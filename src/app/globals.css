@@ -1,26 +1,178 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+body {
+  font-family: "Alethia Next", sans-serif !important;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+.inner-border {
+  position: relative;
+  box-shadow: inset 0 0 0 4px #4b5563;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+.shadow-footer {
+  box-shadow: 0px -6px 30px 0px rgba(75, 85, 99, 0.2);
+  -webkit-box-shadow: 0px -6px 30px 0px rgba(75, 85, 99, 0.2);
+  -moz-box-shadow: 0px -6px 30px 0px rgba(75, 85, 99, 0.2);
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+
+/* HTML: <div class="loader"></div> */
+.loader-text {
+  width: 15px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  animation: l5 1s infinite linear alternate;
+}
+@keyframes l5 {
+  0% {
+    box-shadow: 20px 0 #0001, -20px 0 #0002;
+    background: #0001;
+  }
+  33% {
+    box-shadow: 20px 0 #0001, -20px 0 #0002;
+    background: #0002;
+  }
+  66% {
+    box-shadow: 20px 0 #0002, -20px 0 #0001;
+    background: #0002;
+  }
+  100% {
+    box-shadow: 20px 0 #0002, -20px 0 #0001;
+    background: #0001;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* loading styles */
+.loader {
+  width: 50px;
+  aspect-ratio: 1;
+  display: grid;
+  border-radius: 50%;
+  background: linear-gradient(0deg, rgb(0 0 0/20%) 30%, #0000 0 70%, rgb(0 0 0/40%) 0) 50%/8% 100%, linear-gradient(90deg, rgb(0 0 0/10%) 30%, #0000 0 70%, rgb(0 0 0/30%) 0) 50%/100% 8%;
+  background-repeat: no-repeat;
+  animation: l23 1s infinite steps(12);
+}
+.loader::before,
+.loader::after {
+  content: "";
+  grid-area: 1/1;
+  border-radius: 50%;
+  background: inherit;
+  opacity: 0.915;
+  transform: rotate(30deg);
+}
+.loader::after {
+  opacity: 0.83;
+  transform: rotate(60deg);
+}
+@keyframes l23 {
+  100% {
+    transform: rotate(1turn);
+  }
+}
+
+/* scrollbar style */
+.scrollbar::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+.scrollbar::-webkit-scrollbar-track {
+  border-radius: 100vh;
+  background: #f3f4f6;
+}
+.scrollbar::-webkit-scrollbar-thumb {
+  background: #6b7280;
+  border-radius: 100vh;
+  border: 3px solid #f3f4f6;
+}
+.scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #0e2d65;
+}
+
+@theme inline {
+  /* ===============================
+     COLORS
+  =============================== */
+  --color-primary: #0e2d65;
+  --color-secondary: #b91c1c;
+  --color-gray: #4b5563;
+  --color-darker-gray: #374151;
+  --color-light: #ffffff;
+  --color-dark: #181c14;
+
+  /* ===============================
+     SHADOWS
+  =============================== */
+  --shadow-custom-border: 0 0 0 2px rgba(185, 28, 28, 0.9);
+
+  /* ===============================
+     FONT SIZE
+  =============================== */
+  --text-xxs: 0.625rem;
+
+  /* ===============================
+     MIN HEIGHT
+  =============================== */
+  --min-h-custom: calc(100vh - 80px);
+
+  /* ===============================
+     MAX HEIGHT
+  =============================== */
+  --max-h-custom: calc(100vh - 80px);
+  --max-h-modal: calc(100% - 16px);
+}
+
+@layer components {
+  .btn-blue {
+    @apply text-light bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-blue-200;
+  }
+  .btn-red {
+    @apply text-light bg-red-600 rounded-lg hover:bg-red-700 disabled:bg-red-200;
+  }
+  .btn-gray {
+    @apply text-light bg-gray rounded-lg hover:bg-darker-gray disabled:bg-gray/20;
+  }
+  .btn-green {
+    @apply text-light bg-green-600 rounded-lg hover:bg-green-600 disabled:bg-green-200;
+  }
+  .btn-outline {
+    @apply text-gray bg-light border border-gray/30 rounded-lg shadow-sm hover:bg-gray/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500;
+  }
+  .bg-filter {
+    @apply bg-linear-to-tl from-[#2A5F7A]/40 to-[#4F2E52]/40;
+  }
+  .file-label {
+    @apply block px-4 py-2 mr-4 text-sm font-semibold border-0 cursor-pointer rounded-s-lg whitespace-nowrap bg-blue-600 text-light hover:bg-blue-700;
+  }
+  .heading {
+    @apply text-xl sm:text-2xl font-bold sm:font-semibold md:text-3xl text-gray;
+  }
+  .product-container {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-x-6 sm:gap-y-10 min-h-100;
+  }
+  .popover {
+    @apply absolute py-2 -translate-x-1/2 border border-gray rounded-lg shadow-lg left-1/2 w-full bg-light text-dark z-100;
+  }
+  .input-form {
+    @apply block w-full px-3 py-2 border border-gray/30 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:ring-2 focus:border-blue-500;
+  }
+  .dropdown {
+    @apply relative flex items-center gap-2 p-2 text-sm text-gray font-semibold rounded-lg cursor-pointer sm:px-4 sm:gap-8 border;
+  }
+  .pagination-number {
+    @apply size-10 sm:size-12 flex items-center justify-center text-center transition-all border rounded-lg shadow-sm border-gray/50 text-dark;
+  }
+  .pagination-button {
+    @apply size-10 sm:size-12 flex items-center justify-center border transition-all duration-300 rounded-lg bg-light;
+  }
+  .btn-cross-border {
+    @apply absolute duration-300 right-4 sm:right-6 md:right-10 top-4 flex justify-center items-center rounded-full border-gray border-2 size-8 hover:bg-gray;
+  }
 }

@@ -39,3 +39,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# prisma 
+/generated/prisma
+/prisma/migrations/
+
+# exclude public uploads
+/public/uploads/*
+
+# Ignore all zip files
+*.zip
+
+# Logs
+logs/
+*.log
+

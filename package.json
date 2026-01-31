@@ -1,26 +1,58 @@
 {
   "name": "lindwayhome",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:migrate": "npx prisma migrate dev",
+    "db:generate": "npx prisma generate",
+    "db:seed": "npx prisma db seed",
+    "db:studio": "npx prisma studio",
+    "db:reset": "npx prisma migrate reset --force"
   },
   "dependencies": {
+    "@faker-js/faker": "^10.2.0",
+    "@prisma/adapter-pg": "^7.2.0",
+    "@prisma/client": "^7.2.0",
+    "@tanstack/react-query": "^5.90.16",
+    "axios": "^1.13.2",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.2.3",
+    "framer-motion": "^12.25.0",
+    "ioredis": "^5.9.1",
+    "jsonwebtoken": "^9.0.3",
     "next": "16.1.1",
+    "nodemailer": "^7.0.12",
+    "pg": "^8.16.3",
+    "prisma-client": "file:generated/prisma",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "react-hot-toast": "^2.6.0",
+    "react-icons": "^5.5.0",
+    "react-intersection-observer": "^10.0.0",
+    "use-debounce": "^10.1.0",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0",
+    "zod": "^4.3.5",
+    "zustand": "^5.0.9"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/ioredis": "^4.28.10",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^20.19.28",
+    "@types/nodemailer": "^7.0.5",
+    "@types/pg": "^8.16.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
+    "prisma": "^7.3.0",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

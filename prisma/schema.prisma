@@ -1,0 +1,187 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+  compilerBuild = "fast"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String                          @id @default(cuid())
+  email         String                          @unique
+  username      String                          @unique
+  password      String
+  role          Role                            @default(ADMIN)
+  isActive      Boolean                         @default(true)
+  createdAt     DateTime                        @default(now())
+  updatedAt     DateTime                        @updatedAt
+
+  @@map("users")
+}
+
+model Product {
+  id                   String                   @id @default(cuid())
+  name                 String
+  description          String
+  notes                String
+  sizes                Json[] 
+  price                Decimal                  @db.Decimal(12, 2)
+  discount             Int       
+  discountedPrice      Decimal                  @db.Decimal(12, 2)
+  category             Categories               @default(MY_LINDWAY)
+  images               Json[]        
+  stock                Int                      @default(0)
+  sku                  String                   @unique
+  productionNotes      String?       
+  isPreOrder           Boolean                  @default(false)
+  isFavorite           Boolean                  @default(false)
+  isActive             Boolean                  @default(true)
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+
+  cartItems            Cart[]
+
+  @@map("products")
+}
+
+model Cart {
+  id                   String                   @id @default(cuid())
+  quantity             Int
+  selectedSize         String
+  productId            String
+  guestId              String 
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  
+  product              Product                  @relation(fields: [productId], references: [id])
+  guest                Guest                    @relation(fields: [guestId], references: [id])
+  
+  @@map("carts")
+}
+
+model Guest {
+  id                   String                   @id @default(cuid())
+  email                String
+  fullname             String
+  whatsappNumber       String
+  address              String
+  postalCode           Int
+  isMember             Boolean                  @default(false)
+  shippingCost         Decimal                  @db.Decimal(12, 2)
+  totalPurchased       Decimal                  @db.Decimal(12, 2)
+  purchased            Decimal                  @db.Decimal(12, 2)
+  totalItemsSold       Int
+  isPurchased          Boolean                  @default(false)
+  paymentMethod        PaymentMethod            @default(BANK_TRANSFER)
+  receiptImage         Json     
+  instagram            String?
+  reference            String?
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  
+  cartItems            Cart[]
+  
+  @@map("guests")
+}
+
+model ConfigParameterGroup {
+  id                   String                   @id @default(cuid())
+  name                 String                   @unique // e.g., "shipping", "tax", "images", "promotions"
+  label                String                   // Display name for UI
+  description          String?                  // Optional description
+  order                Int                      @default(0) // For UI ordering
+  isActive             Boolean                  @default(true)
+  configs              ConfigParameter[]
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+
+  @@map("config_parameter_groups")
+}
+
+model ConfigParameter {
+  id                   String                   @id @default(cuid())
+  key                  String                   // e.g., "shipping_rate", "tax_percentage", "hero_image"
+  label                String                   // Display name for UI
+  description          String                   // Help text for admins
+  value                Json                     // Flexible value storage
+  type                 ParameterType            // Determines how to render in UI
+  validation           Json?                    // Validation rules (min, max, required, etc.)
+  order                Int                      @default(0) // For UI ordering within group
+  isActive             Boolean                  @default(true)
+  
+  groupId              String
+  group                ConfigParameterGroup     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  
+  @@unique([key]) 
+  @@map("config_parameters")
+}
+
+model Location {
+  id                   String                   @id @default(cuid())
+  code                 String                   @unique
+  province             String
+  district             String
+  sub_district         String                   @map("sub_district")
+  village              String
+  approx_lat           Decimal                  @map("approx_lat")
+  approx_long          Decimal                  @map("approx_long")
+  
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  
+  @@index([province])
+  @@index([district])
+  @@index([sub_district])
+  @@index([village])
+  @@map("locations")
+}
+
+enum ParameterType {
+  TEXT          
+  NUMBER        
+  DECIMAL       
+  BOOLEAN       
+  SELECT        
+  MULTI_SELECT  
+  IMAGE        
+  IMAGES        
+  VIDEO         
+  VIDEOS       
+  JSON          
+  TEXTAREA      
+  COLOR        
+  DATE         
+  DATETIME      
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+}
+
+enum PaymentMethod { 
+  BANK_TRANSFER
+  QRIS
+}
+
+enum Categories {
+  MY_LINDWAY
+  LURE_BY_LINDWAY
+  SIMPLY_LINDWAY
+}

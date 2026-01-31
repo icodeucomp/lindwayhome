@@ -1,0 +1,71 @@
+/* Regular */
+@font-face {
+  font-family: "Alethia Next";
+  src: url("/fonts/AlethiaNext-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Italic */
+@font-face {
+  font-family: "Alethia Next";
+  src: url("/fonts/AlethiaNext-Italic.otf") format("opentype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Bold */
+@font-face {
+  font-family: "Alethia Next";
+  src: url("/fonts/AlethiaNext-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Bold Italic */
+@font-face {
+  font-family: "Alethia Next";
+  src: url("/fonts/AlethiaNext-BoldItalic.otf") format("opentype");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Light */
+@font-face {
+  font-family: "Alethia Next";
+  src: url("/fonts/AlethiaNext-light.otf") format("opentype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Light Italic */
+@font-face {
+  font-family: "Alethia Next";
+  src: url("/fonts/AlethiaNext-lightitalic.otf") format("opentype");
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Medium */
+@font-face {
+  font-family: "Alethia Next";
+  src: url("/fonts/AlethiaNext-Medium.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Medium Italic */
+@font-face {
+  font-family: "Alethia Next";
+  src: url("/fonts/AlethiaNext-MediumItalic.otf") format("opentype");
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
