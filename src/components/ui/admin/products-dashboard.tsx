@@ -64,7 +64,7 @@ const ProductsCard = ({ products, handleDelete, isPending, isLoading, isError }:
       {products.map((product) => {
         return (
           <div key={product.id} className="relative w-full mx-auto overflow-hidden rounded-lg shadow bg-light max-w-96">
-            <ImageSlider images={product.images.map((image) => image.path)} alt={product.name} showProgressBar={false} showCounter={false} autoPlay={false}>
+            <ImageSlider images={product.images.map((image) => image.url)} alt={product.name} showProgressBar={false} showCounter={false} autoPlay={false}>
               <div className="absolute left-0 flex items-center justify-between w-full p-2 top-2">
                 <div className="flex items-center gap-2">
                   {product.category && <div className={`px-2 py-1.5 text-xs rounded-full ${categoryColors[product.category]}`}>{categoryLabels[product.category]}</div>}

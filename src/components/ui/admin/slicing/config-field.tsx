@@ -269,7 +269,7 @@ export const ConfigField = ({ config, value, onChange }: ConfigFieldProps) => {
                   </button>
 
                   <div className="relative overflow-hidden rounded-lg shadow-lg">
-                    <Img src={image.path} alt={`Selected image ${index + 1}`} className="w-full rounded-lg aspect-square" cover />
+                    <Img src={image.url} alt={`Selected image ${index + 1}`} className="w-full rounded-lg aspect-square" cover />
                     {helper.isDeletingImages && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
                         <div className="flex flex-col items-center space-y-4">

@@ -15,7 +15,7 @@ type exception = "createdAt" | "updatedAt" | "isActive" | "discount" | "image" |
 export const CardProduct = ({ discountedPrice, images, name, price, notes, productionNotes, isPreOrder, category, id }: Omit<Product, exception>) => {
   return (
     <div className="w-full mx-auto space-y-2 shadow max-w-96">
-      <ImageSlider images={images.map((image) => image.path)} alt={name} showProgressBar={false} showCounter={false} autoPlay={false}>
+      <ImageSlider images={images.map((image) => image.url)} alt={name} showProgressBar={false} showCounter={false} autoPlay={false}>
         {isPreOrder && <div className="absolute top-0 left-0 px-4 py-2 text-xs bg-gray text-light sm:text-sm">Pre Order</div>}
         <div className={`absolute top-0 right-0 px-4 py-2 text-xs sm:text-sm ${categoryColors[category as keyof typeof categoryColors]}`}>{formatUnderscoreToSpace(category)}</div>
       </ImageSlider>

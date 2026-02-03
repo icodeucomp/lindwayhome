@@ -165,7 +165,7 @@ export const GuestsLists = ({ guests, isLoading, isPending, isError, updatePurch
               {guest?.data.receiptImage && (
                 <div className="text-gray">
                   <label className="block mb-2 text-sm font-medium">Receipt Image</label>
-                  <Img src={guest?.data.receiptImage.path} alt={guest?.data.receiptImage.alt} className="w-full h-full rounded-lg" width={400} height={400} />
+                  <Img src={guest?.data.receiptImage.url} alt={guest?.data.receiptImage.alt} className="w-full h-full rounded-lg" width={400} height={400} />
                 </div>
               )}
             </div>

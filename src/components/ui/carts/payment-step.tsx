@@ -143,7 +143,7 @@ export const PaymentStep = ({ formData, setFormData, price, onBack, onSubmit, is
         <div className="p-4 text-center border-2 border-dashed rounded-lg sm:p-8 bg-light border-gray">
           <p className="mb-2 text-sm sm:text-base text-gray">Scan QR Code to Pay</p>
           <p className="mb-4 text-xs sm:text-sm text-gray">Use your banking app to scan and pay</p>
-          {parameter?.data.qris_image && <Img src={parameter.data.qris_image.path} alt="QRIS Payment Code" className="w-full mx-auto rounded-lg aspect-square max-w-48 sm:max-w-64" cover />}
+          {parameter?.data.qris_image && <Img src={parameter.data.qris_image.url} alt="QRIS Payment Code" className="w-full mx-auto rounded-lg aspect-square max-w-48 sm:max-w-64" cover />}
         </div>
       )}
 

@@ -146,13 +146,11 @@ export const ProductDetail = ({ id, category }: { id: string; category: string }
             </div>
 
             <div className="flex flex-row items-center w-full max-w-full sm:flex-col sm:max-w-40">
-              {/* Desktop: Up arrow (vertical) | Mobile: Left arrow (horizontal) */}
               <button onClick={scrollThumbnailsUp} className="order-1 sm:p-2 sm:order-1" disabled={thumbnailStartIndex === 0}>
                 <SlArrowUp className={`size-6 hidden sm:block ${thumbnailStartIndex === 0 ? "text-gray/20" : "text-dark"}`} />
                 <SlArrowLeft className={`size-4 sm:size-6 sm:hidden ${thumbnailStartIndex === 0 ? "text-gray/20" : "text-dark"}`} />
               </button>
 
-              {/* Thumbnail grid - responsive layout */}
               <div className="grid order-2 w-full h-full grid-cols-3 grid-rows-1 gap-1 p-2 overflow-hidden sm:grid-rows-3 sm:grid-cols-1 sm:gap-2 sm:order-2">
                 {product.data.images.slice(thumbnailStartIndex, thumbnailStartIndex + maxVisibleScroll).map((image, displayIndex) => {
                   const actualIndex = thumbnailStartIndex + displayIndex;
@@ -162,13 +160,12 @@ export const ProductDetail = ({ id, category }: { id: string; category: string }
                       onClick={() => selectImage(actualIndex)}
                       className={`w-full h-full rounded-lg overflow-hidden ${currentImageIndex === actualIndex ? "border-2 border-gray" : "border-none"}`}
                     >
-                      <Img src={image.path} alt={image.alt} className="aspect-3/4 sm:aspect-4/3 w-full h-full" cover />
+                      <Img src={image.url} alt={image.alt} className="aspect-3/4 sm:aspect-4/3 w-full h-full" cover />
                     </button>
                   );
                 })}
               </div>
 
-              {/* Desktop: Down arrow (vertical) | Mobile: Right arrow (horizontal) */}
               <button onClick={scrollThumbnailsDown} className="order-3 sm:p-2 sm:order-3" disabled={thumbnailStartIndex + maxVisibleScroll >= product.data.images.length}>
                 <SlArrowDown className={`size-6 hidden sm:block ${thumbnailStartIndex + maxVisibleScroll >= product.data.images.length ? "text-gray/20" : "text-dark"}`} />
                 <SlArrowRight className={`size-4 sm:size-6 sm:hidden ${thumbnailStartIndex + maxVisibleScroll >= product.data.images.length ? "text-gray/20" : "text-dark"}`} />
