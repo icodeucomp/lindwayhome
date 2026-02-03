@@ -27,7 +27,7 @@ export class FileUploader {
   private maxFileSize: number;
 
   constructor(config: FileUploaderConfig = {}) {
-    this.baseUploadPath = config.baseUploadPath || "public/uploads";
+    this.baseUploadPath = config.baseUploadPath || join(process.cwd(), "uploads");
     this.allowedTypes = config.allowedTypes || ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
     this.maxFileSize = config.maxFileSize || 5 * 1024 * 1024;
   }
@@ -40,7 +40,7 @@ export class FileUploader {
   }
 
   private async ensureUploadDirectory(subPath = ""): Promise<string> {
-    const fullPath = join(process.cwd(), this.baseUploadPath, subPath);
+    const fullPath = join(this.baseUploadPath, subPath);
     if (!existsSync(fullPath)) {
       await mkdir(fullPath, { recursive: true });
     }

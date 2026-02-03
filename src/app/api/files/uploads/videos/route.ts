@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { FileUploader, logger } from "@/lib";
 
 const uploader = new FileUploader({
-  baseUploadPath: "public/uploads",
   allowedTypes: ["video/mp4", "video/webm", "video/ogg", "video/quicktime", "video/x-msvideo", "video/x-ms-wmv"],
   maxFileSize: 15 * 1024 * 1024,
 });

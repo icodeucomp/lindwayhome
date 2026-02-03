@@ -12,14 +12,14 @@ const availableSizes = ["XS", "S", "M", "L", "XL", "XXL"];
 
 function generateProductImages(count: number = 2) {
   return Array.from({ length: count }).map(() => {
-    const imageNumber = faker.number.int({ min: 2, max: 58 });
-    const filename = `photo-${imageNumber}.png`;
+    const imageNumber = faker.number.int({ min: 1, max: 8 });
+    const filename = `customer-moment-photo-${imageNumber}.webp`;
 
     return {
       originalName: filename,
       filename,
-      url: `${API_BASE_URL}/uploads/sample/image/${filename}`,
-      path: `/uploads/sample/image/${filename}`,
+      url: `${API_BASE_URL}/images/${filename}`,
+      path: `/images/${filename}`,
       size: faker.number.int({ min: 50000, max: 500000 }),
       mimeType: "image/png",
       alt: faker.commerce.productDescription(),
@@ -235,7 +235,15 @@ async function seedConfigurations() {
     key: "qris_image",
     label: "Default Qris Image",
     description: "Base qris image to displayed on the payment screen",
-    value: generateProductImages(1)[0],
+    value: {
+      originalName: "qris.jpeg",
+      filename: "qris.jpeg",
+      url: `${API_BASE_URL}/images/qris.jpeg`,
+      path: `/images/qris.jpeg`,
+      size: faker.number.int({ min: 50000, max: 500000 }),
+      mimeType: "image/png",
+      alt: faker.commerce.productDescription(),
+    },
     type: "IMAGE",
     groupId: imageGroup.id,
     order: 1,
@@ -249,17 +257,8 @@ async function seedConfigurations() {
       {
         originalName: "samplevideo-1.mp4",
         filename: "samplevideo-1.mp4",
-        url: `${API_BASE_URL}/uploads/sample/video/samplevideo-1.mp4`,
-        path: `/uploads/sample/video/samplevideo-1.mp4`,
-        size: faker.number.int({ min: 50000, max: 500000 }),
-        mimeType: "video/mp4",
-        alt: faker.commerce.productDescription(),
-      },
-      {
-        originalName: "samplevideo-2.mp4",
-        filename: "samplevideo-2.mp4",
-        url: `${API_BASE_URL}/uploads/sample/video/samplevideo-2.mp4`,
-        path: `/uploads/sample/video/samplevideo-2.mp4`,
+        url: `${API_BASE_URL}/images/samplevideo-1.mp4`,
+        path: `/images/samplevideo-1.mp4`,
         size: faker.number.int({ min: 50000, max: 500000 }),
         mimeType: "video/mp4",
         alt: faker.commerce.productDescription(),

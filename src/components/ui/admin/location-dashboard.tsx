@@ -182,7 +182,6 @@ export const LocationDashboard = () => {
 
   return (
     <>
-      {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 mb-6 border rounded-lg bg-light border-gray/30">
         <div className="space-y-1 text-gray">
           <div className="flex items-center gap-2">
@@ -192,7 +191,6 @@ export const LocationDashboard = () => {
         </div>
       </div>
 
-      {/* Toolbar */}
       <div className="p-4 mb-6 rounded-lg shadow bg-light">
         <div className="flex flex-col gap-4 sm:flex-row">
           <div className="flex-1">
@@ -220,7 +218,6 @@ export const LocationDashboard = () => {
         </div>
       </div>
 
-      {/* Table */}
       <div className="bg-light rounded-lg shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -283,7 +280,6 @@ export const LocationDashboard = () => {
           </table>
         </div>
 
-        {/* Pagination */}
         {!isLoading && locations.length > 0 && pagination && (
           <div className="bg-light px-6 py-4 border-t border-gray-200">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -337,12 +333,10 @@ export const LocationDashboard = () => {
         )}
       </div>
 
-      {/* Create/Edit Modal */}
       <Modal isVisible={isModalOpen} onClose={() => setIsModalOpen(false)}>
         <h4 className="mb-4 text-xl font-bold text-center sm:text-2xl sm:font-semibold md:text-3xl text-gray">{modalMode === "create" ? "Add New Location" : "Edit Location"}</h4>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Code */}
           <div className="space-y-1">
             <label className="block text-sm font-medium text-gray-700">
               Code <span className="text-red-500">*</span>
@@ -351,7 +345,6 @@ export const LocationDashboard = () => {
             {formErrors.code && <p className="mt-1 text-sm text-red-500">{formErrors.code}</p>}
           </div>
 
-          {/* Province */}
           <div className="space-y-1">
             <label className="block text-sm font-medium text-gray-700">
               Province <span className="text-red-500">*</span>
@@ -367,7 +360,6 @@ export const LocationDashboard = () => {
             {formErrors.province && <p className="mt-1 text-sm text-red-500">{formErrors.province}</p>}
           </div>
 
-          {/* District */}
           <div className="space-y-1">
             <label className="block text-sm font-medium text-gray-700">
               District <span className="text-red-500">*</span>
@@ -383,7 +375,6 @@ export const LocationDashboard = () => {
             {formErrors.district && <p className="mt-1 text-sm text-red-500">{formErrors.district}</p>}
           </div>
 
-          {/* Sub-District */}
           <div className="space-y-1">
             <label className="block text-sm font-medium text-gray-700">
               Sub-District <span className="text-red-500">*</span>
@@ -399,7 +390,6 @@ export const LocationDashboard = () => {
             {formErrors.sub_district && <p className="mt-1 text-sm text-red-500">{formErrors.sub_district}</p>}
           </div>
 
-          {/* Village */}
           <div className="space-y-1 md:col-span-2">
             <label className="block text-sm font-medium text-gray-700">
               Village <span className="text-red-500">*</span>
@@ -415,7 +405,6 @@ export const LocationDashboard = () => {
             {formErrors.village && <p className="mt-1 text-sm text-red-500">{formErrors.village}</p>}
           </div>
 
-          {/* Latitude */}
           <div className="space-y-1">
             <label className="block text-sm font-medium text-gray-700">
               Latitude <span className="text-red-500">*</span>
@@ -431,7 +420,6 @@ export const LocationDashboard = () => {
             {formErrors.approx_lat && <p className="mt-1 text-sm text-red-500">{formErrors.approx_lat}</p>}
           </div>
 
-          {/* Longitude */}
           <div className="space-y-1">
             <label className="block text-sm font-medium text-gray-700">
               Longitude <span className="text-red-500">*</span>
@@ -467,7 +455,6 @@ export const LocationDashboard = () => {
         </div>
       </Modal>
 
-      {/* Delete Confirmation Modal */}
       <Modal isVisible={deleteConfirm !== null} onClose={() => setDeleteConfirm(null)}>
         <h3 className="text-lg font-bold text-gray-900 mb-2">Confirm Deletion</h3>
         <p className="text-gray-600 mb-6">Are you sure you want to delete this location? This action cannot be undone.</p>

@@ -61,14 +61,14 @@ export const InputForm = ({
             <label htmlFor="name" className="block text-sm font-medium text-gray">
               Product Name *
             </label>
-            <input type="text" name="name" value={formData.name} onChange={handleChange} className="input-form" placeholder="Enter product name" />
+            <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} className="input-form" placeholder="Enter product name" />
           </div>
 
           <div className="space-y-1">
             <label htmlFor="sku" className="block text-sm font-medium text-gray">
               SKU *
             </label>
-            <input type="text" name="sku" value={formData.sku} onChange={handleChange} className="input-form" placeholder="Enter SKU" />
+            <input type="text" id="sku" name="sku" value={formData.sku} onChange={handleChange} className="input-form" placeholder="Enter SKU" />
           </div>
         </div>
 
@@ -76,28 +76,39 @@ export const InputForm = ({
           <label htmlFor="description" className="block text-sm font-medium text-gray">
             Description *
           </label>
-          <textarea name="description" rows={3} value={formData.description} onChange={handleChange} className="input-form" placeholder="Enter product description" />
+          <textarea id="description" name="description" rows={3} value={formData.description} onChange={handleChange} className="input-form" placeholder="Enter product description" />
         </div>
 
         <div className="space-y-1">
           <label htmlFor="notes" className="block text-sm font-medium text-gray">
             Notes *
           </label>
-          <textarea name="notes" rows={2} value={formData.notes} onChange={handleChange} className="input-form" placeholder="Additional notes" />
+          <textarea id="notes" name="notes" rows={2} value={formData.notes} onChange={handleChange} className="input-form" placeholder="Additional notes" />
         </div>
 
         <div className="space-y-1">
           <label htmlFor="productionNotes" className="block text-sm font-medium text-gray">
             Production Days
           </label>
-          <input type="text" name="productionNotes" value={formData.productionNotes} onChange={handleChange} className="input-form" placeholder="Enter notes for production days" />
+          <input
+            type="text"
+            id="productionNotes"
+            name="productionNotes"
+            value={formData.productionNotes}
+            onChange={handleChange}
+            className="input-form"
+            placeholder="Enter notes for production days"
+          />
         </div>
 
         <div className="space-y-2">
-          <label className="block mb-2 text-sm font-medium text-gray">Sizes *</label>
+          <label htmlFor="sizes" className="block mb-2 text-sm font-medium text-gray">
+            Sizes *
+          </label>
           <div className="flex gap-2 mb-2">
             <input
               type="text"
+              id="sizes"
               value={helper.sizeInput}
               onChange={(e) => setHelper((prevValue) => ({ ...prevValue, sizeInput: e.target.value }))}
               className="flex-1 input-form"
@@ -152,6 +163,7 @@ export const InputForm = ({
             </label>
             <NumberInput
               type="number"
+              id="price"
               name="price"
               value={formData.price === 0 ? "" : formData.price}
               onChange={(e) => {
@@ -170,6 +182,7 @@ export const InputForm = ({
             </label>
             <NumberInput
               type="number"
+              id="discount"
               name="discount"
               value={formData.discount === 0 ? "" : formData.discount}
               onChange={(e) => {
@@ -183,10 +196,10 @@ export const InputForm = ({
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="discount" className="block text-sm font-medium text-gray">
+            <label htmlFor="discountedPrice" className="block text-sm font-medium text-gray">
               Discounted Price (IDR)
             </label>
-            <input type="number" value={formData.price && formData.discount ? calculateDiscountedPrice(formData.price!, formData.discount!) : 0} className="input-form" readOnly />
+            <input type="number" id="discountedPrice" value={formData.price && formData.discount ? calculateDiscountedPrice(formData.price!, formData.discount!) : 0} className="input-form" readOnly />
           </div>
         </div>
 
@@ -194,7 +207,7 @@ export const InputForm = ({
           <label htmlFor="category" className="block text-sm font-medium text-gray">
             Category *
           </label>
-          <select name="category" value={formData.category} onChange={handleChange} className="input-form">
+          <select name="category" id="category" value={formData.category} onChange={handleChange} className="input-form">
             {Object.values(Categories).map((category) => (
               <option key={category} value={category}>
                 {category.replace(/_/g, " ")}
@@ -204,11 +217,11 @@ export const InputForm = ({
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="image" className="block text-sm font-medium text-gray">
+          <label htmlFor="images" className="block text-sm font-medium text-gray">
             Images *
           </label>
           <div className="relative flex flex-row items-center overflow-hidden border rounded-lg border-gray/50">
-            <input type="file" ref={imagesInputRef} onChange={handleImagesChange} hidden accept="image/*" multiple />
+            <input type="file" id="images" ref={imagesInputRef} onChange={handleImagesChange} hidden accept="image/*" multiple />
             <label htmlFor="images" className="file-label">
               Choose file
             </label>
@@ -246,21 +259,21 @@ export const InputForm = ({
 
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <input name="isActive" type="checkbox" checked={formData.isActive} onChange={handleChange} className="rounded accent-gray size-4" />
+            <input name="isActive" id="isActive" type="checkbox" checked={formData.isActive} onChange={handleChange} className="rounded accent-gray size-4" />
             <label htmlFor="isActive" className="block text-sm text-gray w-max">
               Active product
             </label>
           </div>
 
           <div className="flex items-center gap-2">
-            <input name="isFavorite" type="checkbox" checked={formData.isFavorite} onChange={handleChange} className="rounded accent-gray size-4" />
+            <input name="isFavorite" id="isFavorite" type="checkbox" checked={formData.isFavorite} onChange={handleChange} className="rounded accent-gray size-4" />
             <label htmlFor="isFavorite" className="block text-sm text-gray w-max">
               Make as favorite
             </label>
           </div>
 
           <div className="flex items-center gap-2">
-            <input name="isPreOrder" type="checkbox" checked={formData.isPreOrder} onChange={handleChange} className="rounded accent-gray size-4" />
+            <input name="isPreOrder" id="isPreOrder" type="checkbox" checked={formData.isPreOrder} onChange={handleChange} className="rounded accent-gray size-4" />
             <label htmlFor="isPreOrder" className="block text-sm text-gray w-max">
               Available for pre-order
             </label>

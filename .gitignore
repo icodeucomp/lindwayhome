@@ -46,6 +46,7 @@ next-env.d.ts
 
 # exclude public uploads
 /public/uploads/*
+uploads/
 
 # Ignore all zip files
 *.zip
