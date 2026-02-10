@@ -1,12 +1,16 @@
+"use client";
+
 import * as React from "react";
 
 import { Button, NumberInput } from "@/components";
 
 import { FaCreditCard } from "react-icons/fa";
 
+import Select from "react-select";
+
 import { formatIDR, guestCheckoutApi, locationsApi } from "@/utils";
 
-import { CreateGuest, DiscountType, ConfigParameterData, CartItem, ApiResponse, Location } from "@/types";
+import { CreateGuest, DiscountType, ConfigParameterData, CartItem, ApiResponse, SelectOption } from "@/types";
 
 const validateEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -128,41 +132,33 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
     params: { province, district, sub_district, village, items: cartItems, email: currentFormData.email, purchased: getSelectedTotal() },
   });
 
-  const { data: locationsData, isLoading } = locationsApi.useGetLocations<ApiResponse<Location[]>>({ key: ["locations"] });
+  const { data: provincesData, isLoading: isLoadingProvinces } = locationsApi.useGetMappingLocations<ApiResponse<SelectOption[]>>({
+    key: ["locations", "provinces"],
+    params: { type: "provinces" },
+  });
 
-  const provinceOptions = React.useMemo(() => {
-    if (!locationsData?.data) return [];
-    const uniqueProvinces = Array.from(new Set(locationsData.data.map((location) => location.province)))
-      .sort()
-      .map((province, index) => ({ key: `province-${index}`, value: province }));
-    return uniqueProvinces;
-  }, [locationsData]);
+  const { data: districtsData, isLoading: isLoadingDistricts } = locationsApi.useGetMappingLocations<ApiResponse<SelectOption[]>>({
+    key: ["locations", "districts", province],
+    enabled: !!province,
+    params: { type: "districts", province },
+  });
 
-  const districtOptions = React.useMemo(() => {
-    if (!locationsData?.data || !province) return [];
-    const uniqueDistricts = Array.from(new Set(locationsData.data.filter((location) => location.province === province).map((location) => location.district)))
-      .sort()
-      .map((district, index) => ({ key: `district-${index}`, value: district }));
-    return uniqueDistricts;
-  }, [locationsData, province]);
+  const { data: subDistrictsData, isLoading: isLoadingSubDistricts } = locationsApi.useGetMappingLocations<ApiResponse<SelectOption[]>>({
+    key: ["locations", "sub_districts", province, district],
+    enabled: !!province && !!district,
+    params: { type: "sub_districts", province, district },
+  });
 
-  const subDistrictOptions = React.useMemo(() => {
-    if (!locationsData?.data || !province || !district) return [];
-    const uniqueSubDistricts = Array.from(new Set(locationsData.data.filter((location) => location.province === province && location.district === district).map((location) => location.sub_district)))
-      .sort()
-      .map((subDistrict, index) => ({ key: `sub-district-${index}`, value: subDistrict }));
-    return uniqueSubDistricts;
-  }, [locationsData, province, district]);
+  const { data: villagesData, isLoading: isLoadingVillages } = locationsApi.useGetMappingLocations<ApiResponse<SelectOption[]>>({
+    key: ["locations", "villages", province, district, sub_district],
+    enabled: !!province && !!district && !!sub_district,
+    params: { type: "villages", province, district, sub_district },
+  });
 
-  const villageOptions = React.useMemo(() => {
-    if (!locationsData?.data || !province || !district || !sub_district) return [];
-    const uniqueVillages = Array.from(
-      new Set(locationsData.data.filter((location) => location.province === province && location.district === district && location.sub_district === sub_district).map((location) => location.village)),
-    )
-      .sort()
-      .map((village, index) => ({ key: `village-${index}`, value: village }));
-    return uniqueVillages;
-  }, [locationsData, province, district, sub_district]);
+  const provinceOptions = provincesData?.data || [];
+  const districtOptions = districtsData?.data || [];
+  const subDistrictOptions = subDistrictsData?.data || [];
+  const villageOptions = villagesData?.data || [];
 
   const parameter = checkoutData?.data.parameter;
   const shippingData = checkoutData?.data.shipping;
@@ -225,10 +221,25 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
     }
   };
 
-  const handleChangeOption = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const { name, value } = e.target;
+  const handleChangeOption = (selectedOption: SelectOption | null, name: string) => {
+    const value = selectedOption ? selectedOption.value : "";
 
-    setCurrentLocationData((prev) => ({ ...prev, [name]: value }));
+    setCurrentLocationData((prev) => {
+      const updated = { ...prev, [name]: value };
+
+      if (name === "province") {
+        updated.district = "";
+        updated.sub_district = "";
+        updated.village = "";
+      } else if (name === "district") {
+        updated.sub_district = "";
+        updated.village = "";
+      } else if (name === "sub_district") {
+        updated.village = "";
+      }
+
+      return updated;
+    });
   };
 
   const handleFormSubmit = (e: React.MouseEvent) => {
@@ -290,29 +301,42 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
     </div>
   );
 
-  const renderFieldDropdown = (id: string, label: string, options: { key: string; value: string }[], placeholder: string = "Select an option", required: boolean = true, disabled: boolean = false) => (
-    <div className="space-y-1">
-      <label htmlFor={id} className="block mb-1 text-sm font-medium">
-        {label} {required && "*"}
-      </label>
-      <select
-        id={id}
-        name={id}
-        value={currentLocationData[id as keyof typeof currentLocationData] as string}
-        onChange={handleChangeOption}
-        className={`input-form w-full ${currentFormErrors[id] ? "border-red-500" : "border-gray/30"} ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-        disabled={disabled}
-      >
-        <option value="">{placeholder}</option>
-        {options.map((option) => (
-          <option key={option.key} value={option.value}>
-            {option.value}
-          </option>
-        ))}
-      </select>
-      {currentFormErrors[id] && <p className="text-sm text-red-500">{currentFormErrors[id]}</p>}
-    </div>
-  );
+  const renderFieldSelect = (
+    id: string,
+    label: string,
+    options: SelectOption[],
+    placeholder: string = "Select an option",
+    required: boolean = true,
+    disabled: boolean = false,
+    isLoading: boolean = false,
+  ) => {
+    const selectedValue = currentLocationData[id as keyof typeof currentLocationData];
+    const selectedOption = options.find((opt) => opt.value === selectedValue) || null;
+
+    return (
+      <div className="space-y-1">
+        <label htmlFor={id} className="block mb-1 text-sm font-medium">
+          {label} {required && "*"}
+        </label>
+        <Select
+          id={id}
+          name={id}
+          value={selectedOption}
+          onChange={(option) => handleChangeOption(option, id)}
+          options={options}
+          placeholder={placeholder}
+          isDisabled={disabled}
+          isLoading={isLoading}
+          isClearable
+          isSearchable
+          classNamePrefix="react-select"
+          className="react-select-container"
+          noOptionsMessage={() => "No options available"}
+        />
+        {currentFormErrors[id] && <p className="text-sm text-red-500">{currentFormErrors[id]}</p>}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -325,16 +349,16 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
           <div className="sm:col-span-2">{renderFieldText("whatsappNumber", "WhatsApp Number", "tel", "+62812345678")}</div>
           <div className="sm:col-span-2">{renderFieldText("address", "Address", "text", "Jalan Hayam Wuruk Gang XVII No. 36")}</div>
 
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
+          {isLoadingProvinces ? (
+            <div className="flex items-center justify-center py-8 sm:col-span-2">
               <div className="loader"></div>
             </div>
           ) : (
             <>
-              <div>{renderFieldDropdown("province", "Province", provinceOptions, "Select Province")}</div>
-              <div>{renderFieldDropdown("district", "District", districtOptions, "Select District", true, !province?.trim())}</div>
-              <div>{renderFieldDropdown("sub_district", "Sub District", subDistrictOptions, "Select Sub District", true, !district?.trim())}</div>
-              <div>{renderFieldDropdown("village", "Village", villageOptions, "Select Village", true, !sub_district?.trim())}</div>
+              <div>{renderFieldSelect("province", "Province", provinceOptions, "Select Province", true, false, isLoadingProvinces)}</div>
+              <div>{renderFieldSelect("district", "District", districtOptions, "Select District", true, !province?.trim(), isLoadingDistricts)}</div>
+              <div>{renderFieldSelect("sub_district", "Sub District", subDistrictOptions, "Select Sub District", true, !district?.trim(), isLoadingSubDistricts)}</div>
+              <div>{renderFieldSelect("village", "Village", villageOptions, "Select Village", true, !sub_district?.trim(), isLoadingVillages)}</div>
             </>
           )}
 

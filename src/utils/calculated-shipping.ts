@@ -40,11 +40,11 @@ function toRadians(degrees: number): number {
 }
 
 // Haversine formula to calculate distance between two coordinates
-export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number, earthRadius: number): number {
-  const dLat = toRadians(lat2 - lat1);
-  const dLon = toRadians(lon2 - lon1);
+export function calculateDistance(originLat: number, originLong: number, destinationLat: number, destinationLong: number, earthRadius: number): number {
+  const dLat = toRadians(destinationLat - originLat);
+  const dLon = toRadians(destinationLong - originLong);
 
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLon / 2) ** 2;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRadians(originLat)) * Math.cos(toRadians(destinationLat)) * Math.sin(dLon / 2) ** 2;
 
   const c = 2 * Math.asin(Math.sqrt(a));
   return earthRadius * c;

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+
 import { useRouter } from "next/navigation";
 
 import { useCartStore } from "@/hooks";
@@ -36,14 +37,17 @@ export const CartProduct = () => {
 
   const cartItems = React.useMemo(() => {
     return Object.entries(
-      cart.reduce((acc, product) => {
-        const category = product.category;
-        if (!acc[category]) {
-          acc[category] = [];
-        }
-        acc[category].push(product);
-        return acc;
-      }, {} as Record<string, typeof cart>)
+      cart.reduce(
+        (acc, product) => {
+          const category = product.category;
+          if (!acc[category]) {
+            acc[category] = [];
+          }
+          acc[category].push(product);
+          return acc;
+        },
+        {} as Record<string, typeof cart>,
+      ),
     );
   }, [cart]);
 
@@ -67,7 +71,7 @@ export const CartProduct = () => {
       removeFromCart(id, size);
       toast.success("Item removed from cart");
     },
-    [removeFromCart]
+    [removeFromCart],
   );
 
   React.useEffect(() => {

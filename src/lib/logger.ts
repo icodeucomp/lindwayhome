@@ -17,8 +17,8 @@ const consoleFormat = winston.format.combine(
 const fileRotateTransport = new DailyRotateFile({
   filename: path.join(logDir, "application-%DATE%.log"),
   datePattern: "YYYY-MM-DD",
-  maxFiles: "30d", // Keep logs for 30 days
-  maxSize: "20m", // Rotate if file size exceeds 20MB
+  maxFiles: "30d",
+  maxSize: "20m",
   format: logFormat,
 });
 
@@ -31,10 +31,19 @@ const errorFileRotateTransport = new DailyRotateFile({
   format: logFormat,
 });
 
+// NEW: Calculation rotate file transport
+const calculationFileRotateTransport = new DailyRotateFile({
+  filename: path.join(logDir, "calculation-%DATE%.log"),
+  datePattern: "YYYY-MM-DD",
+  maxFiles: "30d",
+  maxSize: "20m",
+  format: logFormat,
+});
+
 export const logger = winston.createLogger({
   level: process.env.NODE_ENV === "production" ? "info" : "debug",
   format: logFormat,
-  transports: [fileRotateTransport, errorFileRotateTransport],
+  transports: [fileRotateTransport, errorFileRotateTransport, calculationFileRotateTransport],
 });
 
 if (process.env.NODE_ENV !== "production") {
@@ -44,3 +53,8 @@ if (process.env.NODE_ENV !== "production") {
     }),
   );
 }
+
+// Helper function to log calculations with proper typing
+export const logCalculation = (step: string, data: Record<string, unknown>) => {
+  logger.info(`[CALCULATION] ${step}`, { calculation: true, ...data });
+};

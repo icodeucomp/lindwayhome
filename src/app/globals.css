@@ -32,19 +32,27 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 @keyframes l5 {
   0% {
-    box-shadow: 20px 0 #0001, -20px 0 #0002;
+    box-shadow:
+      20px 0 #0001,
+      -20px 0 #0002;
     background: #0001;
   }
   33% {
-    box-shadow: 20px 0 #0001, -20px 0 #0002;
+    box-shadow:
+      20px 0 #0001,
+      -20px 0 #0002;
     background: #0002;
   }
   66% {
-    box-shadow: 20px 0 #0002, -20px 0 #0001;
+    box-shadow:
+      20px 0 #0002,
+      -20px 0 #0001;
     background: #0002;
   }
   100% {
-    box-shadow: 20px 0 #0002, -20px 0 #0001;
+    box-shadow:
+      20px 0 #0002,
+      -20px 0 #0001;
     background: #0001;
   }
 }
@@ -55,7 +63,9 @@ input[type="number"]::-webkit-outer-spin-button {
   aspect-ratio: 1;
   display: grid;
   border-radius: 50%;
-  background: linear-gradient(0deg, rgb(0 0 0/20%) 30%, #0000 0 70%, rgb(0 0 0/40%) 0) 50%/8% 100%, linear-gradient(90deg, rgb(0 0 0/10%) 30%, #0000 0 70%, rgb(0 0 0/30%) 0) 50%/100% 8%;
+  background:
+    linear-gradient(0deg, rgb(0 0 0/20%) 30%, #0000 0 70%, rgb(0 0 0/40%) 0) 50%/8% 100%,
+    linear-gradient(90deg, rgb(0 0 0/10%) 30%, #0000 0 70%, rgb(0 0 0/30%) 0) 50%/100% 8%;
   background-repeat: no-repeat;
   animation: l23 1s infinite steps(12);
 }
@@ -94,6 +104,37 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 .scrollbar::-webkit-scrollbar-thumb:hover {
   background: #0e2d65;
+}
+
+/* Custom React-Select Styles */
+.react-select-container {
+  font-size: 1rem !important;
+}
+.react-select__control {
+  min-height: 42px !important;
+  border-radius: 0.5rem !important;
+}
+.react-select__control:hover {
+  border-color: #2b7fff !important;
+}
+.react-select__control--is-focused {
+  border-color: #2b7fff !important;
+  box-shadow: 0 0 0 2px #2b7fff !important;
+}
+.react-select__indicator-separator {
+  display: none !important;
+}
+.react-select__menu {
+  z-index: 50 !important;
+}
+.react-select__option--is-focused {
+  background-color: #dbeafe !important;
+}
+.react-select__option--is-selected {
+  background-color: #2b7fff !important;
+}
+.react-select__placeholder {
+  color: #9ca3af !important;
 }
 
 @theme inline {

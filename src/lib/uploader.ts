@@ -27,7 +27,7 @@ export class FileUploader {
   private maxFileSize: number;
 
   constructor(config: FileUploaderConfig = {}) {
-    this.baseUploadPath = config.baseUploadPath || join(process.cwd(), "uploads");
+    this.baseUploadPath = config.baseUploadPath || process.env.NEXT_PUBLIC_UPLOADS_PATH || "uploads";
     this.allowedTypes = config.allowedTypes || ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
     this.maxFileSize = config.maxFileSize || 5 * 1024 * 1024;
   }
@@ -75,7 +75,7 @@ export class FileUploader {
         filename: fileName,
         originalName: file.name,
         url: `${API_BASE_URL}/uploads/${subPath}/${fileName}`,
-        path: `/uploads/${subPath}/${fileName}`,
+        path: `uploads/${subPath}/${fileName}`,
         size: buffer.length,
         mimeType: file.type,
         alt: fileName,
@@ -93,16 +93,21 @@ export class FileUploader {
 
   async deleteFile(filePath: string): Promise<boolean> {
     try {
-      const fullPath = join(process.cwd(), "public", filePath);
-      if (existsSync(fullPath)) {
-        const { unlink } = await import("fs/promises");
-        await unlink(fullPath);
-        return true;
+      const relativePath = filePath.replace(/^\/?uploads\/?/, "");
+
+      const fullPath = join(this.baseUploadPath, relativePath);
+
+      if (!existsSync(fullPath)) {
+        return false;
       }
-      return false;
+
+      const { unlink } = await import("fs/promises");
+      await unlink(fullPath);
+
+      return true;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-      throw new Error(`Upload failed: ${errorMessage}`);
+      throw new Error(`Delete failed: ${errorMessage}`);
     }
   }
 }

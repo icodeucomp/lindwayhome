@@ -14,6 +14,11 @@ export enum DiscountType {
   FIXED = "FIXED",
 }
 
+export interface SelectOption {
+  label: string;
+  value: string;
+}
+
 export interface ProductsQueryParams {
   page?: number;
   limit?: number;
@@ -32,6 +37,7 @@ export interface ProductsQueryParams {
   sub_district?: string;
   village?: string;
   email?: string;
+  type?: string;
   items?: {
     selectedSize: string;
     quantity: number;

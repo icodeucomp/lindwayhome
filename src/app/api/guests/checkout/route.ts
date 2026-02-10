@@ -4,13 +4,15 @@ import { z } from "zod";
 
 import { ConfigService, ShippingService } from "@/services";
 
-import { logger, prisma, sendOrderConfirmation } from "@/lib";
+import { logCalculation, logger, prisma, sendOrderConfirmation } from "@/lib";
 
 import { API_BASE_URL, calculateDistance, calculateShippingCost, calculateTotalPrice } from "@/utils";
 
 import { CartSchema, CreateGuestSchema, DiscountType, ShippingCalculateSchema } from "@/types";
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+
   try {
     const { searchParams } = new URL(request.url);
 
@@ -20,11 +22,26 @@ export async function GET(request: NextRequest) {
     const village = searchParams.get("village");
     const email = searchParams.get("email");
     const itemsParam = searchParams.get("items");
-    const purchasedParam = searchParams.get("purchased"); // NEW: Get purchased amount
+    const purchasedParam = searchParams.get("purchased");
+
+    logCalculation("Request received", {
+      province: province || null,
+      district: district || null,
+      sub_district: sub_district || null,
+      village: village || null,
+      email: email || null,
+      purchasedParam: purchasedParam || null,
+      itemsCount: itemsParam ? JSON.parse(itemsParam).length : 0,
+    });
 
     const isValidateEmail = await prisma.guest.findFirst({
       where: { email: email || undefined, isMember: true },
       select: { isMember: true },
+    });
+
+    logCalculation("Email validation", {
+      email: email || null,
+      isMember: isValidateEmail?.isMember || false,
     });
 
     if (!province || !district || !sub_district || !village || !itemsParam || !purchasedParam) {
@@ -34,8 +51,22 @@ export async function GET(request: NextRequest) {
 
     const configParameters = await ConfigService.getConfigValue(["tax_rate", "tax_type", "promotion_discount", "promo_type", "member_discount", "member_type"]);
 
+    logCalculation("Config parameters loaded", {
+      tax_rate: configParameters.tax_rate,
+      tax_type: configParameters.tax_type,
+      promotion_discount: configParameters.promotion_discount,
+      promo_type: configParameters.promo_type,
+      member_discount: configParameters.member_discount,
+      member_type: configParameters.member_type,
+    });
+
     const items = JSON.parse(itemsParam);
-    const purchased = parseFloat(purchasedParam); // NEW: Parse purchased amount
+    const purchased = parseFloat(purchasedParam);
+
+    logCalculation("Parsed input data", {
+      items: items,
+      purchased: purchased,
+    });
 
     // Validate purchased amount
     if (isNaN(purchased) || purchased < 0) {
@@ -51,6 +82,14 @@ export async function GET(request: NextRequest) {
       items,
     });
 
+    logCalculation("Data validated", {
+      province: validatedData.province,
+      district: validatedData.district,
+      sub_district: validatedData.sub_district,
+      village: validatedData.village,
+      itemsCount: validatedData.items.length,
+    });
+
     // =====================
     // 1. GET SHIPPING CONFIG
     // =====================
@@ -59,6 +98,12 @@ export async function GET(request: NextRequest) {
       logger.error("API /guests/checkout error", { error: "Shipping configuration not found" });
       return NextResponse.json({ success: false, message: "Shipping configuration not found" }, { status: 404 });
     }
+
+    logCalculation("Shipping config loaded", {
+      origin_lat: config.origin_lat,
+      origin_long: config.origin_long,
+      earth_radius_km: config.earth_radius_km,
+    });
 
     // =====================
     // 2. GET DESTINATION COORDINATES
@@ -70,10 +115,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Destination coordinates not found" }, { status: 404 });
     }
 
+    logCalculation("Destination coordinates retrieved", {
+      lat: destinationCoords.lat,
+      long: destinationCoords.long,
+    });
+
     // =====================
     // 3. CALCULATE DISTANCE
     // =====================
     const distance_km = calculateDistance(config.origin_lat, config.origin_long, destinationCoords.lat, destinationCoords.long, config.earth_radius_km);
+
+    logCalculation("Distance calculated", {
+      origin_lat: config.origin_lat,
+      origin_long: config.origin_long,
+      destination_lat: destinationCoords.lat,
+      destination_long: destinationCoords.long,
+      distance_km: distance_km,
+    });
 
     // =====================
     // 4. GET DIMENSIONS FROM CONFIG BY SIZE
@@ -84,11 +142,24 @@ export async function GET(request: NextRequest) {
       const dimensions = await ShippingService.getProductDimensionsBySize(item.selectedSize);
 
       if (!dimensions) {
-        logger.error("API /guests/checkout error", { error: `Dimensions for size "${item.selectedSize}" not found in configuration.` });
+        logger.error("API /guests/checkout error", {
+          error: `Dimensions for size "${item.selectedSize}" not found in configuration.`,
+        });
         return NextResponse.json({ success: false, message: `Dimensions for size "${item.selectedSize}" not found in configuration.` }, { status: 404 });
       }
 
-      itemsWithDimensions.push({
+      const itemWithDimension = {
+        weight_g: dimensions.weight_g,
+        length_cm: dimensions.length_cm,
+        width_cm: dimensions.width_cm,
+        height_cm: dimensions.height_cm,
+        quantity: item.quantity,
+      };
+
+      itemsWithDimensions.push(itemWithDimension);
+
+      logCalculation("Item dimensions added", {
+        selectedSize: item.selectedSize,
         weight_g: dimensions.weight_g,
         length_cm: dimensions.length_cm,
         width_cm: dimensions.width_cm,
@@ -97,15 +168,27 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    logCalculation("All items with dimensions", {
+      totalItems: itemsWithDimensions.length,
+      items: itemsWithDimensions,
+    });
+
     // =====================
     // 5. CALCULATE SHIPPING COST
     // =====================
     const calculation = calculateShippingCost(itemsWithDimensions, distance_km, config);
 
+    logCalculation("Shipping cost calculated", {
+      shipping_final: calculation.shipping_final,
+      zone: calculation.zone,
+      distance_km: calculation.distance_km,
+      rounded_weight_kg: calculation.rounded_weight_kg,
+    });
+
     // =====================
-    // 6. CALCULATE TOTAL PRICE (NEW)
+    // 6. CALCULATE TOTAL PRICE
     // =====================
-    const totalPurchased = calculateTotalPrice({
+    const priceCalculationInput = {
       basePrice: purchased,
       member: isValidateEmail?.isMember ? (configParameters.member_discount as number) : 0,
       memberType: configParameters.member_type as DiscountType,
@@ -114,38 +197,87 @@ export async function GET(request: NextRequest) {
       tax: configParameters.tax_rate as number,
       taxType: configParameters.tax_type as DiscountType,
       shipping: calculation.shipping_final,
+    };
+
+    logCalculation("Price calculation input", {
+      basePrice: priceCalculationInput.basePrice,
+      member: priceCalculationInput.member,
+      memberType: priceCalculationInput.memberType,
+      promo: priceCalculationInput.promo,
+      promoType: priceCalculationInput.promoType,
+      tax: priceCalculationInput.tax,
+      taxType: priceCalculationInput.taxType,
+      shipping: priceCalculationInput.shipping,
     });
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: {
-          parameter: {
-            ...configParameters,
-          },
-          shipping: {
-            cost: calculation.shipping_final,
-            zone: calculation.zone,
-            distance_km: parseFloat(calculation.distance_km.toFixed(2)),
-            weight_kg: calculation.rounded_weight_kg,
-          },
-          purchased,
-          totalPurchased,
-          isMember: isValidateEmail?.isMember,
+    const totalPurchased = calculateTotalPrice(priceCalculationInput);
+
+    logCalculation("Total price calculated", {
+      totalPurchased: totalPurchased,
+      basePrice: purchased,
+      memberDiscount: isValidateEmail?.isMember ? configParameters.member_discount : 0,
+      promoDiscount: configParameters.promotion_discount,
+      taxRate: configParameters.tax_rate,
+      shippingCost: calculation.shipping_final,
+      isMember: isValidateEmail?.isMember || false,
+    });
+
+    const responseData = {
+      success: true,
+      data: {
+        parameter: {
+          ...configParameters,
         },
+        shipping: {
+          cost: calculation.shipping_final,
+          zone: calculation.zone,
+          distance_km: parseFloat(calculation.distance_km.toFixed(2)),
+          weight_kg: calculation.rounded_weight_kg,
+        },
+        purchased,
+        totalPurchased,
+        isMember: isValidateEmail?.isMember,
       },
-      { status: 200 },
-    );
+    };
+
+    const processingTime = Date.now() - startTime;
+
+    logCalculation("Request completed successfully", {
+      processingTime: processingTime,
+      processingTimeMs: `${processingTime}ms`,
+      finalTotal: totalPurchased,
+      email: email || null,
+    });
+
+    return NextResponse.json(responseData, { status: 200 });
   } catch (error) {
+    const processingTime = Date.now() - startTime;
+
     if (error instanceof z.ZodError) {
-      logger.error("API /guests/checkout error", { error: error.message, stack: error.stack });
+      logger.error("API /guests/checkout error", {
+        error: error.message,
+        stack: error.stack,
+        processingTime: processingTime,
+      });
+      logCalculation("Validation error", {
+        issues: error.issues,
+        processingTime: processingTime,
+      });
       return NextResponse.json({ success: false, message: error.issues }, { status: 400 });
     }
 
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     const errorStack = error instanceof Error ? error.stack : "An unknown error occurred";
 
-    logger.error("API /guests/checkout error", { error: errorMessage, stack: errorStack });
+    logger.error("API /guests/checkout error", {
+      error: errorMessage,
+      stack: errorStack,
+      processingTime: processingTime,
+    });
+    logCalculation("Unexpected error", {
+      error: errorMessage,
+      processingTime: processingTime,
+    });
 
     return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
   }

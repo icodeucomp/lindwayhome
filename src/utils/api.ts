@@ -404,6 +404,25 @@ export const locationsApi = {
     });
   },
 
+  useGetMappingLocations: <T>({ key, params = {}, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+    return useQuery<T, Error>({
+      queryKey: key,
+      queryFn: async () => {
+        const searchParams = new URLSearchParams();
+        if (params.type) searchParams.append("type", params.type);
+        if (params.province) searchParams.append("province", params.province);
+        if (params.district) searchParams.append("district", params.district);
+        if (params.sub_district) searchParams.append("sub_district", params.sub_district);
+        const { data } = await api.get(`/locations/checkout?${searchParams.toString()}`);
+        return data;
+      },
+      gcTime,
+      staleTime,
+      enabled,
+      retry: RETRY_TIMES,
+    });
+  },
+
   useGetLocation: <T>({ key, id, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
     return useQuery<T, Error>({
       queryKey: key,
