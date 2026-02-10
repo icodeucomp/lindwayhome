@@ -349,18 +349,10 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
           <div className="sm:col-span-2">{renderFieldText("whatsappNumber", "WhatsApp Number", "tel", "+62812345678")}</div>
           <div className="sm:col-span-2">{renderFieldText("address", "Address", "text", "Jalan Hayam Wuruk Gang XVII No. 36")}</div>
 
-          {isLoadingProvinces ? (
-            <div className="flex items-center justify-center py-8 sm:col-span-2">
-              <div className="loader"></div>
-            </div>
-          ) : (
-            <>
-              <div>{renderFieldSelect("province", "Province", provinceOptions, "Select Province", true, false, isLoadingProvinces)}</div>
-              <div>{renderFieldSelect("district", "District", districtOptions, "Select District", true, !province?.trim(), isLoadingDistricts)}</div>
-              <div>{renderFieldSelect("sub_district", "Sub District", subDistrictOptions, "Select Sub District", true, !district?.trim(), isLoadingSubDistricts)}</div>
-              <div>{renderFieldSelect("village", "Village", villageOptions, "Select Village", true, !sub_district?.trim(), isLoadingVillages)}</div>
-            </>
-          )}
+          <div>{renderFieldSelect("province", "Province", provinceOptions, "Select Province", true, false, isLoadingProvinces)}</div>
+          <div>{renderFieldSelect("district", "District", districtOptions, "Select District", true, !province?.trim(), isLoadingDistricts)}</div>
+          <div>{renderFieldSelect("sub_district", "Sub District", subDistrictOptions, "Select Sub District", true, !district?.trim(), isLoadingSubDistricts)}</div>
+          <div>{renderFieldSelect("village", "Village", villageOptions, "Select Village", true, !sub_district?.trim(), isLoadingVillages)}</div>
 
           <div className="sm:col-span-2">{renderFieldNumber("postalCode", "Postal Code", "12345")}</div>
           <div>{renderFieldText("instagram", "Instagram", "text", "@yourusername", false)}</div>
