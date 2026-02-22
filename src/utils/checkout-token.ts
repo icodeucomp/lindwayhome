@@ -1,6 +1,6 @@
 import { createHmac } from "crypto";
 
-const SECRET = process.env.CHECKOUT_TOKEN_SECRET || "default_secret_for_dev_only";
+const SECRET = process.env.NEXT_PUBLIC_CHECKOUT_TOKEN || "default_secret_for_checkout_token";
 
 export interface CheckoutTokenPayload {
   shippingCost: number;
