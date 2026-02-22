@@ -35,6 +35,8 @@ export const PaymentStep = ({ formData, setFormData, onBack, onSubmit, isLoading
 
   const [upload, setUpload] = React.useState<Upload>({ isUploading: false, uploadProgress: 0 });
 
+  const imageInputRef = React.useRef<HTMLInputElement | null>(null);
+
   const handleImagesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files ? Array.from(e.target.files) : [];
     if (files.length === 0) return;
@@ -71,6 +73,9 @@ export const PaymentStep = ({ formData, setFormData, onBack, onSubmit, isLoading
       await filesApi.delete(subPath);
       setFormData((prev) => ({ ...prev, receiptImage: undefined }));
       toast.success("Image deleted successfully");
+      if (imageInputRef.current) {
+        imageInputRef.current.value = "";
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to delete image";
       toast.error(errorMessage);
@@ -211,7 +216,7 @@ export const PaymentStep = ({ formData, setFormData, onBack, onSubmit, isLoading
             Upload Payment Receipt *
           </label>
           <div className="relative flex flex-row items-center overflow-hidden border rounded-lg border-gray/50">
-            <input type="file" id="images" onChange={handleImagesChange} hidden accept="image/*" disabled={upload.isUploading} />
+            <input type="file" id="images" ref={imageInputRef} onChange={handleImagesChange} hidden accept="image/*" disabled={upload.isUploading} />
             <label
               htmlFor="images"
               className={`px-4 py-2 bg-gray/10 text-sm font-medium border-r border-gray/30 ${upload.isUploading ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-gray/20"}`}
@@ -224,7 +229,7 @@ export const PaymentStep = ({ formData, setFormData, onBack, onSubmit, isLoading
               <button
                 onClick={() => handleDeleteImages(formData.receiptImage?.path || "")}
                 type="button"
-                className="absolute p-1 text-white bg-red-500 rounded-full hover:bg-red-600 right-2"
+                className="absolute p-1 text-white bg-red-500 rounded-full hover:bg-red-600 right-2 cursor-pointer"
                 title="Delete image"
               >
                 <svg className="size-3 sm:size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

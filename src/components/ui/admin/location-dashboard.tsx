@@ -6,9 +6,9 @@ import { useSearchPagination } from "@/hooks";
 
 import { useQueryClient } from "@tanstack/react-query";
 
-import { Modal } from "@/components";
+import { Button, Modal, Pagination } from "@/components";
 
-import { FaChevronLeft, FaChevronRight, FaEdit, FaMapPin, FaSearch, FaTrash } from "react-icons/fa";
+import { FaEdit, FaMapPin, FaSearch, FaTrash } from "react-icons/fa";
 
 import { locationsApi } from "@/utils";
 
@@ -177,8 +177,6 @@ export const LocationDashboard = () => {
   };
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
-  const hasNextPage = pagination ? pagination.page < pagination.totalPages : false;
-  const hasPrevPage = pagination ? pagination.page > 1 : false;
 
   return (
     <>
@@ -206,14 +204,14 @@ export const LocationDashboard = () => {
             />
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
-            <button onClick={handleSearch} className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-gray-600 text-light px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
-              <FaSearch className="w-5 h-5" />
+            <Button onClick={handleSearch} className="btn-gray flex items-center gap-2">
+              <FaSearch className="size-4" />
               Search
-            </button>
+            </Button>
 
-            <button onClick={handleCreate} className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-blue-600 text-light px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+            <Button onClick={handleCreate} className="btn-blue">
               Add Location
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -265,10 +263,10 @@ export const LocationDashboard = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end gap-2">
-                        <button onClick={() => handleEdit(location)} className="text-blue-600 hover:text-blue-800 p-1 hover:bg-blue-50 rounded transition-colors" title="Edit">
+                        <button onClick={() => handleEdit(location)} className="text-blue-600 hover:text-blue-800 p-1 hover:bg-blue-50 rounded transition-colors cursor-pointer" title="Edit">
                           <FaEdit className="w-4 h-4" />
                         </button>
-                        <button onClick={() => setDeleteConfirm(location.id)} className="text-red-600 hover:text-red-800 p-1 hover:bg-red-50 rounded transition-colors" title="Delete">
+                        <button onClick={() => setDeleteConfirm(location.id)} className="text-red-600 hover:text-red-800 p-1 hover:bg-red-50 rounded transition-colors cursor-pointer" title="Delete">
                           <FaTrash className="w-4 h-4" />
                         </button>
                       </div>
@@ -287,47 +285,7 @@ export const LocationDashboard = () => {
                 Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to{" "}
                 <span className="font-medium">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> of <span className="font-medium">{pagination.total}</span> results
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                  disabled={!hasPrevPage}
-                  className="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  <FaChevronLeft className="w-5 h-5" />
-                </button>
-                <div className="flex gap-1">
-                  {pagination.totalPages > 0 &&
-                    Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (pagination.totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (pagination.page <= 3) {
-                        pageNum = i + 1;
-                      } else if (pagination.page >= pagination.totalPages - 2) {
-                        pageNum = pagination.totalPages - 4 + i;
-                      } else {
-                        pageNum = pagination.page - 2 + i;
-                      }
-
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => handlePageChange(pageNum)}
-                          className={`px-3 py-1 border rounded-lg transition-colors ${pagination.page === pageNum ? "bg-blue-600 text-light border-blue-600" : "border-gray-300 hover:bg-gray-50"}`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
-                </div>
-                <button
-                  onClick={() => handlePageChange(Math.min(pagination.totalPages || 1, currentPage + 1))}
-                  disabled={!hasNextPage}
-                  className="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  <FaChevronRight className="w-5 h-5" />
-                </button>
-              </div>
+              <Pagination page={currentPage} setPage={handlePageChange} totalPage={pagination.totalPages || 0} isNumber />
             </div>
           </div>
         )}
@@ -437,21 +395,17 @@ export const LocationDashboard = () => {
         </div>
 
         <div className="mt-6 flex gap-3 justify-end">
-          <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+          <Button onClick={() => setIsModalOpen(false)} className="btn-outline">
             Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="px-4 py-2 bg-blue-600 text-light rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-          >
+          </Button>
+          <Button onClick={handleSubmit} disabled={isSubmitting} className="btn-blue">
             {isSubmitting && (
               <div className="flex justify-center items-center py-8">
                 <div className="loader"></div>
               </div>
             )}
             {modalMode === "create" ? "Create Location" : "Update Location"}
-          </button>
+          </Button>
         </div>
       </Modal>
 
@@ -459,21 +413,17 @@ export const LocationDashboard = () => {
         <h3 className="text-lg font-bold text-gray-900 mb-2">Confirm Deletion</h3>
         <p className="text-gray-600 mb-6">Are you sure you want to delete this location? This action cannot be undone.</p>
         <div className="flex gap-3 justify-end">
-          <button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+          <Button onClick={() => setDeleteConfirm(null)} className="btn-outline">
             Cancel
-          </button>
-          <button
-            onClick={() => handleDelete(deleteConfirm || "")}
-            disabled={deleteMutation.isPending}
-            className="px-4 py-2 bg-red-600 text-light rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-          >
+          </Button>
+          <Button onClick={() => handleDelete(deleteConfirm || "")} disabled={deleteMutation.isPending} className="btn-red">
             {deleteMutation.isPending && (
               <div className="flex justify-center items-center py-8">
                 <div className="loader"></div>
               </div>
             )}
             Delete
-          </button>
+          </Button>
         </div>
       </Modal>
     </>

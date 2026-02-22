@@ -19,7 +19,7 @@ export const CreateProductDashboard = () => {
 
   const router = useRouter();
 
-  const imageInputRef = React.useRef<HTMLInputElement | null>(null);
+  const imagesInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const [formData, setFormData] = React.useState<CreateProduct>({
     name: "",
@@ -123,8 +123,8 @@ export const CreateProductDashboard = () => {
 
       setFormData((prev) => ({ ...prev, images: prev.images.filter((image) => image.path !== subPath) }));
 
-      if (imageInputRef.current) {
-        imageInputRef.current.value = "";
+      if (imagesInputRef.current) {
+        imagesInputRef.current.value = "";
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to delete file";
@@ -142,7 +142,7 @@ export const CreateProductDashboard = () => {
       </div>
 
       <InputForm
-        imagesInputRef={imageInputRef}
+        imagesInputRef={imagesInputRef}
         addSize={addSize}
         formData={formData}
         handleChange={handleChange}

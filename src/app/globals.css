@@ -207,11 +207,32 @@ input[type="number"]::-webkit-outer-spin-button {
   .dropdown {
     @apply relative flex items-center gap-2 p-2 text-sm text-gray font-semibold rounded-lg cursor-pointer sm:px-4 sm:gap-8 border;
   }
-  .pagination-number {
-    @apply size-10 sm:size-12 flex items-center justify-center text-center transition-all border rounded-lg shadow-sm border-gray/50 text-dark;
+  .pagination-root {
+    @apply flex items-center justify-center gap-1.5 sm:gap-2;
   }
-  .pagination-button {
-    @apply size-10 sm:size-12 flex items-center justify-center border transition-all duration-300 rounded-lg bg-light;
+  .pagination-numbers {
+    @apply flex items-center gap-1 sm:gap-1.5;
+  }
+  .pagination-arrow {
+    @apply size-8 sm:size-10 flex items-center justify-center rounded-xl border transition-all duration-200 ease-out select-none outline-none;
+  }
+  .pagination-arrow--active {
+    @apply border-blue-500/60 bg-white text-blue-600 shadow-sm shadow-blue-100 hover:border-blue-600 hover:bg-blue-600 hover:text-white hover:shadow-md hover:shadow-blue-200 hover:-translate-y-px active:translate-y-0 active:shadow-sm;
+  }
+  .pagination-arrow--disabled {
+    @apply border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed shadow-none;
+  }
+  .pagination-pill {
+    @apply size-8 sm:size-10 flex items-center justify-center rounded-xl border text-sm font-medium transition-all duration-200 ease-out select-none outline-none;
+  }
+  .pagination-pill--idle {
+    @apply border-gray-200 bg-white text-gray-500 shadow-sm hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 hover:-translate-y-px hover:shadow-md hover:shadow-blue-100 active:translate-y-0;
+  }
+  .pagination-pill--active {
+    @apply border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-300/50 scale-105 cursor-default;
+  }
+  .pagination-ellipsis {
+    @apply size-8 sm:size-10 flex items-end justify-center pb-1 text-base tracking-widest text-gray-400 select-none;
   }
   .btn-cross-border {
     @apply absolute duration-300 right-4 sm:right-6 md:right-10 top-4 flex justify-center items-center rounded-full border-gray border-2 size-8 hover:bg-gray;

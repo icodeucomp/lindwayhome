@@ -23,7 +23,7 @@ export const EditProductDashboard = ({ id }: { id: string }) => {
 
   const { isAuthenticated } = useAuthStore();
 
-  const imageInputRef = React.useRef<HTMLInputElement | null>(null);
+  const imagesInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const [formData, setFormData] = React.useState<EditProduct>({
     name: "",
@@ -159,8 +159,8 @@ export const EditProductDashboard = ({ id }: { id: string }) => {
 
       setFormData((prev) => ({ ...prev, images: prev.images?.filter((image) => image.path !== subPath) }));
 
-      if (imageInputRef.current) {
-        imageInputRef.current.value = "";
+      if (imagesInputRef.current) {
+        imagesInputRef.current.value = "";
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to delete file";
@@ -190,7 +190,7 @@ export const EditProductDashboard = ({ id }: { id: string }) => {
       </div>
 
       <InputForm
-        imagesInputRef={imageInputRef}
+        imagesInputRef={imagesInputRef}
         addSize={addSize}
         formData={formData}
         handleChange={handleChange}
