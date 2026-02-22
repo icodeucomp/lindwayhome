@@ -6,10 +6,13 @@ import { ConfigService, ShippingService } from "@/services";
 
 import { logCalculation, logger, prisma, sendOrderConfirmation } from "@/lib";
 
-import { API_BASE_URL, calculateDistance, calculateShippingCost, calculateTotalPrice } from "@/utils";
+import { API_BASE_URL, calculateDistance, calculateShippingCost, calculateTotalPrice, signCheckoutToken, verifyCheckoutToken, hashItems, ShippingItem } from "@/utils";
 
 import { CartSchema, CreateGuestSchema, DiscountType, ShippingCalculateSchema } from "@/types";
 
+// ===========================
+// GET - Calculate Shipping & Price
+// ===========================
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
@@ -23,55 +26,23 @@ export async function GET(request: NextRequest) {
     const email = searchParams.get("email");
     const itemsParam = searchParams.get("items");
     const purchasedParam = searchParams.get("purchased");
+    const totalItemsSoldParam = searchParams.get("totalItemsSold");
 
     logCalculation("Request received", {
-      province: province || null,
-      district: district || null,
-      sub_district: sub_district || null,
-      village: village || null,
-      email: email || null,
-      purchasedParam: purchasedParam || null,
+      province,
+      district,
+      sub_district,
+      village,
+      email,
+      purchasedParam,
+      totalItemsSoldParam,
       itemsCount: itemsParam ? JSON.parse(itemsParam).length : 0,
     });
 
-    const isValidateEmail = await prisma.guest.findFirst({
-      where: { email: email || undefined, isMember: true },
-      select: { isMember: true },
-    });
-
-    logCalculation("Email validation", {
-      email: email || null,
-      isMember: isValidateEmail?.isMember || false,
-    });
-
-    if (!province || !district || !sub_district || !village || !itemsParam || !purchasedParam) {
-      logger.error("API /guests/checkout error", { error: "Missing required parameters" });
+    // ── 1. Validate required params ──────────────────────────────────────────
+    if (!province || !district || !sub_district || !village || !itemsParam || !purchasedParam || !totalItemsSoldParam) {
+      logger.error("GET /guests/checkout", { error: "Missing required parameters" });
       return NextResponse.json({ success: false, message: "Missing required parameters" }, { status: 400 });
-    }
-
-    const configParameters = await ConfigService.getConfigValue(["tax_rate", "tax_type", "promotion_discount", "promo_type", "member_discount", "member_type"]);
-
-    logCalculation("Config parameters loaded", {
-      tax_rate: configParameters.tax_rate,
-      tax_type: configParameters.tax_type,
-      promotion_discount: configParameters.promotion_discount,
-      promo_type: configParameters.promo_type,
-      member_discount: configParameters.member_discount,
-      member_type: configParameters.member_type,
-    });
-
-    const items = JSON.parse(itemsParam);
-    const purchased = parseFloat(purchasedParam);
-
-    logCalculation("Parsed input data", {
-      items: items,
-      purchased: purchased,
-    });
-
-    // Validate purchased amount
-    if (isNaN(purchased) || purchased < 0) {
-      logger.error("API /guests/checkout error", { error: "Invalid purchased amount" });
-      return NextResponse.json({ success: false, message: "Invalid purchased amount" }, { status: 400 });
     }
 
     const validatedData = ShippingCalculateSchema.parse({
@@ -79,87 +50,63 @@ export async function GET(request: NextRequest) {
       district,
       sub_district,
       village,
-      items,
+      purchased: parseFloat(purchasedParam),
+      totalItemsSold: parseInt(totalItemsSoldParam),
+      items: JSON.parse(itemsParam),
     });
 
-    logCalculation("Data validated", {
-      province: validatedData.province,
-      district: validatedData.district,
-      sub_district: validatedData.sub_district,
-      village: validatedData.village,
-      itemsCount: validatedData.items.length,
+    // ── 2. Parallel DB fetches ───────────────────────────────────────────────
+    const [isValidateEmail, configParameters, config, zones] = await Promise.all([
+      prisma.guest.findFirst({
+        where: { email: email || undefined, isMember: true },
+        select: { isMember: true },
+      }),
+      ConfigService.getConfigValue(["tax_rate", "tax_type", "promotion_discount", "promo_type", "member_discount", "member_type"]),
+      ShippingService.getShippingConfig(),
+      ShippingService.getShippingZones(),
+    ]);
+
+    logCalculation("Email validation", {
+      email,
+      isMember: isValidateEmail?.isMember ?? false,
     });
 
-    // =====================
-    // 1. GET SHIPPING CONFIG
-    // =====================
-    const config = await ShippingService.getShippingConfig();
     if (!config) {
-      logger.error("API /guests/checkout error", { error: "Shipping configuration not found" });
+      logger.error("GET /guests/checkout", { error: "Shipping configuration not found" });
       return NextResponse.json({ success: false, message: "Shipping configuration not found" }, { status: 404 });
     }
 
-    logCalculation("Shipping config loaded", {
-      origin_lat: config.origin_lat,
-      origin_long: config.origin_long,
-      earth_radius_km: config.earth_radius_km,
-    });
-
-    // =====================
-    // 2. GET DESTINATION COORDINATES
-    // =====================
+    // ── 3. Destination coordinates ───────────────────────────────────────────
     const destinationCoords = await ShippingService.getDestinationCoordinates(validatedData.province, validatedData.district, validatedData.sub_district, validatedData.village);
 
     if (!destinationCoords) {
-      logger.error("API /guests/checkout error", { error: "Destination coordinates not found" });
+      logger.error("GET /guests/checkout", { error: "Destination coordinates not found" });
       return NextResponse.json({ success: false, message: "Destination coordinates not found" }, { status: 404 });
     }
 
-    logCalculation("Destination coordinates retrieved", {
-      lat: destinationCoords.lat,
-      long: destinationCoords.long,
-    });
-
-    // =====================
-    // 3. CALCULATE DISTANCE
-    // =====================
+    // ── 4. Calculate distance ────────────────────────────────────────────────
     const distance_km = calculateDistance(config.origin_lat, config.origin_long, destinationCoords.lat, destinationCoords.long, config.earth_radius_km);
 
-    logCalculation("Distance calculated", {
-      origin_lat: config.origin_lat,
-      origin_long: config.origin_long,
-      destination_lat: destinationCoords.lat,
-      destination_long: destinationCoords.long,
-      distance_km: distance_km,
-    });
-
-    // =====================
-    // 4. GET DIMENSIONS FROM CONFIG BY SIZE
-    // =====================
-    const itemsWithDimensions = [];
+    // ── 5. Resolve item dimensions ───────────────────────────────────────────
+    const itemsWithDimensions: ShippingItem[] = [];
 
     for (const item of validatedData.items) {
       const dimensions = await ShippingService.getProductDimensionsBySize(item.selectedSize);
 
       if (!dimensions) {
-        logger.error("API /guests/checkout error", {
-          error: `Dimensions for size "${item.selectedSize}" not found in configuration.`,
+        logger.error("GET /guests/checkout", {
+          error: `Dimensions for size "${item.selectedSize}" not found`,
         });
-        return NextResponse.json({ success: false, message: `Dimensions for size "${item.selectedSize}" not found in configuration.` }, { status: 404 });
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Dimensions for size "${item.selectedSize}" not found in configuration.`,
+          },
+          { status: 404 },
+        );
       }
 
-      const itemWithDimension = {
-        weight_g: dimensions.weight_g,
-        length_cm: dimensions.length_cm,
-        width_cm: dimensions.width_cm,
-        height_cm: dimensions.height_cm,
-        quantity: item.quantity,
-      };
-
-      itemsWithDimensions.push(itemWithDimension);
-
-      logCalculation("Item dimensions added", {
-        selectedSize: item.selectedSize,
+      itemsWithDimensions.push({
         weight_g: dimensions.weight_g,
         length_cm: dimensions.length_cm,
         width_cm: dimensions.width_cm,
@@ -168,28 +115,12 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    logCalculation("All items with dimensions", {
-      totalItems: itemsWithDimensions.length,
-      items: itemsWithDimensions,
-    });
+    // ── 6. Calculate shipping ────────────────────────────────────────────────
+    const calculation = calculateShippingCost(itemsWithDimensions, distance_km, config, zones);
 
-    // =====================
-    // 5. CALCULATE SHIPPING COST
-    // =====================
-    const calculation = calculateShippingCost(itemsWithDimensions, distance_km, config);
-
-    logCalculation("Shipping cost calculated", {
-      shipping_final: calculation.shipping_final,
-      zone: calculation.zone,
-      distance_km: calculation.distance_km,
-      rounded_weight_kg: calculation.rounded_weight_kg,
-    });
-
-    // =====================
-    // 6. CALCULATE TOTAL PRICE
-    // =====================
-    const priceCalculationInput = {
-      basePrice: purchased,
+    // ── 7. Calculate total price ─────────────────────────────────────────────
+    const totalPurchased = calculateTotalPrice({
+      basePrice: validatedData.purchased,
       member: isValidateEmail?.isMember ? (configParameters.member_discount as number) : 0,
       memberType: configParameters.member_type as DiscountType,
       promo: configParameters.promotion_discount as number,
@@ -197,228 +128,206 @@ export async function GET(request: NextRequest) {
       tax: configParameters.tax_rate as number,
       taxType: configParameters.tax_type as DiscountType,
       shipping: calculation.shipping_final,
-    };
-
-    logCalculation("Price calculation input", {
-      basePrice: priceCalculationInput.basePrice,
-      member: priceCalculationInput.member,
-      memberType: priceCalculationInput.memberType,
-      promo: priceCalculationInput.promo,
-      promoType: priceCalculationInput.promoType,
-      tax: priceCalculationInput.tax,
-      taxType: priceCalculationInput.taxType,
-      shipping: priceCalculationInput.shipping,
     });
 
-    const totalPurchased = calculateTotalPrice(priceCalculationInput);
+    // ── 8. Sign checkout token (locks prices server-side for 15 min) ─────────
+    const itemsHash = hashItems(
+      validatedData.items.map((i) => ({
+        productId: i.productId,
+        selectedSize: i.selectedSize,
+        quantity: i.quantity,
+      })),
+    );
 
-    logCalculation("Total price calculated", {
-      totalPurchased: totalPurchased,
-      basePrice: purchased,
-      memberDiscount: isValidateEmail?.isMember ? configParameters.member_discount : 0,
-      promoDiscount: configParameters.promotion_discount,
-      taxRate: configParameters.tax_rate,
+    const checkoutToken = signCheckoutToken({
       shippingCost: calculation.shipping_final,
-      isMember: isValidateEmail?.isMember || false,
+      totalPurchased,
+      purchased: validatedData.purchased,
+      totalItemsSold: validatedData.totalItemsSold,
+      itemsHash,
+      expiresAt: Date.now() + 15 * 60 * 1000,
     });
 
-    const responseData = {
-      success: true,
-      data: {
-        parameter: {
-          ...configParameters,
-        },
-        shipping: {
-          cost: calculation.shipping_final,
-          zone: calculation.zone,
-          distance_km: parseFloat(calculation.distance_km.toFixed(2)),
-          weight_kg: calculation.rounded_weight_kg,
-        },
-        purchased,
-        totalPurchased,
-        isMember: isValidateEmail?.isMember,
-      },
-    };
-
-    const processingTime = Date.now() - startTime;
-
-    logCalculation("Request completed successfully", {
-      processingTime: processingTime,
-      processingTimeMs: `${processingTime}ms`,
+    logCalculation("Request completed", {
+      processingTime: `${Date.now() - startTime}ms`,
       finalTotal: totalPurchased,
-      email: email || null,
+      email,
+      zone: calculation.zone,
+      distance_km: calculation.distance_km.toFixed(2),
     });
 
-    return NextResponse.json(responseData, { status: 200 });
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          parameter: { ...configParameters },
+          shipping: {
+            cost: calculation.shipping_final,
+            zone: calculation.zone,
+            zone_label: calculation.zone_label,
+            distance_km: parseFloat(calculation.distance_km.toFixed(2)),
+            weight_kg: calculation.rounded_weight_kg,
+            multiplier: calculation.multiplier,
+            price_override: calculation.price_override,
+          },
+          purchased: validatedData.purchased,
+          totalItemsSold: validatedData.totalItemsSold,
+          totalPurchased,
+          isMember: isValidateEmail?.isMember ?? false,
+          checkoutToken,
+        },
+      },
+      { status: 200 },
+    );
   } catch (error) {
     const processingTime = Date.now() - startTime;
 
     if (error instanceof z.ZodError) {
-      logger.error("API /guests/checkout error", {
-        error: error.message,
-        stack: error.stack,
-        processingTime: processingTime,
-      });
-      logCalculation("Validation error", {
-        issues: error.issues,
-        processingTime: processingTime,
-      });
+      logger.error("GET /guests/checkout zod error", { error: error.message, processingTime });
       return NextResponse.json({ success: false, message: error.issues }, { status: 400 });
     }
 
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    const errorStack = error instanceof Error ? error.stack : "An unknown error occurred";
-
-    logger.error("API /guests/checkout error", {
-      error: errorMessage,
-      stack: errorStack,
-      processingTime: processingTime,
-    });
-    logCalculation("Unexpected error", {
-      error: errorMessage,
-      processingTime: processingTime,
-    });
-
+    logger.error("GET /guests/checkout error", { error: errorMessage, processingTime });
     return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
   }
 }
 
 // ===========================
-// POST API - Create Guest Order
+// POST - Create Guest Order
 // ===========================
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+
   try {
     const body = await request.json();
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || request.headers.get("x-real-ip") || "::1";
-    const start = Date.now();
-    logger.info("API Request /guests/[id]", {
-      method: request.method,
-      body: body,
-      url: request.url,
-      pathname: request.nextUrl.pathname,
-      ip,
-    });
 
-    // =====================
-    // 1. VALIDATE CART ITEMS
-    // =====================
+    logger.info("POST Request /guests/checkout", { url: request.url, ip, ...body });
 
+    // ── 1. Validate cart items ───────────────────────────────────────────────
     const { items } = CartSchema.parse(body);
 
     if (!items || items.length === 0) {
-      logger.error("API /guests/checkout error", { error: "Cart items are required" });
+      logger.error("API /guests/[id] error", { error: "Cart items are required" });
       return NextResponse.json({ success: false, message: "Cart items are required" }, { status: 400 });
     }
 
-    // Validate each item
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
 
       if (!item.productId || !item.selectedSize || !item.quantity) {
-        logger.error("API /guests/checkout error", { error: `Item ${i + 1}: Missing required fields (productId, quantity, selectedSize).` });
+        logger.error("API /guests/[id] error", { error: `Item ${i + 1}: Missing required fields (productId, quantity, selectedSize).` });
         return NextResponse.json({ success: false, message: `Item ${i + 1}: Missing required fields (productId, quantity, selectedSize).` }, { status: 400 });
       }
-
       if (item.quantity <= 0) {
-        logger.error("API /guests/checkout error", { error: `Item ${i + 1}: Quantity must be greater than 0.` });
+        logger.error("API /guests/[id] error", { error: `Item ${i + 1}: Quantity must be greater than 0.` });
         return NextResponse.json({ success: false, message: `Item ${i + 1}: Quantity must be greater than 0.` }, { status: 400 });
       }
-
       if (typeof item.quantity !== "number" || !Number.isInteger(item.quantity)) {
-        logger.error("API /guests/checkout error", { error: `Item ${i + 1}: Quantity must be a valid integer.` });
+        logger.error("API /guests/[id] error", { error: `Item ${i + 1}: Quantity must be a valid integer.` });
         return NextResponse.json({ success: false, message: `Item ${i + 1}: Quantity must be a valid integer.` }, { status: 400 });
       }
     }
 
-    // =====================
-    // 2. VALIDATE SHIPPING COST PROVIDED
-    // =====================
-
-    if (typeof body.shippingCost !== "number" || body.shippingCost < 0) {
-      logger.error("API /guests/checkout error", { error: "Valid shipping cost is required" });
-      return NextResponse.json({ success: false, message: "Valid shipping cost is required" }, { status: 400 });
+    // ── 2. Verify checkout token ─────────────────────────────────────────────
+    if (!body.checkoutToken || typeof body.checkoutToken !== "string") {
+      logger.error("API /guests/checkout error", { error: "Checkout token is required. Please complete the order summary step first." });
+      return NextResponse.json({ success: false, message: "Checkout token is required. Please complete the order summary step first." }, { status: 400 });
     }
 
-    // =====================
-    // 3. PREPARE GUEST DATA
-    // =====================
+    let trustedPrices: { shippingCost: number; totalPurchased: number; purchased: number; totalItemsSold: number };
 
-    const createData = CreateGuestSchema.parse(body);
+    try {
+      const payload = verifyCheckoutToken(body.checkoutToken);
 
-    // =====================
-    // 4. DATABASE TRANSACTION
-    // =====================
+      const currentItemsHash = hashItems(
+        items.map((i) => ({
+          productId: i.productId,
+          selectedSize: i.selectedSize,
+          quantity: i.quantity,
+        })),
+      );
 
+      if (currentItemsHash !== payload.itemsHash) {
+        logger.error("API /guests/checkout error", { error: "Cart items changed since checkout was calculated. Please go back and recalculate." });
+        return NextResponse.json({ success: false, message: "Cart items changed since checkout was calculated. Please go back and recalculate." }, { status: 400 });
+      }
+
+      trustedPrices = {
+        shippingCost: payload.shippingCost,
+        totalPurchased: payload.totalPurchased,
+        purchased: payload.purchased,
+        totalItemsSold: payload.totalItemsSold,
+      };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Invalid checkout session";
+      logger.error("API /guests/checkout error", { error: msg });
+      return NextResponse.json({ success: false, message: msg }, { status: 400 });
+    }
+
+    // ── 3. Merge trusted prices into guest data ──────────────────────────────
+    const createData = CreateGuestSchema.parse({
+      ...body,
+      shippingCost: trustedPrices.shippingCost,
+      totalPurchased: trustedPrices.totalPurchased,
+      purchased: trustedPrices.purchased,
+      totalItemsSold: trustedPrices.totalItemsSold,
+    });
+
+    // ── 4. Database transaction ──────────────────────────────────────────────
     const result = await prisma.$transaction(async (tx) => {
-      // Validate products and sizes exist
       for (const item of items) {
-        const { productId, selectedSize } = item;
-
         const product = await tx.product.findUnique({
-          where: { id: productId },
+          where: { id: item.productId },
           select: { id: true, name: true, isActive: true, sizes: true },
         });
 
         if (!product) {
-          throw new Error(`Product with ID "${productId}" not found.`);
+          throw new Error(`Product with ID "${item.productId}" not found.`);
         }
-
         if (!product.isActive) {
           throw new Error(`Product "${product.name}" is not available for purchase.`);
         }
-
         if (!product.sizes || !Array.isArray(product.sizes)) {
           throw new Error(`Size information is not available for product "${product.name}".`);
         }
 
         const sizes = product.sizes as Array<{ size: string; quantity: number }>;
-        const sizeData = sizes.find((s) => s.size === selectedSize);
+        const sizeData = sizes.find((s) => s.size === item.selectedSize);
 
         if (!sizeData) {
-          throw new Error(`Selected size "${selectedSize}" is not available for product "${product.name}".`);
+          throw new Error(`Selected size "${item.selectedSize}" is not available for product "${product.name}".`);
         }
-
         if (sizeData.quantity < item.quantity) {
-          throw new Error(`Insufficient stock for product "${product.name}" size "${selectedSize}". Available: ${sizeData.quantity}, Requested: ${item.quantity}`);
+          throw new Error(`Insufficient stock for "${product.name}" size "${item.selectedSize}". ` + `Available: ${sizeData.quantity}, Requested: ${item.quantity}`);
         }
       }
 
-      // Create guest record
-      const guest = await tx.guest.create({
-        data: createData,
-      });
+      const guest = await tx.guest.create({ data: createData });
 
-      // Create cart items
-      const cartItems = [];
-      for (const item of items) {
-        const cartItem = await tx.cart.create({
-          data: {
-            quantity: item.quantity,
-            selectedSize: item.selectedSize,
-            productId: item.productId,
-            guestId: guest.id,
-          },
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                price: true,
-                sizes: true,
+      const cartItems = await Promise.all(
+        items.map((item) =>
+          tx.cart.create({
+            data: {
+              quantity: item.quantity,
+              selectedSize: item.selectedSize,
+              productId: item.productId,
+              guestId: guest.id,
+            },
+            include: {
+              product: {
+                select: { id: true, name: true, price: true, sizes: true },
               },
             },
-          },
-        });
-        cartItems.push(cartItem);
-      }
+          }),
+        ),
+      );
 
       return { guest, cartItems };
     });
 
-    // =====================
-    // 5. SEND CONFIRMATION EMAIL
-    // =====================
-
+    // ── 5. Send confirmation email (non-fatal) ───────────────────────────────
     try {
       await sendOrderConfirmation({
         guestId: result.guest.id,
@@ -427,37 +336,33 @@ export async function POST(request: NextRequest) {
         whatsappNumber: result.guest.whatsappNumber,
         postalCode: result.guest.postalCode,
         totalPurchased: result.guest.totalPurchased.toNumber(),
-        shippingCost: result.guest.shippingCost?.toNumber() || 0,
+        shippingCost: result.guest.shippingCost?.toNumber() ?? 0,
         totalItemsSold: result.guest.totalItemsSold,
         isMember: result.guest.isMember,
         fullname: result.guest.fullname,
         paymentMethod: result.guest.paymentMethod,
         items: result.cartItems.map((item) => ({
           ...item,
-          product: {
-            ...item.product,
-            price: item.product.price.toNumber(),
-          },
+          product: { ...item.product, price: item.product.price.toNumber() },
         })),
         baseUrl: API_BASE_URL!,
         createdAt: result.guest.createdAt,
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-      const errorStack = error instanceof Error ? error.stack : "An unknown error occurred";
-
-      logger.error("API /guests/checkout error", { error: errorMessage, stack: errorStack });
+      logger.error("sendOrderConfirmation failed", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        guestId: result.guest.id,
+      });
+      // Non-fatal: order is saved, continue
     }
 
-    // =====================
-    // 6. RETURN SUCCESS RESPONSE
-    // =====================
-
+    // ── 6. Success response ──────────────────────────────────────────────────
     const totalItems = result.cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
-    logger.info("API Response /guests/checkout", {
-      message: `Guest order created successfully with ${totalItems} item${totalItems > 1 ? "s" : ""}.`,
-      durationMs: Date.now() - start,
+    logger.info("POST /guests/checkout success", {
+      message: `Guest order created with ${totalItems} item(s)`,
+      guestId: result.guest.id,
+      durationMs: Date.now() - startTime,
     });
 
     return NextResponse.json(
@@ -469,7 +374,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     if (error instanceof z.ZodError) {
-      logger.error("API /guests/checkout error", { error: error.message, stack: error.stack });
+      logger.error("POST /guests/checkout zod error", { error: error.message });
       return NextResponse.json(
         {
           success: false,
@@ -484,10 +389,7 @@ export async function POST(request: NextRequest) {
     }
 
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    const errorStack = error instanceof Error ? error.stack : "An unknown error occurred";
-
-    logger.error("API /guests/checkout error", { error: errorMessage, stack: errorStack });
-
+    logger.error("POST /guests/checkout error", { error: errorMessage });
     return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
   }
 }

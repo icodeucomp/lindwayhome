@@ -87,7 +87,7 @@ const ProductDetail = () => {
 
         {!isLoading && hasMore && (
           <div className="flex justify-center text-gray">
-            <button onClick={handleLoadMore} disabled={isLoading} className="block pb-1 text-lg font-medium border-b border-gray w-max">
+            <button onClick={handleLoadMore} disabled={isLoading} className="block pb-1 text-lg font-medium border-b border-gray w-max cursor-pointer">
               Discover More
             </button>
           </div>

@@ -10,14 +10,14 @@ import { paymentMethodColors, paymentMethodLabels } from "@/static/categories";
 
 import { formatIDR, guestsApi } from "@/utils";
 
-import { ApiResponse, Guest } from "@/types";
+import { ApiResponse, Guest, PaymentMethods } from "@/types";
 
 interface CartsListsProps {
   guests: Guest[];
   isError: boolean;
   isLoading: boolean;
   isPending: boolean;
-  updatePurchase: (guestId: string) => void;
+  updatePurchase: (guestId: string, paymentMethod: PaymentMethods, isMember: boolean) => void;
 }
 
 export const GuestsLists = ({ guests, isLoading, isPending, isError, updatePurchase }: CartsListsProps) => {
@@ -100,8 +100,8 @@ export const GuestsLists = ({ guests, isLoading, isPending, isError, updatePurch
                   ) : (
                     <div className="flex items-center gap-3">
                       <button
-                        onClick={() => updatePurchase(guest.id)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${guest.isPurchased ? "bg-green-500" : "bg-red-500"}`}
+                        onClick={() => updatePurchase(guest.id, guest.paymentMethod, guest.isMember)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${guest.isPurchased ? "bg-green-500" : "bg-red-500 cursor-pointer"}`}
                         disabled={guest.isPurchased}
                       >
                         <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${guest.isPurchased ? "translate-x-6" : "translate-x-1"}`} />

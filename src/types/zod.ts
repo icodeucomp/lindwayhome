@@ -135,9 +135,12 @@ export const ShippingCalculateSchema = z.object({
   district: z.string().min(1, "District is required"),
   sub_district: z.string().min(1, "Sub-district is required"),
   village: z.string().min(1, "Village is required"),
+  purchased: z.number().min(0, "Purchased must be a positive number"),
+  totalItemsSold: z.number().min(0, "Total items sold must be a positive number"),
   items: z
     .array(
       z.object({
+        productId: z.string().min(1, "Product ID is required"),
         selectedSize: z.string().min(1, "Size is required"),
         quantity: z.number().int().positive("Quantity must be positive"),
       }),

@@ -282,6 +282,7 @@ export const guestCheckoutApi = {
         if (params.email) searchParams.append("email", params.email);
         if (params.items) searchParams.append("items", JSON.stringify(params.items));
         if (params.purchased) searchParams.append("purchased", params.purchased.toString());
+        if (params.totalItemsSold) searchParams.append("totalItemsSold", params.totalItemsSold.toString());
         const { data } = await api.get(`/guests/checkout?${searchParams.toString()}`);
         return data;
       },

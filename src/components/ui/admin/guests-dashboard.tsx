@@ -10,7 +10,7 @@ import { Pagination } from "@/components";
 
 import { guestsApi } from "@/utils";
 
-import { ApiResponse, Guest } from "@/types";
+import { ApiResponse, Guest, PaymentMethods } from "@/types";
 
 export const GuestsDashboard = () => {
   const queryClient = useQueryClient();
@@ -38,9 +38,9 @@ export const GuestsDashboard = () => {
     },
   });
 
-  const updatePurchase = (id: string) => {
+  const updatePurchase = (id: string, paymentMethod: PaymentMethods, isMember: boolean) => {
     if (window.confirm("Are you sure you want to update the purchase status?")) {
-      updateGuests.mutate({ id, guests: { isPurchased: true } });
+      updateGuests.mutate({ id, guests: { isPurchased: true, paymentMethod, isMember } });
     }
   };
 

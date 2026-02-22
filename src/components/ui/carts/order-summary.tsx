@@ -15,24 +15,21 @@ import { CreateGuest, PaymentMethods } from "@/types";
 type CheckoutStep = "summary" | "payment" | "complete";
 
 interface FormData extends Omit<CreateGuest, "totalItemsSold" | "purchased"> {
-  isUploading: boolean;
-  uploadProgress: number;
+  checkoutToken: string;
 }
 
 const initFormData: FormData = {
   email: "",
   fullname: "",
   receiptImage: undefined,
-  isUploading: false,
-  uploadProgress: 0,
   paymentMethod: PaymentMethods.BANK_TRANSFER,
   address: "",
   isMember: false,
   isPurchased: false,
   items: [],
   postalCode: 0,
-  shippingCost: 0,
   totalPurchased: 0,
+  checkoutToken: "",
   whatsappNumber: "",
   instagram: "",
   reference: "",
@@ -66,7 +63,7 @@ export const OrderSummary = ({ isVisible, onClose, price, totalItem }: OrderSumm
     onClose();
   };
 
-  const handleFormSubmit = (data: FormData, errors: Record<string, string>) => {
+  const handleFormSubmit = (data: FormData & { checkoutToken: string }, errors: Record<string, string>) => {
     if (Object.keys(errors).length > 0) {
       toast.error("Please correct the errors in the form");
       return;
@@ -79,14 +76,19 @@ export const OrderSummary = ({ isVisible, onClose, price, totalItem }: OrderSumm
 
   const handlePaymentSubmit = async (paymentData: FormData) => {
     try {
+      if (!paymentData.checkoutToken) {
+        toast.error("Checkout session expired. Please go back and recalculate.");
+        setCurrentStep("summary");
+        return;
+      }
+
       const submitData = {
         ...paymentData,
         isMember: false,
         isPurchased: false,
         postalCode: Number(paymentData.postalCode),
+        checkoutToken: paymentData.checkoutToken,
         items: addSelectedItems(),
-        totalItemsSold: getSelectedCount(),
-        purchased: getSelectedTotal(),
       };
 
       createGuestsCheckout.mutate(submitData);
@@ -116,19 +118,13 @@ export const OrderSummary = ({ isVisible, onClose, price, totalItem }: OrderSumm
             totalItem={totalItem}
             onSubmit={handleFormSubmit}
             onCancel={onClose}
-            getSelectedTotal={getSelectedTotal}
+            purchased={getSelectedTotal()}
             cartItems={addSelectedItems()}
+            totalItemsSold={getSelectedCount()}
           />
         )}
         {currentStep === "payment" && (
-          <PaymentStep
-            formData={formData}
-            setFormData={setFormData}
-            price={formData.totalPurchased}
-            onBack={() => setCurrentStep("summary")}
-            onSubmit={handlePaymentSubmit}
-            isLoading={createGuestsCheckout.isPending}
-          />
+          <PaymentStep formData={formData} setFormData={setFormData} onBack={() => setCurrentStep("summary")} onSubmit={handlePaymentSubmit} isLoading={createGuestsCheckout.isPending} />
         )}
         {currentStep === "complete" && <CompleteStep formData={formData} totalItem={totalItem} totalPurchased={formData.totalPurchased} onClose={handleClose} />}
       </>

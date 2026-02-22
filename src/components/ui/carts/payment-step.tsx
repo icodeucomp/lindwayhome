@@ -1,3 +1,7 @@
+"use client";
+
+import * as React from "react";
+
 import toast from "react-hot-toast";
 
 import { FaArrowLeft, FaQrcode, FaCreditCard } from "react-icons/fa";
@@ -8,25 +12,28 @@ import { formatIDR, filesApi, configParametersApi } from "@/utils";
 
 import { CreateGuest, PaymentMethods, ConfigParameterData, ApiResponse } from "@/types";
 
-interface FormData extends Omit<CreateGuest, "purchased" | "totalItemsSold"> {
+type FormData = Omit<CreateGuest, "purchased" | "totalItemsSold">;
+
+interface PaymentStepProps {
+  formData: FormData & { checkoutToken: string };
+  setFormData: React.Dispatch<React.SetStateAction<FormData & { checkoutToken: string }>>;
+  onBack: () => void;
+  onSubmit: (data: FormData & { checkoutToken: string }) => void;
+  isLoading: boolean;
+}
+
+interface Upload {
   isUploading: boolean;
   uploadProgress: number;
 }
 
-interface PaymentStepProps {
-  formData: FormData;
-  setFormData: React.Dispatch<React.SetStateAction<FormData>>;
-  price: number;
-  onBack: () => void;
-  onSubmit: (data: FormData) => void;
-  isLoading: boolean;
-}
-
-export const PaymentStep = ({ formData, setFormData, price, onBack, onSubmit, isLoading }: PaymentStepProps) => {
+export const PaymentStep = ({ formData, setFormData, onBack, onSubmit, isLoading }: PaymentStepProps) => {
   const { data: parameter } = configParametersApi.useGetConfigParametersPublic<ApiResponse<ConfigParameterData>>({
     key: ["config-parameters-public"],
-    keyParams: ["tax_rate", "tax_type", "promotion_discount", "promo_type", "member_discount", "member_type", "qris_image"],
+    keyParams: ["qris_image"],
   });
+
+  const [upload, setUpload] = React.useState<Upload>({ isUploading: false, uploadProgress: 0 });
 
   const handleImagesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files ? Array.from(e.target.files) : [];
@@ -44,22 +51,18 @@ export const PaymentStep = ({ formData, setFormData, price, onBack, onSubmit, is
     }
 
     try {
-      setFormData((prev) => ({ ...prev, isUploading: true, uploadProgress: 0 }));
+      setUpload((prev) => ({ ...prev, isUploading: true, uploadProgress: 0 }));
 
       const respImages = await filesApi.uploadImages(files, "receipt", (progress: number) => {
-        setFormData((prev) => ({ ...prev, uploadProgress: progress }));
+        setUpload((prev) => ({ ...prev, uploadProgress: progress }));
       });
 
-      setFormData((prev) => ({
-        ...prev,
-        receiptImage: respImages[0],
-        isUploading: false,
-        uploadProgress: 0,
-      }));
+      setFormData((prev) => ({ ...prev, receiptImage: respImages[0] }));
+      setUpload((prev) => ({ ...prev, isUploading: false, uploadProgress: 0 }));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to upload image. Please try again.";
       toast.error(errorMessage);
-      setFormData((prev) => ({ ...prev, isUploading: false, uploadProgress: 0 }));
+      setUpload((prev) => ({ ...prev, isUploading: false, uploadProgress: 0 }));
     }
   };
 
@@ -103,7 +106,7 @@ export const PaymentStep = ({ formData, setFormData, price, onBack, onSubmit, is
       <div className="p-3 rounded-lg sm:p-4 bg-gray/5">
         <div className="flex items-center justify-between">
           <span className="text-sm sm:text-base text-gray">Total Amount</span>
-          <span className="text-lg font-bold sm:text-xl text-gray">{formatIDR(price)}</span>
+          <span className="text-lg font-bold sm:text-xl text-gray">{formatIDR(formData.totalPurchased)}</span>
         </div>
       </div>
 
@@ -208,16 +211,16 @@ export const PaymentStep = ({ formData, setFormData, price, onBack, onSubmit, is
             Upload Payment Receipt *
           </label>
           <div className="relative flex flex-row items-center overflow-hidden border rounded-lg border-gray/50">
-            <input type="file" id="images" onChange={handleImagesChange} hidden accept="image/*" disabled={formData.isUploading} />
+            <input type="file" id="images" onChange={handleImagesChange} hidden accept="image/*" disabled={upload.isUploading} />
             <label
               htmlFor="images"
-              className={`px-4 py-2 bg-gray/10 text-sm font-medium border-r border-gray/30 ${formData.isUploading ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-gray/20"}`}
+              className={`px-4 py-2 bg-gray/10 text-sm font-medium border-r border-gray/30 ${upload.isUploading ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-gray/20"}`}
             >
-              {formData.isUploading ? "Uploading..." : "Choose File"}
+              {upload.isUploading ? "Uploading..." : "Choose File"}
             </label>
             <label className="flex-1 px-3 py-2 text-sm truncate text-slate-500">{formData.receiptImage?.originalName || "No file selected"}</label>
-            {!formData.receiptImage && !formData.isUploading && <small className="hidden pr-3 text-xs text-gray/70 sm:block">Max 5MB</small>}
-            {formData.receiptImage && !formData.isUploading && (
+            {!formData.receiptImage && !upload.isUploading && <small className="hidden pr-3 text-xs text-gray/70 sm:block">Max 5MB</small>}
+            {formData.receiptImage && !upload.isUploading && (
               <button
                 onClick={() => handleDeleteImages(formData.receiptImage?.path || "")}
                 type="button"
@@ -230,7 +233,7 @@ export const PaymentStep = ({ formData, setFormData, price, onBack, onSubmit, is
               </button>
             )}
           </div>
-          {formData.isUploading && <ProgressBar uploadProgress={formData.uploadProgress} />}
+          {upload.isUploading && <ProgressBar uploadProgress={upload.uploadProgress} />}
         </div>
       )}
 
@@ -238,12 +241,7 @@ export const PaymentStep = ({ formData, setFormData, price, onBack, onSubmit, is
         <Button type="button" onClick={onBack} className="w-full btn-outline">
           Back
         </Button>
-        <Button
-          type="button"
-          onClick={handlePaymentSubmit}
-          disabled={isLoading || formData.isUploading}
-          className={`w-full ${(isLoading || formData.isUploading) && "animate-pulse opacity-70"} btn-gray`}
-        >
+        <Button type="button" onClick={handlePaymentSubmit} disabled={isLoading || upload.isUploading} className={`w-full ${(isLoading || upload.isUploading) && "animate-pulse opacity-70"} btn-gray`}>
           {isLoading ? "Processing..." : "Complete Order"}
         </Button>
       </div>

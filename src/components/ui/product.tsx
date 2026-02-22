@@ -19,8 +19,10 @@ import { PiWarningCircleLight } from "react-icons/pi";
 import { formatIDR, formatDashToSpace, formatDashToUnderscore, productsApi } from "@/utils";
 
 import { ApiResponse, Product } from "@/types";
+import { useRouter } from "next/navigation";
 
 export const ProductDetail = ({ id, category }: { id: string; category: string }) => {
+  const router = useRouter();
   const { addToCart } = useCartStore();
   const { data: product, isLoading: loadProduct, error: errorProduct } = productsApi.useGetProduct<ApiResponse<Product>>({ key: ["product", id], id });
 
@@ -121,7 +123,10 @@ export const ProductDetail = ({ id, category }: { id: string; category: string }
   return (
     <Container className="pt-10">
       <div className="relative flex items-center justify-center pt-8 pb-4 sm:py-6">
-        <button className="absolute top-0 left-0 flex items-center gap-2 transition-colors sm:-translate-y-1/2 sm:top-1/2 text-gray hover:text-darker-gray">
+        <button
+          onClick={() => router.back()}
+          className="absolute top-0 left-0 flex items-center gap-2 transition-colors sm:-translate-y-1/2 sm:top-1/2 text-gray hover:text-darker-gray cursor-pointer"
+        >
           <MdOutlineArrowBackIos />
           Back
         </button>

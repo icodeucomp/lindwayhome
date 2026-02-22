@@ -8,69 +8,11 @@ import { FaCreditCard } from "react-icons/fa";
 
 import Select from "react-select";
 
-import { formatIDR, guestCheckoutApi, locationsApi } from "@/utils";
+import { formatIDR, guestCheckoutApi, locationsApi, sanitizeInput, validateField } from "@/utils";
 
 import { CreateGuest, DiscountType, ConfigParameterData, CartItem, ApiResponse, SelectOption } from "@/types";
 
-const validateEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email.trim());
-};
-
-const validateWhatsApp = (number: string): boolean => {
-  const cleanNumber = number.replace(/\D/g, "");
-  return cleanNumber.length >= 10 && cleanNumber.length <= 15;
-};
-
-const validatePostalCode = (code: number): boolean => {
-  return code > 0 && code.toString().length >= 5;
-};
-
-const sanitizeInput = (value: string): string => {
-  return value.trim().replace(/\s+/g, " ");
-};
-
-const validateField = (name: string, value: string | number): string => {
-  switch (name) {
-    case "email":
-      const emailValue = typeof value === "string" ? value : "";
-      if (!emailValue.trim()) return "Email is required";
-      if (!validateEmail(emailValue)) return "Please enter a valid email address";
-      return "";
-
-    case "fullname":
-      const nameValue = typeof value === "string" ? value : "";
-      if (!nameValue.trim()) return "Full name is required";
-      if (nameValue.trim().length < 2) return "Full name must be at least 2 characters";
-      return "";
-
-    case "whatsappNumber":
-      const whatsappValue = typeof value === "string" ? value : "";
-      if (!whatsappValue.trim()) return "WhatsApp number is required";
-      if (!validateWhatsApp(whatsappValue)) return "Please enter a valid WhatsApp number (10-15 digits)";
-      return "";
-
-    case "address":
-      const addressValue = typeof value === "string" ? value : "";
-      if (!addressValue.trim()) return "Address is required";
-      if (addressValue.trim().length < 10) return "Address must be at least 10 characters";
-      return "";
-
-    case "postalCode":
-      const postalValue = typeof value === "number" ? value : parseInt(value as string) || 0;
-      if (!postalValue) return "Postal code is required";
-      if (!validatePostalCode(postalValue)) return "Please enter a valid postal code (at least 5 digits)";
-      return "";
-
-    default:
-      return "";
-  }
-};
-
-interface FormData extends Omit<CreateGuest, "purchased" | "totalItemsSold"> {
-  isUploading: boolean;
-  uploadProgress: number;
-}
+type FormData = Omit<CreateGuest, "purchased" | "totalItemsSold">;
 
 interface LocationData {
   province: string;
@@ -84,7 +26,6 @@ interface ShippingCalculation {
   zone: string;
   distance_km: number;
   weight_kg: number;
-  formatted_cost: string;
 }
 
 interface CheckoutApiResponse {
@@ -93,6 +34,7 @@ interface CheckoutApiResponse {
   purchased: number;
   totalPurchased: number;
   isMember: boolean;
+  checkoutToken: string;
 }
 
 interface CheckoutFormProps {
@@ -101,21 +43,22 @@ interface CheckoutFormProps {
   price: number;
   totalItem: number;
   cartItems: CartItem[];
-  onSubmit: (data: FormData, errors: Record<string, string>) => void;
+  onSubmit: (data: FormData & { checkoutToken: string }, errors: Record<string, string>) => void;
   onCancel: () => void;
-  getSelectedTotal: () => number;
+  purchased: number;
+  totalItemsSold: number;
 }
 
-const locationData: LocationData = {
+const initialLocationData: LocationData = {
   province: "",
   district: "",
   sub_district: "",
   village: "",
 };
 
-export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems, onSubmit, onCancel, getSelectedTotal }: CheckoutFormProps) => {
+export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems, onSubmit, onCancel, purchased, totalItemsSold }: CheckoutFormProps) => {
   const [currentFormData, setCurrentFormData] = React.useState<FormData>(formData);
-  const [currentLocationData, setCurrentLocationData] = React.useState<LocationData>(locationData);
+  const [currentLocationData, setCurrentLocationData] = React.useState<LocationData>(initialLocationData);
   const [currentFormErrors, setCurrentFormErrors] = React.useState(formErrors);
 
   const { province, district, sub_district, village } = currentLocationData;
@@ -129,7 +72,16 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
   } = guestCheckoutApi.useGetGuestCheckouts<ApiResponse<CheckoutApiResponse>>({
     key: ["checkout", province, district, sub_district, village, cartItems, currentFormData.email],
     enabled: isAddressComplete,
-    params: { province, district, sub_district, village, items: cartItems, email: currentFormData.email, purchased: getSelectedTotal() },
+    params: {
+      province,
+      district,
+      sub_district,
+      village,
+      items: cartItems,
+      email: currentFormData.email,
+      purchased,
+      totalItemsSold,
+    },
   });
 
   const { data: provincesData, isLoading: isLoadingProvinces } = locationsApi.useGetMappingLocations<ApiResponse<SelectOption[]>>({
@@ -163,20 +115,23 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
   const parameter = checkoutData?.data.parameter;
   const shippingData = checkoutData?.data.shipping;
 
-  // Check if all required fields are filled
-  const isRequiredFieldsFilled = React.useMemo(() => {
-    return Boolean(
-      currentFormData.email?.trim() &&
-      currentFormData.fullname?.trim() &&
-      currentFormData.whatsappNumber?.trim() &&
-      currentFormData.address?.trim() &&
-      currentFormData.postalCode &&
-      province?.trim() &&
-      district?.trim() &&
-      sub_district?.trim() &&
-      village?.trim(),
-    );
-  }, [currentFormData, province, district, sub_district, village]);
+  const isRequiredFieldsFilled = React.useMemo(
+    () =>
+      Boolean(
+        currentFormData.email?.trim() &&
+        currentFormData.fullname?.trim() &&
+        currentFormData.whatsappNumber?.trim() &&
+        currentFormData.address?.trim() &&
+        currentFormData.postalCode &&
+        province?.trim() &&
+        district?.trim() &&
+        sub_district?.trim() &&
+        village?.trim(),
+      ),
+    [currentFormData, province, district, sub_district, village],
+  );
+
+  const canSubmit = !!checkoutData?.data.checkoutToken && !isCheckoutLoading && !(isAddressComplete && isCheckoutError);
 
   const validateAllFields = (): boolean => {
     const errors: Record<string, string> = {};
@@ -184,9 +139,7 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
 
     requiredFields.forEach((field) => {
       const error = validateField(field, currentFormData[field as keyof typeof currentFormData] as string | number);
-      if (error) {
-        errors[field] = error;
-      }
+      if (error) errors[field] = error;
     });
 
     if (isAddressComplete && isCheckoutLoading) {
@@ -245,9 +198,10 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
   const handleFormSubmit = (e: React.MouseEvent) => {
     e.preventDefault();
 
-    if (!validateAllFields()) {
-      return;
-    }
+    if (!validateAllFields()) return;
+
+    const checkoutToken = checkoutData?.data.checkoutToken;
+    if (!checkoutToken) return;
 
     const sanitizedData = {
       ...currentFormData,
@@ -255,10 +209,10 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
       fullname: sanitizeInput(currentFormData.fullname),
       whatsappNumber: currentFormData.whatsappNumber.trim(),
       address: sanitizeInput(currentFormData.address),
-      shippingCost: shippingData ? shippingData.cost : 0,
-      totalPurchased: checkoutData ? checkoutData.data.totalPurchased : 0,
       instagram: currentFormData.instagram ? sanitizeInput(currentFormData.instagram) : currentFormData.instagram,
       reference: currentFormData.reference ? sanitizeInput(currentFormData.reference) : currentFormData.reference,
+      totalPurchased: checkoutData?.data.totalPurchased || 0,
+      checkoutToken,
     };
 
     onSubmit(sanitizedData, currentFormErrors);
@@ -360,11 +314,10 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
         </div>
       </div>
 
-      {/* Shipping Calculation Status - Always show when address is complete */}
       {isAddressComplete && isCheckoutLoading && (
         <div className="p-3 text-sm rounded-lg bg-gray/5 text-gray">
           <p className="flex items-center gap-2">
-            <span className="inline-block w-4 h-4 border-2 border-gray rounded-full animate-spin border-t-transparent"></span>
+            <span className="inline-block w-4 h-4 border-2 border-gray rounded-full animate-spin border-t-transparent" />
             Calculating shipping cost...
           </p>
         </div>
@@ -376,7 +329,6 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
         </div>
       )}
 
-      {/* Order Summary - Only show when all required fields are filled */}
       {isRequiredFieldsFilled && checkoutData && parameter && (
         <div className="p-3 mb-2 rounded-lg sm:p-4 bg-gray/5 text-gray">
           <h4 className="mb-3 text-sm font-semibold sm:text-base">Order Summary</h4>
@@ -392,7 +344,7 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
               <span>Shipping</span>
               {isCheckoutLoading ? (
                 <span className="flex items-center gap-1 text-gray">
-                  <span className="inline-block w-3 h-3 border-2 border-gray rounded-full animate-spin border-t-transparent"></span>
+                  <span className="inline-block w-3 h-3 border-2 border-gray rounded-full animate-spin border-t-transparent" />
                   Calculating...
                 </span>
               ) : isCheckoutError ? (
@@ -446,12 +398,7 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
         <Button type="button" onClick={onCancel} className="w-full btn-outline">
           Cancel
         </Button>
-        <Button
-          type="button"
-          onClick={handleFormSubmit}
-          className="flex items-center justify-center w-full gap-2 btn-gray"
-          disabled={!checkoutData || isCheckoutLoading || (isAddressComplete && isCheckoutError)}
-        >
+        <Button type="button" onClick={handleFormSubmit} className="flex items-center justify-center w-full gap-2 btn-gray" disabled={!canSubmit}>
           <FaCreditCard size={18} />
           Next
         </Button>

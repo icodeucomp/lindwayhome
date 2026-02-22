@@ -1,20 +1,15 @@
 import { ConfigService } from "@/services";
-
 import { hashPassword, prisma } from "@/lib";
-
 import { faker } from "@faker-js/faker";
 
 const categories = ["MY_LINDWAY", "LURE_BY_LINDWAY", "SIMPLY_LINDWAY"] as const;
-
 const availableSizes = ["XS", "S", "M", "L", "XL", "XXL"];
-
 const API_BASE_URL = process.env.NODE_ENV === "production" ? process.env.NEXT_PUBLIC_BASE_URL : "";
 
 function generateProductImages(count: number = 2) {
   return Array.from({ length: count }).map(() => {
     const imageNumber = faker.number.int({ min: 1, max: 8 });
     const filename = `customer-moment-photo-${imageNumber}.webp`;
-
     return {
       originalName: filename,
       filename,
@@ -30,10 +25,8 @@ function generateProductImages(count: number = 2) {
 function generateSizes() {
   const numberOfSizes = faker.number.int({ min: 3, max: 5 });
   const selectedSizes = faker.helpers.arrayElements(availableSizes, numberOfSizes);
-
   const sizeOrder = ["XS", "S", "M", "L", "XL", "XXL"];
   selectedSizes.sort((a, b) => sizeOrder.indexOf(a) - sizeOrder.indexOf(b));
-
   return selectedSizes.map((size) => ({
     size,
     quantity: faker.number.int({ min: 0, max: 50 }),
@@ -42,23 +35,12 @@ function generateSizes() {
 
 async function seedUsers() {
   console.log("👥 Creating admin and super admin users...");
-
   const passwordAdmin = await hashPassword("!Admin123");
   const passwordLindway = await hashPassword("!Lindway@123");
   await prisma.user.createMany({
     data: [
-      {
-        email: "admin@gmail.com",
-        username: "admin",
-        password: passwordAdmin,
-        role: "ADMIN",
-      },
-      {
-        email: "mylindway@gmail.com",
-        username: "lindway",
-        password: passwordLindway,
-        role: "SUPER_ADMIN",
-      },
+      { email: "admin@gmail.com", username: "admin", password: passwordAdmin, role: "ADMIN" },
+      { email: "mylindway@gmail.com", username: "lindway", password: passwordLindway, role: "SUPER_ADMIN" },
     ],
     skipDuplicates: true,
   });
@@ -66,18 +48,14 @@ async function seedUsers() {
 
 async function seedProducts() {
   console.log(`👔 Creating products ...`);
-
   for (const category of categories) {
     console.log(`🏷️  Creating products for category: ${category}...`);
-
     const products = Array.from({ length: 20 }).map(() => {
       const price = parseFloat(faker.commerce.price({ min: 100000, max: 300000 }));
       const discount = faker.number.int({ min: 0, max: 100 });
       const discountedPrice = parseFloat((price - (price * discount) / 100).toFixed(2));
-
       const sizes = generateSizes();
       const totalStock = sizes.reduce((sum, sizeObj) => sum + sizeObj.quantity, 0);
-
       return {
         name: faker.commerce.productName(),
         description: faker.commerce.productDescription(),
@@ -96,13 +74,14 @@ async function seedProducts() {
         isActive: true,
       };
     });
-
     await prisma.product.createMany({ data: products });
   }
 }
 
 async function seedConfigurations() {
   console.log(`🍙 Creating parameters ...`);
+
+  // ── Groups ────────────────────────────────────────────────────────────────
 
   const shippingCalcGroup = await ConfigService.createConfigGroup({
     name: "shipping",
@@ -153,6 +132,8 @@ async function seedConfigurations() {
     order: 7,
   });
 
+  // ── Tax ───────────────────────────────────────────────────────────────────
+
   await ConfigService.createConfig({
     key: "tax_rate",
     label: "Tax Rate",
@@ -179,11 +160,13 @@ async function seedConfigurations() {
     order: 2,
   });
 
+  // ── Promotions ────────────────────────────────────────────────────────────
+
   await ConfigService.createConfig({
     key: "promotion_discount",
     label: "Promotion Discount",
     description: "Base promotion discount when buy a product in percentage or fixed amount",
-    value: 8.5,
+    value: 4.5,
     type: "DECIMAL",
     groupId: promotionGroup.id,
     order: 1,
@@ -205,11 +188,13 @@ async function seedConfigurations() {
     order: 2,
   });
 
+  // ── Members ───────────────────────────────────────────────────────────────
+
   await ConfigService.createConfig({
     key: "member_discount",
     label: "Member Discount",
     description: "Base member discount when buy a product in percentage or fixed amount",
-    value: 8.5,
+    value: 6.1,
     type: "DECIMAL",
     groupId: memberGroup.id,
     order: 1,
@@ -231,6 +216,8 @@ async function seedConfigurations() {
     order: 2,
   });
 
+  // ── Images ────────────────────────────────────────────────────────────────
+
   await ConfigService.createConfig({
     key: "qris_image",
     label: "Default Qris Image",
@@ -248,6 +235,8 @@ async function seedConfigurations() {
     groupId: imageGroup.id,
     order: 1,
   });
+
+  // ── Videos ────────────────────────────────────────────────────────────────
 
   await ConfigService.createConfig({
     key: "videos_curated_collection",
@@ -269,12 +258,10 @@ async function seedConfigurations() {
     order: 1,
   });
 
-  // ============================================
-  // NEW: Shipping Calculation Configurations
-  // ============================================
+  // ── Shipping Calculation ──────────────────────────────────────────────────
+
   console.log("📦 Creating shipping calculation parameters...");
 
-  // Volume Divider
   await ConfigService.createConfig({
     key: "volume_divider",
     label: "Volume Divider",
@@ -282,15 +269,10 @@ async function seedConfigurations() {
     value: 6000,
     type: "NUMBER",
     groupId: shippingCalcGroup.id,
-    validation: {
-      min: 1000,
-      max: 10000,
-      required: true,
-    },
+    validation: { min: 1000, max: 10000, required: true },
     order: 1,
   });
 
-  // Price Per Kilogram
   await ConfigService.createConfig({
     key: "price_per_kg",
     label: "Price Per Kilogram",
@@ -298,14 +280,10 @@ async function seedConfigurations() {
     value: 5000,
     type: "DECIMAL",
     groupId: shippingCalcGroup.id,
-    validation: {
-      min: 0,
-      required: true,
-    },
+    validation: { min: 0, required: true },
     order: 2,
   });
 
-  // Price Per Kilometer
   await ConfigService.createConfig({
     key: "price_per_km",
     label: "Price Per Kilometer",
@@ -313,14 +291,10 @@ async function seedConfigurations() {
     value: 1000,
     type: "DECIMAL",
     groupId: shippingCalcGroup.id,
-    validation: {
-      min: 0,
-      required: true,
-    },
+    validation: { min: 0, required: true },
     order: 3,
   });
 
-  // Base Price
   await ConfigService.createConfig({
     key: "base_price",
     label: "Base Shipping Price",
@@ -328,14 +302,10 @@ async function seedConfigurations() {
     value: 10000,
     type: "DECIMAL",
     groupId: shippingCalcGroup.id,
-    validation: {
-      min: 0,
-      required: true,
-    },
+    validation: { min: 0, required: true },
     order: 4,
   });
 
-  // Minimum Shipping
   await ConfigService.createConfig({
     key: "min_shipping",
     label: "Minimum Shipping Cost",
@@ -343,14 +313,10 @@ async function seedConfigurations() {
     value: 15000,
     type: "DECIMAL",
     groupId: shippingCalcGroup.id,
-    validation: {
-      min: 0,
-      required: true,
-    },
+    validation: { min: 0, required: true },
     order: 5,
   });
 
-  // Origin Latitude (Jakarta default)
   await ConfigService.createConfig({
     key: "origin_lat",
     label: "Origin Latitude",
@@ -358,15 +324,10 @@ async function seedConfigurations() {
     value: -6.2088,
     type: "DECIMAL",
     groupId: shippingCalcGroup.id,
-    validation: {
-      min: -90,
-      max: 90,
-      required: true,
-    },
+    validation: { min: -90, max: 90, required: true },
     order: 6,
   });
 
-  // Origin Longitude (Jakarta default)
   await ConfigService.createConfig({
     key: "origin_long",
     label: "Origin Longitude",
@@ -374,15 +335,10 @@ async function seedConfigurations() {
     value: 106.8456,
     type: "DECIMAL",
     groupId: shippingCalcGroup.id,
-    validation: {
-      min: -180,
-      max: 180,
-      required: true,
-    },
+    validation: { min: -180, max: 180, required: true },
     order: 7,
   });
 
-  // Earth Radius
   await ConfigService.createConfig({
     key: "earth_radius_km",
     label: "Earth Radius (km)",
@@ -390,150 +346,76 @@ async function seedConfigurations() {
     value: 6371,
     type: "DECIMAL",
     groupId: shippingCalcGroup.id,
-    validation: {
-      min: 6000,
-      max: 7000,
-      required: true,
-    },
+    validation: { min: 6000, max: 7000, required: true },
     order: 8,
+  });
+
+  // ── Shipping Zones ────────────────────────────────────────────────────────
+  // Each zone has:
+  //   max_km        — upper distance bound (null = catch-all final zone)
+  //   multiplier    — applied to the formula result (null when price_override is set)
+  //   price_override — flat price in IDR, bypasses formula entirely (null = use multiplier)
+
+  await ConfigService.createConfig({
+    key: "shipping_zones",
+    label: "Shipping Zones",
+    description: "Zone tiers by distance. Set multiplier to scale formula cost, or price_override for a flat rate (IDR). max_km: null means the zone applies to all remaining distances.",
+    value: [
+      { zone: "Z1", label: "Local", max_km: 10, multiplier: 1.0, price_override: null },
+      { zone: "Z2", label: "Nearby", max_km: 30, multiplier: 1.2, price_override: null },
+      { zone: "Z3", label: "Regional", max_km: 100, multiplier: 1.5, price_override: null },
+      { zone: "Z4", label: "Long Distance", max_km: null, multiplier: 2.0, price_override: null },
+    ],
+    type: "JSON",
+    groupId: shippingCalcGroup.id,
+    validation: { required: true },
+    order: 9,
   });
 
   console.log("✅ Shipping calculation parameters created successfully");
 
-  // ============================================
-  // NEW: Product Dimensions Configurations (Option 2 - Individual Size Entries)
-  // ============================================
+  // ── Product Dimensions ────────────────────────────────────────────────────
+
   console.log("📐 Creating product dimensions parameters...");
 
-  // Size XS
-  await ConfigService.createConfig({
-    key: "XS",
-    label: "Size XS Dimensions",
-    description: "Product dimensions for size XS (Weight: 160g, Dimensions: 26x22x2 cm)",
-    value: {
-      weight_g: 160,
-      length_cm: 26,
-      width_cm: 22,
-      height_cm: 2,
-    },
-    type: "JSON",
-    groupId: productDimensionsGroup.id,
-    order: 1,
-  });
+  const sizeConfigs = [
+    { key: "XS", label: "Size XS", weight_g: 160, length_cm: 26, width_cm: 22, height_cm: 2, order: 1 },
+    { key: "S", label: "Size S", weight_g: 180, length_cm: 28, width_cm: 24, height_cm: 2, order: 2 },
+    { key: "M", label: "Size M", weight_g: 200, length_cm: 30, width_cm: 25, height_cm: 2, order: 3 },
+    { key: "L", label: "Size L", weight_g: 220, length_cm: 32, width_cm: 27, height_cm: 2, order: 4 },
+    { key: "XL", label: "Size XL", weight_g: 240, length_cm: 34, width_cm: 29, height_cm: 2, order: 5 },
+    { key: "XXL", label: "Size XXL", weight_g: 260, length_cm: 36, width_cm: 31, height_cm: 2, order: 6 },
+    { key: "XXXL", label: "Size XXXL", weight_g: 300, length_cm: 38, width_cm: 33, height_cm: 2, order: 7 },
+  ];
 
-  // Size S
-  await ConfigService.createConfig({
-    key: "S",
-    label: "Size S Dimensions",
-    description: "Product dimensions for size S (Weight: 180g, Dimensions: 28x24x2 cm)",
-    value: {
-      weight_g: 180,
-      length_cm: 28,
-      width_cm: 24,
-      height_cm: 2,
-    },
-    type: "JSON",
-    groupId: productDimensionsGroup.id,
-    order: 2,
-  });
-
-  // Size M
-  await ConfigService.createConfig({
-    key: "M",
-    label: "Size M Dimensions",
-    description: "Product dimensions for size M (Weight: 200g, Dimensions: 30x25x2 cm)",
-    value: {
-      weight_g: 200,
-      length_cm: 30,
-      width_cm: 25,
-      height_cm: 2,
-    },
-    type: "JSON",
-    groupId: productDimensionsGroup.id,
-    order: 3,
-  });
-
-  // Size L
-  await ConfigService.createConfig({
-    key: "L",
-    label: "Size L Dimensions",
-    description: "Product dimensions for size L (Weight: 220g, Dimensions: 32x27x2 cm)",
-    value: {
-      weight_g: 220,
-      length_cm: 32,
-      width_cm: 27,
-      height_cm: 2,
-    },
-    type: "JSON",
-    groupId: productDimensionsGroup.id,
-    order: 4,
-  });
-
-  // Size XL
-  await ConfigService.createConfig({
-    key: "XL",
-    label: "Size XL Dimensions",
-    description: "Product dimensions for size XL (Weight: 240g, Dimensions: 34x29x2 cm)",
-    value: {
-      weight_g: 240,
-      length_cm: 34,
-      width_cm: 29,
-      height_cm: 2,
-    },
-    type: "JSON",
-    groupId: productDimensionsGroup.id,
-    order: 5,
-  });
-
-  // Size XXL
-  await ConfigService.createConfig({
-    key: "XXL",
-    label: "Size XXL Dimensions",
-    description: "Product dimensions for size XXL (Weight: 260g, Dimensions: 36x31x2 cm)",
-    value: {
-      weight_g: 260,
-      length_cm: 36,
-      width_cm: 31,
-      height_cm: 2,
-    },
-    type: "JSON",
-    groupId: productDimensionsGroup.id,
-    order: 6,
-  });
-
-  // Size XXXL
-  await ConfigService.createConfig({
-    key: "XXXL",
-    label: "Size XXXL Dimensions",
-    description: "Product dimensions for size XXXL (Weight: 300g, Dimensions: 38x33x2 cm)",
-    value: {
-      weight_g: 300,
-      length_cm: 38,
-      width_cm: 33,
-      height_cm: 2,
-    },
-    type: "JSON",
-    groupId: productDimensionsGroup.id,
-    order: 7,
-  });
+  for (const { key, label, order, ...dimensions } of sizeConfigs) {
+    await ConfigService.createConfig({
+      key,
+      label: `${label} Dimensions`,
+      description: `Product dimensions for ${label} (Weight: ${dimensions.weight_g}g, Dimensions: ${dimensions.length_cm}x${dimensions.width_cm}x${dimensions.height_cm} cm)`,
+      value: dimensions,
+      type: "JSON",
+      groupId: productDimensionsGroup.id,
+      order,
+    });
+  }
 
   console.log("✅ Product dimensions parameters created successfully");
 }
 
 async function main() {
   console.log("🌱 Starting seeding process...");
+
   await seedUsers();
-
   await seedConfigurations();
-
   await seedProducts();
 
   console.log("\n🎉 Seeding complete!");
   console.log(`📈 Total products created: ${categories.length * 20}`);
-  console.log("👥 Admin and super admin users has been created successfully");
-  console.log("✨ Parameters has been created successfully");
-  console.log("📦 Shipping calculation parameters has been created successfully");
-  console.log("📐 Product dimensions parameters has been created successfully");
+  console.log("👥 Admin and super admin users created successfully");
+  console.log("✨ Config parameters created successfully");
+  console.log("📦 Shipping calculation parameters created successfully");
+  console.log("📐 Product dimensions parameters created successfully");
 }
 
 main()

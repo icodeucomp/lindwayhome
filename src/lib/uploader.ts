@@ -75,7 +75,7 @@ export class FileUploader {
         filename: fileName,
         originalName: file.name,
         url: `${API_BASE_URL}/uploads/${subPath}/${fileName}`,
-        path: `uploads/${subPath}/${fileName}`,
+        path: `/uploads/${subPath}/${fileName}`,
         size: buffer.length,
         mimeType: file.type,
         alt: fileName,

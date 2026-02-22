@@ -6,10 +6,7 @@ import { formatUnderscoreToSpace, formatIDR } from "@/utils";
 
 import { CreateGuest } from "@/types";
 
-interface FormData extends Omit<CreateGuest, "purchased" | "totalItemsSold"> {
-  isUploading: boolean;
-  uploadProgress: number;
-}
+type FormData = Omit<CreateGuest, "purchased" | "totalItemsSold">;
 
 interface CompleteStepProps {
   formData: FormData;

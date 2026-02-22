@@ -43,6 +43,7 @@ export interface ProductsQueryParams {
     quantity: number;
   }[];
   purchased?: number;
+  totalItemsSold?: number;
 }
 
 export interface ApiResponse<T> {
@@ -188,10 +189,7 @@ export interface CreateGuest {
   whatsappNumber: string;
   address: string;
   postalCode: number;
-  shippingCost: number;
-  purchased: number;
   totalPurchased: number;
-  totalItemsSold: number;
   isMember: boolean;
   instagram?: string;
   reference?: string;
@@ -296,7 +294,9 @@ export interface ValidationRule {
   nonZero?: boolean;
 }
 
-export type ConfigValue = string | number | boolean | Files | Files[] | undefined | null;
+export type JsonRow = Record<string, unknown>;
+
+export type ConfigValue = string | number | boolean | Files | Files[] | JsonRow | JsonRow[] | undefined | null;
 
 export interface Config {
   id: string;
@@ -304,7 +304,7 @@ export interface Config {
   label: string;
   description: string;
   value: ConfigValue;
-  type: "TEXT" | "NUMBER" | "DECIMAL" | "BOOLEAN" | "SELECT" | "TEXTAREA" | "IMAGE" | "IMAGES" | "VIDEO" | "VIDEOS";
+  type: "TEXT" | "NUMBER" | "DECIMAL" | "BOOLEAN" | "SELECT" | "TEXTAREA" | "IMAGE" | "IMAGES" | "VIDEO" | "VIDEOS" | "JSON";
   validation: ValidationRule;
   order: number;
   isActive: boolean;
