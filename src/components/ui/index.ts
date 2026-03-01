@@ -11,3 +11,4 @@ export * from "./curated-collections";
 export * from "./product";
 export * from "./video-carousel";
 export * from "./card-product";
+export * from "./membership-confirm";

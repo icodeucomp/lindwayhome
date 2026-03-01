@@ -1,5 +1,5 @@
-import { LocationDashboard } from "@/components/ui/admin";
+import { LocationsDashboard } from "@/components/ui/admin";
 
 export default function LocationDashboardPage() {
-  return <LocationDashboard />;
+  return <LocationsDashboard />;
 }

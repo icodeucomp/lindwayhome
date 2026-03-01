@@ -3,7 +3,7 @@ export * from "./main-dashboard";
 
 export * from "./guests-dashboard";
 export * from "./config-parameters-dashboard";
-export * from "./location-dashboard";
+export * from "./locations-dashboard";
 
 export * from "./products-dashboard";
 export * from "./edit-products-dashboard";

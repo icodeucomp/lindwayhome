@@ -245,6 +245,33 @@ export const guestsApi = {
       ...mutationOptions,
     });
   },
+  useUpdateMembershipGuests: ({ ...mutationOptions }: UseMutationOptions<Guest, Error, string>) => {
+    return useMutation({
+      mutationFn: async (id: string) => {
+        try {
+          const { data } = await api.patch(`/guests/membership/${id}`);
+          toast.success(data.message || "Membership activated successfully");
+          return data.data;
+        } catch (error) {
+          if (axios.isAxiosError(error)) {
+            const responseData = error.response?.data.message;
+            if (Array.isArray(responseData)) {
+              const errorMessages = responseData.map((err, index) => `${index + 1}. ${err.message}`).join("\n");
+              throw new Error(errorMessages);
+            } else {
+              throw new Error(responseData || "An error occurred");
+            }
+          }
+          throw new Error("An unexpected error occurred");
+        }
+      },
+      onError: (error: unknown) => {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+        toast.error(errorMessage);
+      },
+      ...mutationOptions,
+    });
+  },
   useDeleteGuests: ({ ...mutationOptions }: UseMutationOptions<Guest, Error, string>) => {
     return useMutation({
       mutationFn: async (id: string) => {
