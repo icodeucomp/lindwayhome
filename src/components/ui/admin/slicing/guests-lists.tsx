@@ -67,7 +67,7 @@ export const GuestsLists = ({ guests, isLoading, isPending, isError, updatePurch
     <>
       <div className="mb-6 overflow-x-auto rounded-lg">
         <table className="w-full">
-          <thead className="text-sm font-medium uppercase border-b bg-light border-gray/30 text-gray">
+          <thead className="text-sm font-medium uppercase text-gray bg-gray-50 border-b border-gray-200">
             <tr>
               <th className="px-6 py-4 tracking-wider text-left">Full Name</th>
               <th className="px-6 py-4 tracking-wider text-left">Email</th>
@@ -77,22 +77,16 @@ export const GuestsLists = ({ guests, isLoading, isPending, isError, updatePurch
               <th className="px-6 py-4 tracking-wider text-left">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y bg-light divide-gray/30">
+          <tbody className="bg-light divide-y divide-gray-200">
             {guests.map((guest) => (
-              <tr key={guest.id} className="odd:bg-gray/5">
-                <td className="px-6 py-3 whitespace-nowrap">
-                  <div className="text-sm font-medium">{guest.fullname}</div>
-                </td>
-                <td className="px-6 py-3 whitespace-nowrap">
-                  <div className="text-sm">{guest.email}</div>
-                </td>
-                <td className="px-6 py-3 whitespace-nowrap">
-                  <div className="text-sm">{guest.whatsappNumber}</div>
-                </td>
-                <td className="px-6 py-3 whitespace-nowrap">
+              <tr key={guest.id} className="hover:bg-gray-50 transition-colors text-sm">
+                <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{guest.fullname}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-gray-700">{guest.email}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-gray-700">{guest.whatsappNumber}</td>
+                <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${paymentMethodColors[guest.paymentMethod]}`}>{paymentMethodLabels[guest.paymentMethod]}</span>
                 </td>
-                <td className="px-6 py-3 whitespace-nowrap">
+                <td className="px-6 py-4 whitespace-nowrap">
                   {isPending ? (
                     <div className="px-6">
                       <div className="loader-text"></div>
@@ -110,7 +104,7 @@ export const GuestsLists = ({ guests, isLoading, isPending, isError, updatePurch
                     </div>
                   )}
                 </td>
-                <td className="px-6 py-3 whitespace-nowrap">
+                <td className="px-6 py-4 whitespace-nowrap">
                   <Button onClick={() => openModal(guest.id)} className="inline-flex items-center gap-1 btn-outline">
                     <FaEye className="size-4" />
                     View Details

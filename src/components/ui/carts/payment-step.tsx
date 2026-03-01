@@ -39,7 +39,7 @@ export const PaymentStep = ({ formData, setFormData, onBack, onSubmit, isLoading
 
   const handleImagesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files ? Array.from(e.target.files) : [];
-    if (files.length === 0) return;
+    if (!files.length) return;
 
     const file = files[0];
     if (file.size > 5 * 1024 * 1024) {
@@ -60,11 +60,11 @@ export const PaymentStep = ({ formData, setFormData, onBack, onSubmit, isLoading
       });
 
       setFormData((prev) => ({ ...prev, receiptImage: respImages[0] }));
-      setUpload((prev) => ({ ...prev, isUploading: false, uploadProgress: 0 }));
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to upload image. Please try again.";
-      toast.error(errorMessage);
+      toast.error((error as string) || "Failed to upload image");
+    } finally {
       setUpload((prev) => ({ ...prev, isUploading: false, uploadProgress: 0 }));
+      if (imageInputRef.current) imageInputRef.current.value = "";
     }
   };
 
@@ -73,12 +73,9 @@ export const PaymentStep = ({ formData, setFormData, onBack, onSubmit, isLoading
       await filesApi.delete(subPath);
       setFormData((prev) => ({ ...prev, receiptImage: undefined }));
       toast.success("Image deleted successfully");
-      if (imageInputRef.current) {
-        imageInputRef.current.value = "";
-      }
+      if (imageInputRef.current) imageInputRef.current.value = "";
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to delete image";
-      toast.error(errorMessage);
+      toast.error((error as string) || "Failed to delete image");
     }
   };
 
@@ -221,7 +218,7 @@ export const PaymentStep = ({ formData, setFormData, onBack, onSubmit, isLoading
               htmlFor="images"
               className={`px-4 py-2 bg-gray/10 text-sm font-medium border-r border-gray/30 ${upload.isUploading ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-gray/20"}`}
             >
-              {upload.isUploading ? "Uploading..." : "Choose File"}
+              {upload.isUploading ? "Uploading..." : "Choose Image"}
             </label>
             <label className="flex-1 px-3 py-2 text-sm truncate text-slate-500">{formData.receiptImage?.originalName || "No file selected"}</label>
             {!formData.receiptImage && !upload.isUploading && <small className="hidden pr-3 text-xs text-gray/70 sm:block">Max 5MB</small>}

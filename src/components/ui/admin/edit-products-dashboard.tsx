@@ -131,7 +131,7 @@ export const EditProductDashboard = ({ id }: { id: string }) => {
   const handleImagesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files ? Array.from(e.target.files) : [];
 
-    if (files.length === 0) return;
+    if (!files.length) return;
 
     try {
       setHelper((prev) => ({ ...prev, isUploading: true, uploadProgress: 0 }));
@@ -142,10 +142,10 @@ export const EditProductDashboard = ({ id }: { id: string }) => {
 
       setFormData((prev) => ({ ...prev, images: [...(prev.images || []), ...respImages] }));
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to delete file";
-      toast.error(errorMessage);
+      toast.error((error as string) || "Failed to upload images");
     } finally {
       setHelper((prev) => ({ ...prev, isUploading: false, uploadProgress: 0 }));
+      if (imagesInputRef.current) imagesInputRef.current.value = "";
     }
   };
 
@@ -158,15 +158,11 @@ export const EditProductDashboard = ({ id }: { id: string }) => {
       });
 
       setFormData((prev) => ({ ...prev, images: prev.images?.filter((image) => image.path !== subPath) }));
-
-      if (imagesInputRef.current) {
-        imagesInputRef.current.value = "";
-      }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to delete file";
-      toast.error(errorMessage);
+      toast.error((error as string) || "Failed to delete image");
     } finally {
       setHelper((prev) => ({ ...prev, isDeleting: false, deletingProgress: 0 }));
+      if (imagesInputRef.current) imagesInputRef.current.value = "";
     }
   };
 

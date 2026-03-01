@@ -84,7 +84,6 @@ export const OrderSummary = ({ isVisible, onClose, price, totalItem }: OrderSumm
 
       const submitData = {
         ...paymentData,
-        isMember: false,
         isPurchased: false,
         postalCode: Number(paymentData.postalCode),
         checkoutToken: paymentData.checkoutToken,

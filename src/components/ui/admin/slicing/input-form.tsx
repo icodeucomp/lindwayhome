@@ -223,7 +223,7 @@ export const InputForm = ({
           <div className="relative flex flex-row items-center overflow-hidden border rounded-lg border-gray/50">
             <input type="file" id="images" ref={imagesInputRef} onChange={handleImagesChange} hidden accept="image/*" multiple />
             <label htmlFor="images" className="file-label">
-              Choose file
+              Choose Image
             </label>
             <label className="text-sm text-slate-500 whitespace-nowrap">{formData.images?.length} Images</label>
             <small className="pr-2 ms-auto text-gray/70">Max 5mb. (aspect ratio of 1:1)</small>

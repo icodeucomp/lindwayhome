@@ -6,6 +6,8 @@ import { useSearchPagination } from "@/hooks";
 
 import { useQueryClient } from "@tanstack/react-query";
 
+import { LocationLists } from "./slicing";
+
 import { Button, Modal } from "@/components";
 
 import { FaSearch } from "react-icons/fa";
@@ -13,7 +15,6 @@ import { FaSearch } from "react-icons/fa";
 import { locationsApi } from "@/utils";
 
 import { Location, CreateLocation, UpdateLocation, ApiResponse } from "@/types";
-import { LocationLists } from "./slicing";
 
 interface FormData {
   code: string;

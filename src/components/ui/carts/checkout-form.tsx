@@ -200,8 +200,7 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
 
     if (!validateAllFields()) return;
 
-    const checkoutToken = checkoutData?.data.checkoutToken;
-    if (!checkoutToken) return;
+    if (!checkoutData) return;
 
     const sanitizedData = {
       ...currentFormData,
@@ -212,7 +211,8 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
       instagram: currentFormData.instagram ? sanitizeInput(currentFormData.instagram) : currentFormData.instagram,
       reference: currentFormData.reference ? sanitizeInput(currentFormData.reference) : currentFormData.reference,
       totalPurchased: checkoutData?.data.totalPurchased || 0,
-      checkoutToken,
+      isMember: checkoutData?.data.isMember || false,
+      checkoutToken: checkoutData?.data.checkoutToken,
     };
 
     onSubmit(sanitizedData, currentFormErrors);

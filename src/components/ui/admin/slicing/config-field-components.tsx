@@ -239,8 +239,9 @@ export const ImageField = ({ configKey, value, onChange }: { configKey: string; 
       const uploaded = await filesApi.uploadImages(files, configKey, setUploadProgress);
       onChange(uploaded[0]);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to upload image");
+      toast.error((error as string) || "Failed to upload image");
     } finally {
+      if (inputRef.current) inputRef.current.value = "";
       setUploading(false);
       setUploadProgress(0);
     }
@@ -248,14 +249,14 @@ export const ImageField = ({ configKey, value, onChange }: { configKey: string; 
 
   const handleDelete = async () => {
     if (!imageValue) return;
-    if (inputRef.current) inputRef.current.value = "";
     try {
       setDeleting(true);
       await filesApi.delete(imageValue.path);
       onChange(undefined);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete image");
+      toast.error((error as string) || "Failed to delete image");
     } finally {
+      if (inputRef.current) inputRef.current.value = "";
       setDeleting(false);
     }
   };
@@ -266,7 +267,7 @@ export const ImageField = ({ configKey, value, onChange }: { configKey: string; 
         <div className="relative flex flex-row items-center overflow-hidden border rounded-lg border-gray/50">
           <input type="file" id={`image-${configKey}`} ref={inputRef} onChange={handleUpload} hidden accept="image/*" />
           <label htmlFor={`image-${configKey}`} className="file-label">
-            Choose file
+            Choose Image
           </label>
           <span className="text-sm text-slate-500 whitespace-nowrap">{imageValue?.filename}</span>
           <small className="pr-2 ms-auto text-gray/70">Max 5mb. (1:1)</small>
@@ -314,22 +315,23 @@ export const ImagesField = ({ configKey, value, onChange }: { configKey: string;
       const uploaded = await filesApi.uploadImages(files, configKey, setUploadProgress);
       onChange([...images, ...uploaded]);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to upload images");
+      toast.error((error as string) || "Failed to upload images");
     } finally {
+      if (inputRef.current) inputRef.current.value = "";
       setUploading(false);
       setUploadProgress(0);
     }
   };
 
   const handleDelete = async (path: string) => {
-    if (inputRef.current) inputRef.current.value = "";
     try {
       setDeletingPath(path);
       await filesApi.delete(path);
       onChange(images.filter((f) => f.path !== path));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete image");
+      toast.error((error as string) || "Failed to delete image");
     } finally {
+      if (inputRef.current) inputRef.current.value = "";
       setDeletingPath(null);
     }
   };
@@ -340,7 +342,7 @@ export const ImagesField = ({ configKey, value, onChange }: { configKey: string;
         <div className="relative flex flex-row items-center overflow-hidden border rounded-lg border-gray/50">
           <input type="file" id={`images-${configKey}`} ref={inputRef} onChange={handleUpload} hidden multiple accept="image/*" />
           <label htmlFor={`images-${configKey}`} className="file-label">
-            Choose images
+            Choose Images
           </label>
           <span className="text-sm text-slate-500 whitespace-nowrap">{images.length} Images</span>
           <small className="pr-2 ms-auto text-gray/70">Max 5mb. (1:1)</small>
@@ -396,8 +398,9 @@ export const VideoField = ({ value, onChange }: { value: ConfigValue; onChange: 
       const uploaded = await filesApi.uploadVideos(files, setUploadProgress);
       onChange(uploaded[0]);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to upload video");
+      toast.error((error as string) || "Failed to upload video");
     } finally {
+      if (inputRef.current) inputRef.current.value = "";
       setUploading(false);
       setUploadProgress(0);
     }
@@ -405,14 +408,14 @@ export const VideoField = ({ value, onChange }: { value: ConfigValue; onChange: 
 
   const handleDelete = async () => {
     if (!videoValue) return;
-    if (inputRef.current) inputRef.current.value = "";
     try {
       setDeleting(true);
       await filesApi.delete(videoValue.path);
       onChange(undefined);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete video");
+      toast.error((error as string) || "Failed to delete video");
     } finally {
+      if (inputRef.current) inputRef.current.value = "";
       setDeleting(false);
     }
   };
@@ -423,7 +426,7 @@ export const VideoField = ({ value, onChange }: { value: ConfigValue; onChange: 
         <div className="relative flex flex-row items-center overflow-hidden border rounded-lg border-gray/50">
           <input type="file" id="video-single" ref={inputRef} onChange={handleUpload} hidden accept="video/mp4,video/x-m4v,video/*" />
           <label htmlFor="video-single" className="file-label">
-            Choose video
+            Choose Video
           </label>
           <small className="pr-2 ms-auto text-gray/70">Max 15mb. (16:9)</small>
         </div>
@@ -470,22 +473,23 @@ export const VideosField = ({ value, onChange }: { value: ConfigValue; onChange:
       const uploaded = await filesApi.uploadVideos(files, setUploadProgress);
       onChange([...videos, ...uploaded]);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to upload videos");
+      toast.error((error as string) || "Failed to upload videos");
     } finally {
+      if (inputRef.current) inputRef.current.value = "";
       setUploading(false);
       setUploadProgress(0);
     }
   };
 
   const handleDelete = async (path: string) => {
-    if (inputRef.current) inputRef.current.value = "";
     try {
       setDeletingPath(path);
       await filesApi.delete(path);
       onChange(videos.filter((v) => v.path !== path));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete video");
+      toast.error((error as string) || "Failed to delete video");
     } finally {
+      if (inputRef.current) inputRef.current.value = "";
       setDeletingPath(null);
     }
   };
@@ -496,7 +500,7 @@ export const VideosField = ({ value, onChange }: { value: ConfigValue; onChange:
         <div className="relative flex flex-row items-center overflow-hidden border rounded-lg border-gray/50">
           <input type="file" id="videos-multiple" ref={inputRef} onChange={handleUpload} hidden multiple accept="video/mp4,video/x-m4v,video/*" />
           <label htmlFor="videos-multiple" className="file-label">
-            Choose videos
+            Choose Videos
           </label>
           <span className="text-sm text-slate-500 whitespace-nowrap">{videos.length} Videos</span>
           <small className="pr-2 ms-auto text-gray/70">Max 15mb. (16:9)</small>

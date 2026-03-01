@@ -18,15 +18,15 @@ export const LocationLists = ({ locationsData, isLoading, currentPage, handleEdi
     <div className="bg-light rounded-lg shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="text-sm font-medium uppercase text-gray bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Province</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">District</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sub-District</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Village</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coordinates</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-4 tracking-wider text-left">Code</th>
+              <th className="px-6 py-4 tracking-wider text-left">Province</th>
+              <th className="px-6 py-4 tracking-wider text-left">District</th>
+              <th className="px-6 py-4 tracking-wider text-left">Sub-District</th>
+              <th className="px-6 py-4 tracking-wider text-left">Village</th>
+              <th className="px-6 py-4 tracking-wider text-left">Coordinates</th>
+              <th className="px-6 py-4 tracking-wider text-left">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-light divide-y divide-gray-200">
