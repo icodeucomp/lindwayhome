@@ -55,7 +55,7 @@ export const PaymentStep = ({ formData, setFormData, onBack, onSubmit, isLoading
     try {
       setUpload((prev) => ({ ...prev, isUploading: true, uploadProgress: 0 }));
 
-      const respImages = await filesApi.uploadImages(files, "receipt", (progress: number) => {
+      const respImages = await filesApi.uploadImages(files, (progress: number) => {
         setUpload((prev) => ({ ...prev, uploadProgress: progress }));
       });
 

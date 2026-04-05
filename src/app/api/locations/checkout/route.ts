@@ -4,6 +4,7 @@ import { logger, prisma } from "@/lib";
 
 import { SelectOption } from "@/types";
 
+// GET - Fetch all locations within a specific province, district, or sub-district
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;

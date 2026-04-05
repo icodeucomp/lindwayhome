@@ -2,13 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { z } from "zod";
 
-import { authenticate, authorize, logger, prisma } from "@/lib";
+import { checkAuth, logger, prisma } from "@/lib";
 
 import { Prisma } from "prisma-client/client";
 
 import { CreateLocationSchema, LocationQuerySchema } from "@/types";
 
+// GET - Fetch all locations
 export async function GET(request: NextRequest) {
+  const authError = await checkAuth(request, "/locations");
+  if (authError) return authError;
+
   try {
     const { searchParams } = new URL(request.url);
 
@@ -86,17 +90,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// POST - Create a new location
 export async function POST(request: NextRequest) {
-  const authenticationResult = await authenticate(request);
-  const authorizationResult = await authorize(request, "ADMIN");
-  if (authenticationResult.message) {
-    logger.error("API /locations error", { error: authenticationResult.message });
-    return NextResponse.json({ success: false, message: authenticationResult.message }, { status: authenticationResult.status });
-  }
-  if (authorizationResult.message) {
-    logger.error("API /locations error", { error: authorizationResult.message });
-    return NextResponse.json({ success: false, message: authorizationResult.message }, { status: authorizationResult.status });
-  }
+  const authError = await checkAuth(request, "/locations");
+  if (authError) return authError;
 
   try {
     const body = await request.json();

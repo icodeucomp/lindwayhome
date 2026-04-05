@@ -16,7 +16,7 @@ interface InputFormProps {
   isPending: boolean;
   imagesInputRef: React.RefObject<HTMLInputElement | null>;
   setHelper: React.Dispatch<React.SetStateAction<Helper>>;
-  handleSubmit: (E: React.FormEvent) => void;
+  handleSubmit: (E: React.SubmitEvent<HTMLFormElement>) => void;
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   addSize: () => void;
   handleImagesChange: (e: React.ChangeEvent<HTMLInputElement>) => void;

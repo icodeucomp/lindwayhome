@@ -87,7 +87,7 @@ export const EditProductDashboard = ({ id }: { id: string }) => {
     }
   }, [product]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     updateProduct.mutate({ id, updatedItem: formData });
@@ -136,7 +136,7 @@ export const EditProductDashboard = ({ id }: { id: string }) => {
     try {
       setHelper((prev) => ({ ...prev, isUploading: true, uploadProgress: 0 }));
 
-      const respImages = await filesApi.uploadImages(files, formData.category!, (progress: number) => {
+      const respImages = await filesApi.uploadImages(files, (progress: number) => {
         setHelper((prev) => ({ ...prev, uploadProgress: progress }));
       });
 

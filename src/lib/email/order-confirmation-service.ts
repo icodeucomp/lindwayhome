@@ -4,7 +4,7 @@ import { generateOrderConfirmationHTML } from "./order-confirmation-template";
 
 import { RequestDataForEmail } from "@/types";
 
-export async function sendOrderConfirmation(params: RequestDataForEmail) {
+export const sendOrderConfirmation = async (params: RequestDataForEmail) => {
   const html = generateOrderConfirmationHTML(params);
 
   return await sendEmail({
@@ -12,4 +12,4 @@ export async function sendOrderConfirmation(params: RequestDataForEmail) {
     subject: `Order Confirmation - ${params.guestId}`,
     html,
   });
-}
+};

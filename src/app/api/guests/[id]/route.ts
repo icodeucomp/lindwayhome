@@ -1,23 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { authenticate, authorize, logger, prisma } from "@/lib";
+import { checkAuth, logger, prisma } from "@/lib";
 
 import { z } from "zod";
 
 import { UpdateGuestSchema } from "@/types";
 
-// POST - Update guests and carts
+// GET - Fetch one guest and carts by ID
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const authError = await checkAuth(request, "/guests/[id]");
+  if (authError) return authError;
+
+  try {
+    const { id } = await params;
+
+    const guest = await prisma.guest.findUnique({
+      where: { id },
+      include: {
+        cartItems: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                stock: true,
+                sizes: true,
+                images: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!guest) {
+      return NextResponse.json({ success: false, message: "Guest not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, data: guest }, { status: 200 });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+    const errorStack = error instanceof Error ? error.stack : "An unknown error occurred";
+
+    logger.error("API /guests/[id] error", { error: errorMessage, stack: errorStack });
+
+    return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
+  }
+}
+
+// PUT - Update guests and carts by ID
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const authenticationResult = await authenticate(request);
-  const authorizationResult = await authorize(request, "ADMIN");
-  if (authenticationResult.message) {
-    logger.error("API /guests/[id] error", { error: authenticationResult.message });
-    return NextResponse.json({ success: false, message: authenticationResult.message }, { status: authenticationResult.status });
-  }
-  if (authorizationResult.message) {
-    logger.error("API /guests/[id] error", { error: authorizationResult.message });
-    return NextResponse.json({ success: false, message: authorizationResult.message }, { status: authorizationResult.status });
-  }
+  const authError = await checkAuth(request, "/guests/[id]");
+  if (authError) return authError;
 
   try {
     const { id } = await params;
@@ -121,57 +156,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ success: false, message: error.issues }, { status: 400 });
     }
 
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    const errorStack = error instanceof Error ? error.stack : "An unknown error occurred";
-
-    logger.error("API /guests/[id] error", { error: errorMessage, stack: errorStack });
-
-    return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
-  }
-}
-
-// GET - Get one guest and carts
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const authenticationResult = await authenticate(request);
-  const authorizationResult = await authorize(request, "ADMIN");
-  if (authenticationResult.message) {
-    logger.error("API /guests/[id] error", { error: authenticationResult.message });
-    return NextResponse.json({ success: false, message: authenticationResult.message }, { status: authenticationResult.status });
-  }
-  if (authorizationResult.message) {
-    logger.error("API /guests/[id] error", { error: authorizationResult.message });
-    return NextResponse.json({ success: false, message: authorizationResult.message }, { status: authorizationResult.status });
-  }
-
-  try {
-    const { id } = await params;
-
-    const guest = await prisma.guest.findUnique({
-      where: { id },
-      include: {
-        cartItems: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                price: true,
-                stock: true,
-                sizes: true,
-                images: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!guest) {
-      return NextResponse.json({ success: false, message: "Guest not found" }, { status: 404 });
-    }
-
-    return NextResponse.json({ success: true, data: guest }, { status: 200 });
-  } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     const errorStack = error instanceof Error ? error.stack : "An unknown error occurred";
 

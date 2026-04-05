@@ -94,6 +94,7 @@ export interface Files {
   originalName: string;
   url: string;
   path: string;
+  folderPath: string;
   size: number;
   mimeType: string;
   alt: string;

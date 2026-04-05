@@ -1,6 +1,6 @@
 import { RequestDataForEmail } from "@/types";
 
-export function generateOrderConfirmationHTML(data: RequestDataForEmail): string {
+export const generateOrderConfirmationHTML = (data: RequestDataForEmail): string => {
   const { guestId, fullname, address, whatsappNumber, postalCode, totalPurchased, totalItemsSold, isMember, paymentMethod, items, baseUrl, createdAt } = data;
 
   const formattedDate = new Date(createdAt).toLocaleDateString("id-ID", {
@@ -25,7 +25,7 @@ export function generateOrderConfirmationHTML(data: RequestDataForEmail): string
             Price: Rp ${(item.product.price * item.quantity).toLocaleString("id-ID")}
           </p>
         </div>
-      `
+      `,
           )
           .join("")
       : "<p>No items in the cart.</p>";
@@ -133,4 +133,4 @@ export function generateOrderConfirmationHTML(data: RequestDataForEmail): string
   </body>
 </html>
   `.trim();
-}
+};

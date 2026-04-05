@@ -10,7 +10,7 @@ import { Button } from "@/components";
 
 type Status = "idle" | "loading" | "success" | "error";
 
-export function MembershipConfirm({ guestId }: { guestId: string }) {
+export const MembershipConfirm = ({ guestId }: { guestId: string }) => {
   const [status, setStatus] = useState<Status>("idle");
 
   const { mutate: updateGuest } = guestsApi.useUpdateMembershipGuests({
@@ -18,14 +18,14 @@ export function MembershipConfirm({ guestId }: { guestId: string }) {
     onError: () => setStatus("error"),
   });
 
-  function handleConfirm() {
+  const handleConfirm = () => {
     setStatus("loading");
     updateGuest(guestId);
-  }
+  };
 
-  function handleDecline() {
+  const handleDecline = () => {
     window.location.href = "/";
-  }
+  };
 
   const wrapper = "min-h-screen bg-gray-100 flex items-center justify-center px-4";
   const card = "max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center";
@@ -128,4 +128,4 @@ export function MembershipConfirm({ guestId }: { guestId: string }) {
       </div>
     </div>
   );
-}
+};

@@ -11,13 +11,13 @@ export interface CheckoutTokenPayload {
   expiresAt: number;
 }
 
-export function signCheckoutToken(payload: CheckoutTokenPayload): string {
+export const signCheckoutToken = (payload: CheckoutTokenPayload): string => {
   const data = JSON.stringify(payload);
   const sig = createHmac("sha256", SECRET).update(data).digest("hex");
   return Buffer.from(JSON.stringify({ data, sig })).toString("base64url");
-}
+};
 
-export function verifyCheckoutToken(token: string): CheckoutTokenPayload {
+export const verifyCheckoutToken = (token: string): CheckoutTokenPayload => {
   let parsed: { data: string; sig: string };
 
   try {
@@ -40,12 +40,12 @@ export function verifyCheckoutToken(token: string): CheckoutTokenPayload {
   }
 
   return payload;
-}
+};
 
-export function hashItems(items: { productId: string; selectedSize: string; quantity: number }[]): string {
+export const hashItems = (items: { productId: string; selectedSize: string; quantity: number }[]): string => {
   const normalized = [...items]
     .sort((a, b) => a.productId.localeCompare(b.productId))
     .map((i) => `${i.productId}:${i.selectedSize}:${i.quantity}`)
     .join("|");
   return createHmac("sha256", SECRET).update(normalized).digest("hex");
-}
+};

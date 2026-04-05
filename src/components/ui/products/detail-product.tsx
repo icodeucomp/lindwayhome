@@ -8,7 +8,7 @@ import { useCartStore } from "@/hooks";
 
 import { Button, Container, Img, Motion } from "@/components";
 
-import { CardProduct } from "./card-product";
+import { CardProduct } from "../card-product";
 
 import toast from "react-hot-toast";
 
@@ -21,7 +21,7 @@ import { formatIDR, formatDashToSpace, formatDashToUnderscore, productsApi } fro
 import { ApiResponse, Product } from "@/types";
 import { useRouter } from "next/navigation";
 
-export const ProductDetail = ({ id, category }: { id: string; category: string }) => {
+export const DetailProduct = ({ id, category }: { id: string; category: string }) => {
   const router = useRouter();
   const { addToCart } = useCartStore();
   const { data: product, isLoading: loadProduct, error: errorProduct } = productsApi.useGetProduct<ApiResponse<Product>>({ key: ["product", id], id });
@@ -294,7 +294,7 @@ export const ProductDetail = ({ id, category }: { id: string; category: string }
 
             {!loadProducts && hasMore && (
               <div className="flex justify-center text-gray">
-                <button onClick={handleLoadMore} disabled={loadProducts} className="block pb-1 text-lg font-medium border-b border-gray w-max">
+                <button onClick={handleLoadMore} disabled={loadProducts} className="block pb-1 text-lg font-medium border-b border-gray w-max cursor-pointer">
                   Discover More
                 </button>
               </div>

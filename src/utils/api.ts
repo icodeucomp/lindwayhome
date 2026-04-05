@@ -396,6 +396,7 @@ export const configParametersApi = {
         } catch (error) {
           if (axios.isAxiosError(error)) {
             const responseData = error.response?.data.message;
+            console.log("🚀 ~ responseData:", responseData);
             throw new Error(responseData || "An error occurred");
           }
           throw new Error("An unexpected error occurred");
@@ -567,18 +568,14 @@ export const dashboardApi = {
 
 // Files Api
 export const filesApi = {
-  uploadImages: async (files: File | File[], subPath: string, onProgress?: (progress: number) => void): Promise<Files[]> => {
+  uploadImages: async (files: File | File[], onProgress?: (progress: number) => void): Promise<Files[]> => {
     const formData = new FormData();
     if (Array.isArray(files)) files.forEach((file) => formData.append("files", file));
     else formData.append("files", files);
 
-    formData.append("subPath", subPath);
-
     try {
       const response = await api.post("/files/uploads/images", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total && onProgress) {
             const progress = Math.round((progressEvent.loaded / progressEvent.total) * 100);
@@ -597,13 +594,8 @@ export const filesApi = {
   },
   uploadVideos: async (files: File | File[], onProgress?: (progress: number) => void): Promise<Files[]> => {
     const formData = new FormData();
-    if (Array.isArray(files)) {
-      files.forEach((file) => {
-        formData.append("files", file);
-      });
-    } else {
-      formData.append("files", files);
-    }
+    if (Array.isArray(files)) files.forEach((file) => formData.append("files", file));
+    else formData.append("files", files);
 
     try {
       const response = await api.post("/files/uploads/videos", formData, {

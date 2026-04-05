@@ -4,15 +4,15 @@ import { z } from "zod";
 
 import { ConfigService, ShippingService } from "@/services";
 
-import { logCalculation, logger, prisma, sendOrderConfirmation } from "@/lib";
+import { FileUploader, logCalculation, logger, prisma, sendOrderConfirmation } from "@/lib";
 
 import { API_BASE_URL, calculateDistance, calculateShippingCost, calculateTotalPrice, signCheckoutToken, verifyCheckoutToken, hashItems, ShippingItem } from "@/utils";
 
 import { CartSchema, CreateGuestSchema, DiscountType, ShippingCalculateSchema } from "@/types";
 
-// ===========================
+const uploader = new FileUploader();
+
 // GET - Calculate Shipping & Price
-// ===========================
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
@@ -193,9 +193,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// ===========================
 // POST - Create Guest Order
-// ===========================
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
@@ -266,7 +264,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: msg }, { status: 400 });
     }
 
-    // ── 3. Merge trusted prices into guest data ──────────────────────────────
+    // ── 3. Merge trusted prices into guest data and move receipt images from temp storage ──────────────────────────────
     const createData = CreateGuestSchema.parse({
       ...body,
       shippingCost: trustedPrices.shippingCost,
@@ -274,6 +272,8 @@ export async function POST(request: NextRequest) {
       purchased: trustedPrices.purchased,
       totalItemsSold: trustedPrices.totalItemsSold,
     });
+
+    await uploader.moveFromTemp(createData.receiptImage.filename, "receipts");
 
     // ── 4. Database transaction ──────────────────────────────────────────────
     const result = await prisma.$transaction(async (tx) => {

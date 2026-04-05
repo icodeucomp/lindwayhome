@@ -8,9 +8,11 @@ import { useCartStore } from "@/hooks";
 
 import toast from "react-hot-toast";
 
-import { Container, Button } from "@/components";
+import { OrderSummary } from "./order-summary";
 
-import { CartCategory, CartHeader, CartSummary, OrderSummary } from "@/components/ui/carts";
+import { CartCategory, CartHeader, CartSummary } from "./slicing";
+
+import { Container, Button } from "@/components";
 
 import { FaShoppingCart } from "react-icons/fa";
 

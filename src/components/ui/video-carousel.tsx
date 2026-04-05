@@ -10,21 +10,29 @@ import { ApiResponse, ConfigParameterData, Files } from "@/types";
 
 export const VideoCarousel = () => {
   const [videos, setVideos] = React.useState<Files[]>([]);
-
   const [currentIndex, setCurrentIndex] = React.useState<number>(0);
   const [playingVideo, setPlayingVideo] = React.useState<string | null>(null);
   const [mutedVideos, setMutedVideos] = React.useState<Set<string>>(new Set());
   const [isDragging, setIsDragging] = React.useState<boolean>(false);
   const [dragStart, setDragStart] = React.useState<number>(0);
   const [dragOffset, setDragOffset] = React.useState<number>(0);
-  const [pausedVideos, setPausedVideos] = React.useState<Set<string>>(new Set());
+
+  const videoRefs = React.useRef<{ [key: string]: HTMLVideoElement | null }>({});
+  // Tracks which slide index was "active" when a play() was initiated,
+  // so async callbacks can bail out if the slide has already changed.
+  const activeSlideRef = React.useRef<number>(currentIndex);
 
   const { data: parameter, isLoading } = configParametersApi.useGetConfigParametersPublic<ApiResponse<ConfigParameterData>>({
     key: ["config-parameters-public"],
     keyParams: ["videos_curated_collection"],
   });
 
-  const videoRefs = React.useRef<{ [key: string]: HTMLVideoElement | null }>({});
+  const pauseAll = React.useCallback(() => {
+    Object.values(videoRefs.current).forEach((v) => {
+      if (v && !v.paused) v.pause();
+    });
+    setPlayingVideo(null);
+  }, []);
 
   const goToSlide = React.useCallback((index: number) => {
     setCurrentIndex(index);
@@ -45,16 +53,16 @@ export const VideoCarousel = () => {
     if (playingVideo === videoFilename) {
       video.pause();
       setPlayingVideo(null);
-      setPausedVideos((prev) => new Set(prev).add(videoFilename));
     } else {
-      Object.values(videoRefs.current).forEach((v) => v?.pause());
-      video.play();
-      setPlayingVideo(videoFilename);
-      setPausedVideos((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(videoFilename);
-        return newSet;
-      });
+      pauseAll();
+      video
+        .play()
+        .then(() => {
+          setPlayingVideo(videoFilename);
+        })
+        .catch((err) => {
+          if (err.name !== "AbortError") console.error(err);
+        });
     }
   };
 
@@ -62,15 +70,17 @@ export const VideoCarousel = () => {
     const video = videoRefs.current[videoFilename];
     if (!video) return;
 
-    const newMutedVideos = new Set(mutedVideos);
-    if (mutedVideos.has(videoFilename)) {
-      newMutedVideos.delete(videoFilename);
-      video.muted = false;
-    } else {
-      newMutedVideos.add(videoFilename);
-      video.muted = true;
-    }
-    setMutedVideos(newMutedVideos);
+    setMutedVideos((prev) => {
+      const next = new Set(prev);
+      if (next.has(videoFilename)) {
+        next.delete(videoFilename);
+        video.muted = false;
+      } else {
+        next.add(videoFilename);
+        video.muted = true;
+      }
+      return next;
+    });
   };
 
   const handleDragStart = (clientX: number) => {
@@ -81,64 +91,61 @@ export const VideoCarousel = () => {
 
   const handleDragMove = (clientX: number) => {
     if (!isDragging) return;
-    const offset = clientX - dragStart;
-    setDragOffset(offset);
+    setDragOffset(clientX - dragStart);
   };
 
   const handleDragEnd = () => {
     if (!isDragging) return;
     setIsDragging(false);
-
-    const threshold = 100;
-    if (dragOffset > threshold) {
-      prevSlide();
-    } else if (dragOffset < -threshold) {
-      nextSlide();
-    }
-
+    if (dragOffset > 100) prevSlide();
+    else if (dragOffset < -100) nextSlide();
     setDragOffset(0);
   };
 
-  const currentVideo = videos[currentIndex];
-  const isCurrentVideoPlaying = currentVideo && playingVideo === currentVideo.filename;
-
+  // Populate videos from API
   React.useEffect(() => {
-    if (parameter && parameter.data) {
+    if (parameter?.data) {
       setVideos(parameter.data.videos_curated_collection);
     }
   }, [parameter]);
 
+  // Reset refs when video list changes
+  React.useEffect(() => {
+    videoRefs.current = {};
+  }, [videos]);
+
+  // Auto-play the current slide
   React.useEffect(() => {
     if (videos.length === 0) return;
 
-    Object.values(videoRefs.current).forEach((v) => v?.pause());
-    setPlayingVideo(null);
+    const slideIndex = currentIndex;
+    activeSlideRef.current = slideIndex;
 
-    const currentVideo = videos[currentIndex];
-    if (currentVideo) {
-      const videoElement = videoRefs.current[currentVideo.filename];
+    // Pause everything first, synchronously
+    pauseAll();
 
-      if (videoElement && !pausedVideos.has(currentVideo.filename)) {
-        const timer = setTimeout(() => {
-          videoElement
-            .play()
-            .then(() => {
-              setPlayingVideo(currentVideo.filename);
-            })
-            .catch((error) => {
-              setPlayingVideo(error);
-            });
-        }, 100);
+    const currentVideo = videos[slideIndex];
+    if (!currentVideo) return;
 
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [currentIndex, videos, pausedVideos]);
+    const videoEl = videoRefs.current[currentVideo.filename];
+    if (!videoEl) return;
 
-  React.useEffect(() => {
-    videoRefs.current = {};
-    setPausedVideos(new Set());
-  }, [videos]);
+    videoEl
+      .play()
+      .then(() => {
+        // Only update state if this slide is still active
+        if (activeSlideRef.current === slideIndex) {
+          setPlayingVideo(currentVideo.filename);
+        }
+      })
+      .catch((err) => {
+        // AbortError is expected when slides change quickly — ignore it
+        if (err.name !== "AbortError") console.error(err);
+      });
+  }, [currentIndex, videos, pauseAll]);
+
+  const currentVideo = videos[currentIndex];
+  const isCurrentVideoPlaying = currentVideo && playingVideo === currentVideo.filename;
 
   if (isLoading) {
     return (
@@ -172,11 +179,6 @@ export const VideoCarousel = () => {
                 className="object-cover w-full h-full"
                 preload="metadata"
                 onEnded={() => setPlayingVideo(null)}
-                onLoadStart={() => {
-                  if (videoRefs.current[video.filename]) {
-                    videoRefs.current[video.filename]!.pause();
-                  }
-                }}
               >
                 <source src={video.url} type="video/mp4" />
               </video>

@@ -1,6 +1,7 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "./prisma";
+import { logger } from "./logger";
 
 import bcrypt from "bcryptjs";
 
@@ -114,4 +115,20 @@ export const authorize = async (req: NextRequest, requiredRole: Role): Promise<A
   }
 
   return { user };
+};
+
+export const checkAuth = async (request: NextRequest, context: string, role: Role = "ADMIN") => {
+  const [authenticationResult, authorizationResult] = await Promise.all([authenticate(request), authorize(request, role)]);
+
+  if (authenticationResult.message) {
+    logger.error(`API ${context} error`, { error: authenticationResult.message });
+    return NextResponse.json({ success: false, message: authenticationResult.message }, { status: authenticationResult.status });
+  }
+
+  if (authorizationResult.message) {
+    logger.error(`API ${context} error`, { error: authorizationResult.message });
+    return NextResponse.json({ success: false, message: authorizationResult.message }, { status: authorizationResult.status });
+  }
+
+  return null;
 };

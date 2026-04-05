@@ -8,7 +8,6 @@ export * from "./care-instructions";
 export * from "./how-to-shop";
 export * from "./our-fabrics";
 export * from "./curated-collections";
-export * from "./product";
 export * from "./video-carousel";
 export * from "./card-product";
 export * from "./membership-confirm";

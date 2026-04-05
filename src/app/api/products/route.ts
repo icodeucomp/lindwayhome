@@ -3,11 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "prisma-client/client";
 import { z } from "zod";
 
-import { authenticate, authorize, logger, prisma } from "@/lib";
+import { checkAuth, FileUploader, logger, prisma } from "@/lib";
 
 import { calculateDiscountedPrice } from "@/utils";
 
 import { Categories, CreateProductSchema } from "@/types";
+
+const uploader = new FileUploader();
 
 // GET - Fetch all products
 export async function GET(request: NextRequest) {
@@ -115,16 +117,8 @@ export async function GET(request: NextRequest) {
 
 // POST - create product
 export async function POST(request: NextRequest) {
-  const authenticationResult = await authenticate(request);
-  const authorizationResult = await authorize(request, "ADMIN");
-  if (authenticationResult.message) {
-    logger.error("API /products error", { error: authenticationResult.message });
-    return NextResponse.json({ success: false, message: authenticationResult.message }, { status: authenticationResult.status });
-  }
-  if (authorizationResult.message) {
-    logger.error("API /products error", { error: authorizationResult.message });
-    return NextResponse.json({ success: false, message: authorizationResult.message }, { status: authorizationResult.status });
-  }
+  const authError = await checkAuth(request, "/products");
+  if (authError) return authError;
 
   try {
     const body = await request.json();
@@ -157,6 +151,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, message: "Product with this SKU already exists" }, { status: 400 });
       }
     }
+
+    await Promise.all(createData.images.map((image) => uploader.moveFromTemp(image.filename, `${createData.category}/${createData.sku}`)));
 
     await prisma.product.create({ data: { ...createData, discountedPrice, stock: totalStock } });
 

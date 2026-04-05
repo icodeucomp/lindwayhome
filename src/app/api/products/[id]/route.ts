@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 
-import { authenticate, authorize, logger, prisma } from "@/lib";
+import { checkAuth, FileUploader, logger, prisma } from "@/lib";
 
 import { calculateDiscountedPrice } from "@/utils";
 
@@ -8,7 +8,9 @@ import { z } from "zod";
 
 import { UpdateProductSchema } from "@/types";
 
-// GET - Fetch single product
+const uploader = new FileUploader();
+
+// GET - Fetch one product by ID
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -31,18 +33,10 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   }
 }
 
-// PUT - Update product
+// PUT - Update a product by ID
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const authenticationResult = await authenticate(request);
-  const authorizationResult = await authorize(request, "ADMIN");
-  if (authenticationResult.message) {
-    logger.error("API /products/[id] error", { error: authenticationResult.message });
-    return NextResponse.json({ success: false, message: authenticationResult.message }, { status: authenticationResult.status });
-  }
-  if (authorizationResult.message) {
-    logger.error("API /products/[id] error", { error: authorizationResult.message });
-    return NextResponse.json({ success: false, message: authorizationResult.message }, { status: authorizationResult.status });
-  }
+  const authError = await checkAuth(request, "/products/[id]");
+  if (authError) return authError;
 
   try {
     const { id } = await params;
@@ -85,6 +79,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       }
     }
 
+    if (updateData && updateData.images) {
+      console.log("Moving images from temp to permanent storage for product update:", updateData.images);
+      await Promise.all(updateData.images.map((image) => uploader.moveFromTemp(image.filename, `${updateData.category}/${updateData.sku}` || "uncategorized")));
+    }
+
     await prisma.product.update({ where: { id }, data: { ...updateData, stock: totalStock } });
 
     logger.info("API Response /products/[id]", {
@@ -108,18 +107,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-// DELETE - Delete product
+// DELETE - Delete a product by ID
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const authenticationResult = await authenticate(request);
-  const authorizationResult = await authorize(request, "ADMIN");
-  if (authenticationResult.message) {
-    logger.error("API /products/[id] error", { error: authenticationResult.message });
-    return NextResponse.json({ success: false, message: authenticationResult.message }, { status: authenticationResult.status });
-  }
-  if (authorizationResult.message) {
-    logger.error("API /products/[id] error", { error: authorizationResult.message });
-    return NextResponse.json({ success: false, message: authorizationResult.message }, { status: authorizationResult.status });
-  }
+  const authError = await checkAuth(request, "/products/[id]");
+  if (authError) return authError;
 
   try {
     const { id } = await params;
@@ -130,6 +121,8 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       logger.error("API /products/[id] error", { error: "Product not found" });
       return NextResponse.json({ success: false, message: "Product not found" }, { status: 404 });
     }
+
+    await uploader.deleteFolder(`/uploads/${product.category}/${product.sku}`);
 
     await prisma.product.delete({ where: { id } });
 

@@ -6,7 +6,7 @@ import { useCartStore } from "@/hooks";
 
 import toast from "react-hot-toast";
 
-import { CheckoutForm, CompleteStep, PaymentStep } from "@/components/ui/carts";
+import { CheckoutForm, CompleteStep, PaymentStep } from "./slicing";
 
 import { Modal } from "@/components";
 import { guestCheckoutApi } from "@/utils";

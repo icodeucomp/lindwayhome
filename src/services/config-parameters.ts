@@ -18,10 +18,13 @@ export class ConfigService {
     const config = await prisma.configParameter.findMany({ where: { key: { in: keys }, isActive: true } });
 
     // Convert array to object with key-value pairs
-    return config.reduce((acc, item) => {
-      acc[item.key] = item.value;
-      return acc;
-    }, {} as Record<string, Prisma.JsonValue>);
+    return config.reduce(
+      (acc, item) => {
+        acc[item.key] = item.value;
+        return acc;
+      },
+      {} as Record<string, Prisma.JsonValue>,
+    );
   }
 
   // Update a configuration value

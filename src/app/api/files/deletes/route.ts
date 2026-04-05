@@ -35,6 +35,10 @@ export async function POST(request: NextRequest) {
 
     const uploadResults = await uploader.deleteFile(subPath.trim());
 
+    if (!uploadResults) {
+      return NextResponse.json({ success: false, message: "File not found or already deleted" }, { status: 404 });
+    }
+
     logger.info("API Response /files/deletes", {
       message: "File deleted successfully",
       durationMs: Date.now() - start,

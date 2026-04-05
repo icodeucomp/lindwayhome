@@ -58,22 +58,22 @@ export const DEFAULT_SHIPPING_ZONES: ShippingZone[] = [
   { zone: "Z4", label: "Long Distance", max_km: null, multiplier: 2.0, price_override: null },
 ];
 
-function toRadians(degrees: number): number {
+const toRadians = (degrees: number): number => {
   return degrees * (Math.PI / 180);
-}
+};
 
 // Haversine formula
-export function calculateDistance(originLat: number, originLong: number, destinationLat: number, destinationLong: number, earthRadius: number): number {
+export const calculateDistance = (originLat: number, originLong: number, destinationLat: number, destinationLong: number, earthRadius: number): number => {
   const dLat = toRadians(destinationLat - originLat);
   const dLon = toRadians(destinationLong - originLong);
 
   const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRadians(originLat)) * Math.cos(toRadians(destinationLat)) * Math.sin(dLon / 2) ** 2;
 
   return earthRadius * 2 * Math.asin(Math.sqrt(a));
-}
+};
 
 // Resolve zone from a sorted zones array
-export function resolveZone(distance_km: number, zones: ShippingZone[]): ZoneResult {
+export const resolveZone = (distance_km: number, zones: ShippingZone[]): ZoneResult => {
   const sorted = [...zones].sort((a, b) => {
     if (a.max_km === null) return 1;
     if (b.max_km === null) return -1;
@@ -98,9 +98,9 @@ export function resolveZone(distance_km: number, zones: ShippingZone[]): ZoneRes
     multiplier: last.multiplier,
     price_override: last.price_override,
   };
-}
+};
 
-export function calculateShippingCost(items: ShippingItem[], distance_km: number, config: ShippingConfig, zones: ShippingZone[] = DEFAULT_SHIPPING_ZONES): ShippingCalculationResult {
+export const calculateShippingCost = (items: ShippingItem[], distance_km: number, config: ShippingConfig, zones: ShippingZone[] = DEFAULT_SHIPPING_ZONES): ShippingCalculationResult => {
   // 1. Calculate total chargeable weight
   let total_weight_kg = 0;
 
@@ -143,4 +143,4 @@ export function calculateShippingCost(items: ShippingItem[], distance_km: number
     multiplier,
     price_override,
   };
-}
+};

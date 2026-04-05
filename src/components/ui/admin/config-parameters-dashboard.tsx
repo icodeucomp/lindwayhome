@@ -2,8 +2,6 @@
 
 import * as React from "react";
 
-import toast from "react-hot-toast";
-
 import { useAuthStore } from "@/hooks";
 
 import { ConfigField } from "./slicing";
@@ -17,11 +15,12 @@ import { CiSettings } from "react-icons/ci";
 
 import { ApiResponse, ConfigGroup, ConfigValue, EditConfigParameter } from "@/types";
 
-function useConfigParameters() {
+const useConfigParameters = () => {
   const queryClient = useQueryClient();
   const { isAuthenticated } = useAuthStore();
 
   const [values, setValues] = React.useState<EditConfigParameter>({});
+  const [changedKeys, setChangedKeys] = React.useState<Set<string>>(new Set());
   const [hasChanges, setHasChanges] = React.useState(false);
 
   const { data, isLoading, isError } = configParametersApi.useGetConfigParameters<ApiResponse<ConfigGroup[]>>({
@@ -39,37 +38,39 @@ function useConfigParameters() {
     });
     setValues(initial);
     setHasChanges(false);
+    setChangedKeys(new Set());
   }, [data]);
 
-  const mutation = configParametersApi.useUpdateConfigParameters({
+  const updateConfigParameters = configParametersApi.useUpdateConfigParameters({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["config-parameters"] });
       setHasChanges(false);
-      toast.success("Configuration saved successfully");
-    },
-    onError: () => {
-      toast.error("Failed to save configuration");
+      setChangedKeys(new Set());
     },
   });
 
   const handleValueChange = (key: string, newValue: ConfigValue) => {
     setValues((prev) => ({ ...prev, [key]: newValue }));
+    setChangedKeys((prev) => new Set(prev).add(key));
     setHasChanges(true);
   };
 
-  const handleSave = () => mutation.mutate(values);
+  const handleSave = () => {
+    const changedValues = Object.fromEntries([...changedKeys].map((key) => [key, values[key]]));
+    updateConfigParameters.mutate(changedValues);
+  };
 
   return {
     groups: data?.data ?? [],
     isLoading,
     isError,
-    isSaving: mutation.isPending,
+    isSaving: updateConfigParameters.isPending,
     values,
     hasChanges,
     handleValueChange,
     handleSave,
   };
-}
+};
 
 interface TabSidebarProps {
   groups: ConfigGroup[];

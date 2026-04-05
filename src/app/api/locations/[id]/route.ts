@@ -2,21 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 
 import z from "zod";
 
-import { authenticate, authorize, logger, prisma } from "@/lib";
+import { checkAuth, logger, prisma } from "@/lib";
 
 import { UpdateLocationSchema } from "@/types";
 
+// GET - Fetch one location by ID
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const authenticationResult = await authenticate(request);
-  const authorizationResult = await authorize(request, "ADMIN");
-  if (authenticationResult.message) {
-    logger.error("API /locations error", { error: authenticationResult.message });
-    return NextResponse.json({ success: false, message: authenticationResult.message }, { status: authenticationResult.status });
-  }
-  if (authorizationResult.message) {
-    logger.error("API /locations error", { error: authorizationResult.message });
-    return NextResponse.json({ success: false, message: authorizationResult.message }, { status: authorizationResult.status });
-  }
+  const authError = await checkAuth(request, "/locations/[id]");
+  if (authError) return authError;
 
   try {
     const { id } = await params;
@@ -48,17 +41,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
+// PUT - Update a location by ID
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const authenticationResult = await authenticate(request);
-  const authorizationResult = await authorize(request, "ADMIN");
-  if (authenticationResult.message) {
-    logger.error("API /locations/[id] error", { error: authenticationResult.message });
-    return NextResponse.json({ success: false, message: authenticationResult.message }, { status: authenticationResult.status });
-  }
-  if (authorizationResult.message) {
-    logger.error("API /locations/[id] error", { error: authorizationResult.message });
-    return NextResponse.json({ success: false, message: authorizationResult.message }, { status: authorizationResult.status });
-  }
+  const authError = await checkAuth(request, "/locations/[id]");
+  if (authError) return authError;
 
   try {
     const { id } = await params;
@@ -131,17 +117,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
+// DELETE - Delete a location by ID
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const authenticationResult = await authenticate(request);
-  const authorizationResult = await authorize(request, "ADMIN");
-  if (authenticationResult.message) {
-    logger.error("API /locations error", { error: authenticationResult.message });
-    return NextResponse.json({ success: false, message: authenticationResult.message }, { status: authenticationResult.status });
-  }
-  if (authorizationResult.message) {
-    logger.error("API /locations error", { error: authorizationResult.message });
-    return NextResponse.json({ success: false, message: authorizationResult.message }, { status: authorizationResult.status });
-  }
+  const authError = await checkAuth(request, "/locations/[id]");
+  if (authError) return authError;
 
   try {
     const { id } = await params;

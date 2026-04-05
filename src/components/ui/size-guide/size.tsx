@@ -22,7 +22,7 @@ export const Size = () => {
           <Background src="/images/size-guide-find-your-perfect-fit-women-measurement.webp" alt="women hero background" className="flex items-end justify-center p-8 min-h-100 sm:min-h-150 bg-dark/40">
             <div className="space-y-4 text-center">
               <h4 className="text-2xl font-medium max-w-40">Women Measurement</h4>
-              <button onClick={() => setIsModalWomen(true)} className="block pb-2 mx-auto border-b border-light w-max">
+              <button onClick={() => setIsModalWomen(true)} className="block pb-2 mx-auto border-b border-light w-max cursor-pointer">
                 See details
               </button>
             </div>
@@ -30,7 +30,7 @@ export const Size = () => {
           <Background src="/images/size-guide-find-your-perfect-fit-men-measurement.webp" alt="men hero background" className="flex items-end justify-center p-8 min-h-100 sm:min-h-150 bg-dark/40">
             <div className="space-y-4 text-center">
               <h4 className="text-2xl font-medium max-w-40">Men Measurement</h4>
-              <button onClick={() => setIsModalMen(true)} className="block pb-2 mx-auto border-b border-light w-max">
+              <button onClick={() => setIsModalMen(true)} className="block pb-2 mx-auto border-b border-light w-max cursor-pointer">
                 See details
               </button>
             </div>
@@ -38,7 +38,7 @@ export const Size = () => {
           <Background src="/images/size-guide-find-your-perfect-fit-baby-measurement.webp" alt="baby hero background" className="flex items-end justify-center p-8 min-h-100 sm:min-h-150 bg-dark/40">
             <div className="space-y-4 text-center">
               <h4 className="text-2xl font-medium max-w-40">Baby & Child Measurement</h4>
-              <button onClick={() => setIsModalBaby(true)} className="block pb-2 mx-auto border-b border-light w-max">
+              <button onClick={() => setIsModalBaby(true)} className="block pb-2 mx-auto border-b border-light w-max cursor-pointer">
                 See details
               </button>
             </div>

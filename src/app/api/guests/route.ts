@@ -2,20 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { Prisma } from "prisma-client/client";
 
-import { authenticate, authorize, logger, prisma } from "@/lib";
+import { checkAuth, logger, prisma } from "@/lib";
 
 // GET - Fetch all guests and carts
 export async function GET(request: NextRequest) {
-  const authenticationResult = await authenticate(request);
-  const authorizationResult = await authorize(request, "ADMIN");
-  if (authenticationResult.message) {
-    logger.error("API /guests error", { error: authenticationResult.message });
-    return NextResponse.json({ success: false, message: authenticationResult.message }, { status: authenticationResult.status });
-  }
-  if (authorizationResult.message) {
-    logger.error("API /guests error", { error: authorizationResult.message });
-    return NextResponse.json({ success: false, message: authorizationResult.message }, { status: authorizationResult.status });
-  }
+  const authError = await checkAuth(request, "/guests");
+  if (authError) return authError;
 
   try {
     const { searchParams } = new URL(request.url);

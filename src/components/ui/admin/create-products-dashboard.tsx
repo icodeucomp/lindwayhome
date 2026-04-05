@@ -52,7 +52,7 @@ export const CreateProductDashboard = () => {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     createProduct.mutate(formData);
   };
@@ -100,7 +100,7 @@ export const CreateProductDashboard = () => {
     try {
       setHelper((prev) => ({ ...prev, isUploading: true, uploadProgress: 0 }));
 
-      const respImages = await filesApi.uploadImages(files, formData.category, (progress: number) => {
+      const respImages = await filesApi.uploadImages(files, (progress: number) => {
         setHelper((prev) => ({ ...prev, uploadProgress: progress }));
       });
 
