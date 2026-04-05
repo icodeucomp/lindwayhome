@@ -3,7 +3,7 @@ import { prisma } from "@/lib";
 
 export class ConfigService {
   // Get all configurations grouped by their groups
-  static async getAllConfigurations() {
+  static async getAllConfigs() {
     const groups = await prisma.configParameterGroup.findMany({
       include: { configs: { where: { isActive: true }, orderBy: { order: "asc" } } },
       where: { isActive: true },

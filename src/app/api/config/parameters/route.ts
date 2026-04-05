@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   if (authError) return authError;
 
   try {
-    const configParameters = await ConfigService.getAllConfigurations();
+    const configParameters = await ConfigService.getAllConfigs();
     return NextResponse.json({ success: true, data: configParameters }, { status: 200 });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
@@ -46,24 +46,30 @@ export async function PUT(request: NextRequest) {
       ip,
     });
 
-    const existingConfig = await ConfigService.getAllConfigurations();
+    const existingConfig = await ConfigService.getConfigValue(Object.keys(body));
 
-    const collectFiles = (node: unknown): Files[] => {
-      if (!node || typeof node !== "object") return [];
-      if ("filename" in node && "isMoved" in node) return [node as Files];
-      if (Array.isArray(node)) return node.flatMap(collectFiles);
-      return Object.values(node).flatMap(collectFiles);
+    const existingFiles = new Map<string, Files>();
+    const collectExisting = (node: unknown) => {
+      if (!node || typeof node !== "object") return;
+      if ("filename" in node && "isMoved" in node) {
+        existingFiles.set((node as Files).filename, node as Files);
+        return;
+      }
+      if (Array.isArray(node)) {
+        node.forEach(collectExisting);
+        return;
+      }
+      Object.values(node).forEach(collectExisting);
     };
+    collectExisting(existingConfig);
 
-    const existingFiles = collectFiles(existingConfig);
-    const incomingFiles = collectFiles(body);
-
-    const deletedFiles = existingFiles.filter((existing) => !incomingFiles.some((incoming) => incoming.filename === existing.filename));
+    const seenFilenames = new Set<string>();
 
     const replaceTempFiles = async (node: unknown): Promise<unknown> => {
       if (!node || typeof node !== "object") return node;
       if ("filename" in node && "isMoved" in node) {
         const file = node as Files;
+        seenFilenames.add(file.filename);
         return file.isMoved ? file : await uploader.moveFromTemp(file, "config");
       }
       if (Array.isArray(node)) return Promise.all(node.map(replaceTempFiles));
@@ -72,6 +78,8 @@ export async function PUT(request: NextRequest) {
     };
 
     const updatedBody = (await replaceTempFiles(body)) as Record<string, Prisma.InputJsonValue>;
+
+    const deletedFiles = [...existingFiles.values()].filter((f) => !seenFilenames.has(f.filename));
 
     await Promise.all([ConfigService.updateConfigValues(updatedBody), ...deletedFiles.map((file) => uploader.deleteFile(file.path))]);
 
