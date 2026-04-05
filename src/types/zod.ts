@@ -8,15 +8,13 @@ export const DiscountEnum = z.enum(["PERCENTAGE", "FIXED"]);
 
 export const FileSchema = z.object({
   filename: z.string().min(1, "Filename is required"),
+  originalName: z.string().min(1, "Original Filename is required"),
   url: z.string().min(1, "Url is required"),
   path: z.string().min(1, "Path is required"),
-  size: z.number().int().positive("Size must be positive").nullable().optional(),
-  mimeType: z
-    .string()
-    .regex(/^(image|video)\//, "Must be a valid image or video mime type")
-    .nullable()
-    .optional(),
+  size: z.number().int().positive("Size must be positive"),
+  mimeType: z.string().regex(/^(image|video)\//, "Must be a valid image or video mime type"),
   alt: z.string().min(1, "Alt text is required for accessibility"),
+  isMoved: z.boolean().default(false),
 });
 
 const CartItemSchema = z.object({

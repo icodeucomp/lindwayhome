@@ -149,13 +149,9 @@ export const EditProductDashboard = ({ id }: { id: string }) => {
     }
   };
 
-  const handleDeleteImages = async (subPath: string) => {
+  const handleDeleteImages = (subPath: string) => {
     try {
       setHelper((prev) => ({ ...prev, isDeleting: true, deletingProgress: 0 }));
-
-      await filesApi.delete(subPath, (progress: number) => {
-        setHelper((prev) => ({ ...prev, deletingProgress: progress }));
-      });
 
       setFormData((prev) => ({ ...prev, images: prev.images?.filter((image) => image.path !== subPath) }));
     } catch (error) {

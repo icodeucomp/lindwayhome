@@ -306,7 +306,7 @@ export const ImageField = ({ configKey, value, onChange }: { configKey: string; 
           <label htmlFor={`image-${configKey}`} className="file-label">
             Choose Image
           </label>
-          <span className="text-sm text-slate-500 whitespace-nowrap">{imageValue?.filename}</span>
+          <span className="text-sm text-slate-500 whitespace-nowrap">{imageValue?.originalName}</span>
           <small className="pr-2 ms-auto text-gray/70">Max 5mb. (1:1)</small>
         </div>
         {uploading && <ProgressBar uploadProgress={uploadProgress} />}
@@ -360,10 +360,10 @@ export const ImagesField = ({ configKey, value, onChange }: { configKey: string;
     }
   };
 
-  const handleDelete = async (path: string) => {
+  const handleDelete = (path: string) => {
     try {
       setDeletingPath(path);
-      await filesApi.delete(path);
+
       onChange(images.filter((f) => f.path !== path));
     } catch (error) {
       toast.error((error as string) || "Failed to delete image");
@@ -465,6 +465,7 @@ export const VideoField = ({ value, onChange }: { value: ConfigValue; onChange: 
           <label htmlFor="video-single" className="file-label">
             Choose Video
           </label>
+          <span className="text-sm text-slate-500 whitespace-nowrap">{videoValue?.originalName}</span>
           <small className="pr-2 ms-auto text-gray/70">Max 15mb. (16:9)</small>
         </div>
         {uploading && <ProgressBar uploadProgress={uploadProgress} />}
@@ -518,10 +519,9 @@ export const VideosField = ({ value, onChange }: { value: ConfigValue; onChange:
     }
   };
 
-  const handleDelete = async (path: string) => {
+  const handleDelete = (path: string) => {
     try {
       setDeletingPath(path);
-      await filesApi.delete(path);
       onChange(videos.filter((v) => v.path !== path));
     } catch (error) {
       toast.error((error as string) || "Failed to delete video");

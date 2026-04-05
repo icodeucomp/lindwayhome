@@ -152,7 +152,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    await Promise.all(createData.images.map((image) => uploader.moveFromTemp(image.filename, `${createData.category}/${createData.sku}`)));
+    if (createData && createData.images) {
+      const moved = await Promise.all(createData.images.filter((image) => !image.isMoved).map((image) => uploader.moveFromTemp(image, `${createData.category}/${createData.sku}`)));
+      createData.images = [...createData.images.filter((image) => image.isMoved), ...moved];
+    }
 
     await prisma.product.create({ data: { ...createData, discountedPrice, stock: totalStock } });
 

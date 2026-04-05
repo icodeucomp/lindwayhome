@@ -1,7 +1,6 @@
 import { writeFile, mkdir, rename, readdir, unlink, stat } from "fs/promises";
 import { join, resolve } from "path";
 import { existsSync } from "fs";
-import { API_BASE_URL } from "@/utils";
 
 interface FileUploaderConfig {
   baseUploadPath?: string;
@@ -18,6 +17,7 @@ interface UploadedFileInfo {
   size: number;
   mimeType: string;
   alt: string;
+  isMoved: boolean;
 }
 
 export class FileUploader {
@@ -25,12 +25,14 @@ export class FileUploader {
   private allowedTypes: string[];
   private maxFileSize: number;
   private tempTTLMs: number;
+  private baseURL: string;
 
   constructor(config: FileUploaderConfig = {}) {
     this.baseUploadPath = config.baseUploadPath || process.env.NEXT_PUBLIC_UPLOADS_PATH || "uploads";
     this.allowedTypes = config.allowedTypes || ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
     this.maxFileSize = config.maxFileSize || 5 * 1024 * 1024;
-    this.tempTTLMs = config.tempTTLMs || 60 * 60 * 1000; // 1 hour
+    this.tempTTLMs = config.tempTTLMs || 60 * 60 * 1000;
+    this.baseURL = process.env.NODE_ENV === "production" ? process.env.NEXT_PUBLIC_BASE_URL || "" : "";
   }
 
   private generateFileName(originalName: string): string {
@@ -65,7 +67,6 @@ export class FileUploader {
     return targetPath.startsWith(basePath + "/");
   }
 
-  // NEW: Upload to temp folder only
   async uploadToTemp(file: File): Promise<UploadedFileInfo> {
     try {
       const buffer = Buffer.from(await file.arrayBuffer());
@@ -80,11 +81,12 @@ export class FileUploader {
       return {
         filename: fileName,
         originalName: file.name,
-        url: `${API_BASE_URL}/uploads/temp/${fileName}`,
+        url: `${this.baseURL}/uploads/temp/${fileName}`,
         path: `/uploads/temp/${fileName}`,
         size: buffer.length,
         mimeType: file.type,
-        alt: fileName,
+        alt: file.name,
+        isMoved: false,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
@@ -92,28 +94,28 @@ export class FileUploader {
     }
   }
 
-  // NEW: Move a file from temp/ to a specific destination folder
-  async moveFromTemp(fileName: string, destinationSubPath: string): Promise<UploadedFileInfo> {
+  async moveFromTemp(file: UploadedFileInfo, destinationSubPath: string): Promise<UploadedFileInfo> {
     try {
-      const tempFilePath = join(this.baseUploadPath, "temp", fileName);
+      const tempFilePath = join(this.baseUploadPath, "temp", file.filename);
 
       if (!existsSync(tempFilePath)) {
-        throw new Error(`Temp file not found: ${fileName}`);
+        throw new Error(`Temp file not found: ${file.filename}`);
       }
 
       const destDir = await this.ensureUploadDirectory(destinationSubPath);
-      const destFilePath = join(destDir, fileName);
+      const destFilePath = join(destDir, file.filename);
 
       await rename(tempFilePath, destFilePath);
 
       return {
-        filename: fileName,
-        originalName: fileName,
-        url: `${API_BASE_URL}/uploads/${destinationSubPath}/${fileName}`,
-        path: `/uploads/${destinationSubPath}/${fileName}`,
+        filename: file.filename,
+        originalName: file.originalName,
+        url: `${this.baseURL}/uploads/${destinationSubPath}/${file.filename}`,
+        path: `/uploads/${destinationSubPath}/${file.filename}`,
         size: (await stat(destFilePath)).size,
-        mimeType: "",
-        alt: fileName,
+        mimeType: file.mimeType,
+        alt: file.originalName,
+        isMoved: true,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
@@ -121,7 +123,6 @@ export class FileUploader {
     }
   }
 
-  // NEW: Delete orphaned temp files older than tempTTLMs
   async cleanupTempFiles(): Promise<number> {
     const tempDir = join(this.baseUploadPath, "temp");
     if (!existsSync(tempDir)) return 0;

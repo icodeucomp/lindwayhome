@@ -273,7 +273,10 @@ export async function POST(request: NextRequest) {
       totalItemsSold: trustedPrices.totalItemsSold,
     });
 
-    await uploader.moveFromTemp(createData.receiptImage.filename, "receipts");
+    if (!createData.receiptImage.isMoved) {
+      const moved = await uploader.moveFromTemp(createData.receiptImage, "receipts");
+      createData.receiptImage = moved;
+    }
 
     // ── 4. Database transaction ──────────────────────────────────────────────
     const result = await prisma.$transaction(async (tx) => {

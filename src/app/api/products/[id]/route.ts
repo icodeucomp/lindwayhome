@@ -6,7 +6,7 @@ import { calculateDiscountedPrice } from "@/utils";
 
 import { z } from "zod";
 
-import { UpdateProductSchema } from "@/types";
+import { Files, UpdateProductSchema } from "@/types";
 
 const uploader = new FileUploader();
 
@@ -79,10 +79,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       }
     }
 
-    if (updateData && updateData.images) {
-      console.log("Moving images from temp to permanent storage for product update:", updateData.images);
-      await Promise.all(updateData.images.map((image) => uploader.moveFromTemp(image.filename, `${updateData.category}/${updateData.sku}` || "uncategorized")));
-    }
+    const existingImages = existingProduct.images as unknown as Files[];
+    const incomingImages = updateData.images || [];
+
+    const deletedImages = existingImages.filter((existing) => !incomingImages.some((incoming) => incoming.filename === existing.filename));
+
+    const newImages = incomingImages.filter((image) => !image.isMoved);
+
+    const movedImages = await Promise.all([...newImages.map((image) => uploader.moveFromTemp(image, `${updateData.category}/${updateData.sku}`))]);
+
+    await Promise.all(deletedImages.map((image) => uploader.deleteFile(image.path)));
+
+    updateData.images = [...incomingImages.filter((image) => image.isMoved), ...movedImages];
 
     await prisma.product.update({ where: { id }, data: { ...updateData, stock: totalStock } });
 

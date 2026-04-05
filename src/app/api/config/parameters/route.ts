@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { Prisma } from "prisma-client/client";
+
 import { checkAuth, FileUploader, logger } from "@/lib";
 
 import { ConfigService } from "@/services";
 
-import { ConfigValue, EditConfigParameter, Files } from "@/types";
+import { Files } from "@/types";
 
 const uploader = new FileUploader();
 
@@ -44,40 +46,34 @@ export async function PUT(request: NextRequest) {
       ip,
     });
 
-    // Recursively find all Files objects that still have a tempId
-    function extractTempFiles(value: ConfigValue, parentKey: string): { key: string; file: Files }[] {
-      if (!value || typeof value !== "object") return [];
+    const existingConfig = await ConfigService.getAllConfigurations();
 
-      if (Array.isArray(value)) {
-        return value.flatMap((item) => extractTempFiles(item, parentKey));
+    const collectFiles = (node: unknown): Files[] => {
+      if (!node || typeof node !== "object") return [];
+      if ("filename" in node && "isMoved" in node) return [node as Files];
+      if (Array.isArray(node)) return node.flatMap(collectFiles);
+      return Object.values(node).flatMap(collectFiles);
+    };
+
+    const existingFiles = collectFiles(existingConfig);
+    const incomingFiles = collectFiles(body);
+
+    const deletedFiles = existingFiles.filter((existing) => !incomingFiles.some((incoming) => incoming.filename === existing.filename));
+
+    const replaceTempFiles = async (node: unknown): Promise<unknown> => {
+      if (!node || typeof node !== "object") return node;
+      if ("filename" in node && "isMoved" in node) {
+        const file = node as Files;
+        return file.isMoved ? file : await uploader.moveFromTemp(file, "config");
       }
+      if (Array.isArray(node)) return Promise.all(node.map(replaceTempFiles));
+      const entries = await Promise.all(Object.entries(node).map(async ([key, val]) => [key, await replaceTempFiles(val)]));
+      return Object.fromEntries(entries);
+    };
 
-      // It's a Files object if it has a filename
-      if ("filename" in value && typeof (value as Files).filename === "string") {
-        return [{ key: parentKey, file: value as Files }];
-      }
+    const updatedBody = (await replaceTempFiles(body)) as Record<string, Prisma.InputJsonValue>;
 
-      // It's a JsonRow — recurse into its keys
-      return Object.entries(value).flatMap(([k, v]) => extractTempFiles(v as ConfigValue, k));
-    }
-
-    const tempFiles = Object.entries(body as EditConfigParameter).flatMap(([key, value]) => extractTempFiles(value, key));
-
-    // Move all temp files to "config" folder and update their paths in the body
-    if (tempFiles.length > 0) {
-      const destination = "config";
-
-      const moved = await Promise.all(tempFiles.map(({ file }) => uploader.moveFromTemp(file.filename!, destination)));
-
-      // Replace each temp file entry in-place with the finalized file info
-      tempFiles.forEach(({ file }, index) => {
-        const finalFile = moved[index];
-        file.url = finalFile.url;
-        file.path = finalFile.path;
-      });
-    }
-
-    await ConfigService.updateConfigValues(body);
+    await Promise.all([ConfigService.updateConfigValues(updatedBody), ...deletedFiles.map((file) => uploader.deleteFile(file.path))]);
 
     logger.info("API Response /config/parameters", {
       message: "Parameter has been updated successfully",

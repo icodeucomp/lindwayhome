@@ -18,6 +18,7 @@ function generateProductImages(count: number = 2) {
       size: faker.number.int({ min: 50000, max: 500000 }),
       mimeType: "image/png",
       alt: faker.commerce.productDescription(),
+      isMoved: true,
     };
   });
 }
@@ -230,6 +231,7 @@ async function seedConfigurations() {
       size: faker.number.int({ min: 50000, max: 500000 }),
       mimeType: "image/png",
       alt: faker.commerce.productDescription(),
+      isMoved: true,
     },
     type: "IMAGE",
     groupId: imageGroup.id,
@@ -251,6 +253,7 @@ async function seedConfigurations() {
         size: faker.number.int({ min: 50000, max: 500000 }),
         mimeType: "video/mp4",
         alt: faker.commerce.productDescription(),
+        isMoved: true,
       },
     ],
     type: "VIDEOS",
