@@ -4,13 +4,11 @@ import { z } from "zod";
 
 import { ConfigService, ShippingService } from "@/services";
 
-import { FileUploader, getClientIp, logCalculation, logError, logger, logRequest, logResponse, prisma, sendOrderConfirmation } from "@/lib";
+import { getClientIp, logCalculation, logError, logger, logRequest, logResponse, prisma, resolveFiles, sendOrderConfirmation } from "@/lib";
 
 import { API_BASE_URL, calculateDistance, calculateShippingCost, calculateTotalPrice, signCheckoutToken, verifyCheckoutToken, hashItems, ShippingItem } from "@/utils";
 
 import { CartSchema, CreateGuestSchema, DiscountType, ShippingCalculateSchema } from "@/types";
-
-const uploader = new FileUploader();
 
 // GET - Calculate Shipping & Price
 export async function GET(request: NextRequest) {
@@ -252,11 +250,6 @@ export async function POST(request: NextRequest) {
       totalItemsSold: trustedPrices.totalItemsSold,
     });
 
-    if (!createData.receiptImage.isMoved) {
-      const moved = await uploader.moveFromTemp(createData.receiptImage, "receipts");
-      createData.receiptImage = moved;
-    }
-
     // ── 4. Database transaction ──────────────────────────────────────────────
     const result = await prisma.$transaction(async (tx) => {
       for (const item of items) {
@@ -286,7 +279,9 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const guest = await tx.guest.create({ data: createData });
+      const resolvedImages = await resolveFiles({}, createData.receiptImage, "receipts");
+
+      const guest = await tx.guest.create({ data: { ...createData, receiptImage: resolvedImages } });
 
       const cartItems = await Promise.all(
         items.map((item) =>

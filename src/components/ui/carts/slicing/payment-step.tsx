@@ -60,6 +60,7 @@ export const PaymentStep = ({ formData, setFormData, onBack, onSubmit, isLoading
       });
 
       setFormData((prev) => ({ ...prev, receiptImage: respImages[0] }));
+      toast.success("Image uploaded successfully");
     } catch (error) {
       toast.error((error as string) || "Failed to upload image");
     } finally {

@@ -4,7 +4,7 @@ import { Prisma } from "prisma-client/client";
 
 import { z } from "zod";
 
-import { checkAuth, FileUploader, getClientIp, logError, logger, logRequest, logResponse, prisma } from "@/lib";
+import { checkAuth, FileUploader, getClientIp, logError, logger, logRequest, logResponse, prisma, resolveFiles } from "@/lib";
 
 import { calculateDiscountedPrice } from "@/utils";
 
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
 
     const discountedPrice = calculateDiscountedPrice(body.price, body.discount);
 
-    const createData = CreateProductSchema.parse(body);
+    const createData = CreateProductSchema.parse({ ...body, discountedPrice });
 
     const totalStock = createData.sizes.reduce((sum, sizeObj) => sum + sizeObj.quantity, 0);
 
@@ -163,7 +163,9 @@ export async function POST(request: NextRequest) {
       createData.images = [...createData.images.filter((image) => image.isMoved), ...moved];
     }
 
-    await prisma.product.create({ data: { ...createData, discountedPrice, stock: totalStock } });
+    const resolvedImages = await resolveFiles([], createData.images, `${createData.category}/${createData.sku}`);
+
+    await prisma.product.create({ data: { ...createData, images: resolvedImages, stock: totalStock } });
 
     logResponse(pathAPI, Date.now() - startTime, { message: "Product has been added successfully" });
 

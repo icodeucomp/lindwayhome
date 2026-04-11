@@ -43,7 +43,7 @@ export const ProductSchema = z.object({
   sku: z.string().min(1, "Product sku is required"),
   images: z.array(FileSchema).min(1, "Product images is required, minimal 1 image"),
   discount: z.number().min(0).positive("Discount must be positive"),
-  discountedPrice: z.number().min(1).positive("Discounted Price must be positive").optional(),
+  discountedPrice: z.number().min(1).positive("Discounted Price must be positive"),
   productionNotes: z.string().default("").optional(),
   isPreOrder: z.boolean().default(false),
   isFavorite: z.boolean().default(false),
