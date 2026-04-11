@@ -1,12 +1,12 @@
 import { NextResponse, NextRequest } from "next/server";
 
-import { checkAuth, FileUploader, getClientIp, logError, logger, logRequest, logResponse, prisma } from "@/lib";
+import { checkAuth, FileUploader, getClientIp, logError, logger, logRequest, logResponse, prisma, resolveFiles } from "@/lib";
 
 import { calculateDiscountedPrice } from "@/utils";
 
 import { z } from "zod";
 
-import { Files, UpdateProductSchema } from "@/types";
+import { UpdateProductSchema } from "@/types";
 
 const uploader = new FileUploader();
 
@@ -72,20 +72,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       }
     }
 
-    const existingImages = existingProduct.images as unknown as Files[];
-    const incomingImages = updateData.images || [];
+    const resolvedImages = await resolveFiles(existingProduct.images, updateData.images ?? [], `${updateData.category}/${updateData.sku}`);
 
-    const deletedImages = existingImages.filter((existing) => !incomingImages.some((incoming) => incoming.filename === existing.filename));
-
-    const newImages = incomingImages.filter((image) => !image.isMoved);
-
-    const movedImages = await Promise.all([...newImages.map((image) => uploader.moveFromTemp(image, `${updateData.category}/${updateData.sku}`))]);
-
-    await Promise.all(deletedImages.map((image) => uploader.deleteFile(image.path)));
-
-    updateData.images = [...incomingImages.filter((image) => image.isMoved), ...movedImages];
-
-    await prisma.product.update({ where: { id }, data: { ...updateData, stock: totalStock } });
+    await prisma.product.update({ where: { id }, data: { ...updateData, images: resolvedImages, stock: totalStock } });
 
     logResponse(pathAPI, Date.now() - startTime, { message: "Product has been updated successfully", data: body });
 
