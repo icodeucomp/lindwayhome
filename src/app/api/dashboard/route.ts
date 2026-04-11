@@ -2,14 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { Prisma } from "prisma-client/client";
 
-import { checkAuth, logger, prisma } from "@/lib";
+import { checkAuth, logError, prisma } from "@/lib";
 
 type totalAllStock = { total: number }[];
 
 // GET - Fetch all products
 export async function GET(request: NextRequest) {
-  const authError = await checkAuth(request, "/dashboard");
+  const pathAPI = "GET /dashboard";
+  const authError = await checkAuth(request, pathAPI);
   if (authError) return authError;
+  const startTime = Date.now();
 
   try {
     const { searchParams } = new URL(request.url);
@@ -114,11 +116,7 @@ export async function GET(request: NextRequest) {
       { status: 200 },
     );
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    const errorStack = error instanceof Error ? error.stack : "An unknown error occurred";
-
-    logger.error("API /config/parameters error", { error: errorMessage, stack: errorStack });
-
-    return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
+    logError(`${pathAPI} error`, Date.now() - startTime, error);
+    return NextResponse.json({ success: false, message: error }, { status: 500 });
   }
 }

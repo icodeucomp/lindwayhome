@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { ConfigService, ShippingService } from "@/services";
 
-import { FileUploader, logCalculation, logger, prisma, sendOrderConfirmation } from "@/lib";
+import { FileUploader, getClientIp, logCalculation, logError, logger, logRequest, logResponse, prisma, sendOrderConfirmation } from "@/lib";
 
 import { API_BASE_URL, calculateDistance, calculateShippingCost, calculateTotalPrice, signCheckoutToken, verifyCheckoutToken, hashItems, ShippingItem } from "@/utils";
 
@@ -14,20 +14,22 @@ const uploader = new FileUploader();
 
 // GET - Calculate Shipping & Price
 export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+
+  const province = searchParams.get("province");
+  const district = searchParams.get("district");
+  const sub_district = searchParams.get("sub_district");
+  const village = searchParams.get("village");
+  const email = searchParams.get("email");
+  const itemsParam = searchParams.get("items");
+  const purchasedParam = searchParams.get("purchased");
+  const totalItemsSoldParam = searchParams.get("totalItemsSold");
+
+  const pathAPI = `GET /guests/checkout/${email}`;
+
   const startTime = Date.now();
 
   try {
-    const { searchParams } = new URL(request.url);
-
-    const province = searchParams.get("province");
-    const district = searchParams.get("district");
-    const sub_district = searchParams.get("sub_district");
-    const village = searchParams.get("village");
-    const email = searchParams.get("email");
-    const itemsParam = searchParams.get("items");
-    const purchasedParam = searchParams.get("purchased");
-    const totalItemsSoldParam = searchParams.get("totalItemsSold");
-
     logCalculation("Request received", {
       province,
       district,
@@ -41,7 +43,7 @@ export async function GET(request: NextRequest) {
 
     // ── 1. Validate required params ──────────────────────────────────────────
     if (!province || !district || !sub_district || !village || !itemsParam || !purchasedParam || !totalItemsSoldParam) {
-      logger.error("GET /guests/checkout", { error: "Missing required parameters" });
+      logger.error(`${pathAPI} error`, { error: "Missing required parameters" });
       return NextResponse.json({ success: false, message: "Missing required parameters" }, { status: 400 });
     }
 
@@ -57,22 +59,16 @@ export async function GET(request: NextRequest) {
 
     // ── 2. Parallel DB fetches ───────────────────────────────────────────────
     const [isValidateEmail, configParameters, config, zones] = await Promise.all([
-      prisma.guest.findFirst({
-        where: { email: email || undefined, isMember: true },
-        select: { isMember: true },
-      }),
+      prisma.guest.findFirst({ where: { email: email || undefined, isMember: true }, select: { isMember: true } }),
       ConfigService.getConfigValue(["tax_rate", "tax_type", "promotion_discount", "promo_type", "member_discount", "member_type"]),
       ShippingService.getShippingConfig(),
       ShippingService.getShippingZones(),
     ]);
 
-    logCalculation("Email validation", {
-      email,
-      isMember: isValidateEmail?.isMember ?? false,
-    });
+    logCalculation("Email validation", { email, isMember: isValidateEmail?.isMember ?? false });
 
     if (!config) {
-      logger.error("GET /guests/checkout", { error: "Shipping configuration not found" });
+      logger.error(`${pathAPI} error`, { error: "Shipping configuration not found" });
       return NextResponse.json({ success: false, message: "Shipping configuration not found" }, { status: 404 });
     }
 
@@ -80,7 +76,7 @@ export async function GET(request: NextRequest) {
     const destinationCoords = await ShippingService.getDestinationCoordinates(validatedData.province, validatedData.district, validatedData.sub_district, validatedData.village);
 
     if (!destinationCoords) {
-      logger.error("GET /guests/checkout", { error: "Destination coordinates not found" });
+      logger.error(`${pathAPI} error`, { error: "Destination coordinates not found" });
       return NextResponse.json({ success: false, message: "Destination coordinates not found" }, { status: 404 });
     }
 
@@ -94,9 +90,7 @@ export async function GET(request: NextRequest) {
       const dimensions = await ShippingService.getProductDimensionsBySize(item.selectedSize);
 
       if (!dimensions) {
-        logger.error("GET /guests/checkout", {
-          error: `Dimensions for size "${item.selectedSize}" not found`,
-        });
+        logger.error(`${pathAPI} error`, { error: `Dimensions for size "${item.selectedSize}" not found` });
         return NextResponse.json(
           {
             success: false,
@@ -131,13 +125,7 @@ export async function GET(request: NextRequest) {
     });
 
     // ── 8. Sign checkout token (locks prices server-side for 15 min) ─────────
-    const itemsHash = hashItems(
-      validatedData.items.map((i) => ({
-        productId: i.productId,
-        selectedSize: i.selectedSize,
-        quantity: i.quantity,
-      })),
-    );
+    const itemsHash = hashItems(validatedData.items.map((i) => ({ productId: i.productId, selectedSize: i.selectedSize, quantity: i.quantity })));
 
     const checkoutToken = signCheckoutToken({
       shippingCost: calculation.shipping_final,
@@ -149,9 +137,9 @@ export async function GET(request: NextRequest) {
     });
 
     logCalculation("Request completed", {
-      processingTime: `${Date.now() - startTime}ms`,
+      pathAPI,
+      processingTime: Date.now() - startTime,
       finalTotal: totalPurchased,
-      email,
       zone: calculation.zone,
       distance_km: calculation.distance_km.toFixed(2),
     });
@@ -180,34 +168,32 @@ export async function GET(request: NextRequest) {
       { status: 200 },
     );
   } catch (error) {
-    const processingTime = Date.now() - startTime;
-
     if (error instanceof z.ZodError) {
-      logger.error("GET /guests/checkout zod error", { error: error.message, processingTime });
+      logError(`${pathAPI} zod error`, Date.now() - startTime, error);
       return NextResponse.json({ success: false, message: error.issues }, { status: 400 });
     }
 
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    logger.error("GET /guests/checkout error", { error: errorMessage, processingTime });
-    return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
+    logError(`${pathAPI} error`, Date.now() - startTime, error);
+    return NextResponse.json({ success: false, message: error }, { status: 500 });
   }
 }
 
 // POST - Create Guest Order
 export async function POST(request: NextRequest) {
+  const pathAPI = `POST /guests/checkout`;
   const startTime = Date.now();
 
   try {
     const body = await request.json();
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || request.headers.get("x-real-ip") || "::1";
 
-    logger.info("POST Request /guests/checkout", { url: request.url, ip, ...body });
+    const ip = getClientIp(request);
+    logRequest(pathAPI, request, body, ip);
 
     // ── 1. Validate cart items ───────────────────────────────────────────────
     const { items } = CartSchema.parse(body);
 
     if (!items || items.length === 0) {
-      logger.error("API /guests/[id] error", { error: "Cart items are required" });
+      logger.error(`${pathAPI} error`, { error: "Cart items are required" });
       return NextResponse.json({ success: false, message: "Cart items are required" }, { status: 400 });
     }
 
@@ -215,22 +201,22 @@ export async function POST(request: NextRequest) {
       const item = items[i];
 
       if (!item.productId || !item.selectedSize || !item.quantity) {
-        logger.error("API /guests/[id] error", { error: `Item ${i + 1}: Missing required fields (productId, quantity, selectedSize).` });
+        logger.error(`${pathAPI} error`, { error: `Item ${i + 1}: Missing required fields (productId, quantity, selectedSize).` });
         return NextResponse.json({ success: false, message: `Item ${i + 1}: Missing required fields (productId, quantity, selectedSize).` }, { status: 400 });
       }
       if (item.quantity <= 0) {
-        logger.error("API /guests/[id] error", { error: `Item ${i + 1}: Quantity must be greater than 0.` });
+        logger.error(`${pathAPI} error`, { error: `Item ${i + 1}: Quantity must be greater than 0.` });
         return NextResponse.json({ success: false, message: `Item ${i + 1}: Quantity must be greater than 0.` }, { status: 400 });
       }
       if (typeof item.quantity !== "number" || !Number.isInteger(item.quantity)) {
-        logger.error("API /guests/[id] error", { error: `Item ${i + 1}: Quantity must be a valid integer.` });
+        logger.error(`${pathAPI} error`, { error: `Item ${i + 1}: Quantity must be a valid integer.` });
         return NextResponse.json({ success: false, message: `Item ${i + 1}: Quantity must be a valid integer.` }, { status: 400 });
       }
     }
 
     // ── 2. Verify checkout token ─────────────────────────────────────────────
     if (!body.checkoutToken || typeof body.checkoutToken !== "string") {
-      logger.error("API /guests/checkout error", { error: "Checkout token is required. Please complete the order summary step first." });
+      logger.error(`${pathAPI} error`, { error: "Checkout token is required. Please complete the order summary step first." });
       return NextResponse.json({ success: false, message: "Checkout token is required. Please complete the order summary step first." }, { status: 400 });
     }
 
@@ -239,16 +225,10 @@ export async function POST(request: NextRequest) {
     try {
       const payload = verifyCheckoutToken(body.checkoutToken);
 
-      const currentItemsHash = hashItems(
-        items.map((i) => ({
-          productId: i.productId,
-          selectedSize: i.selectedSize,
-          quantity: i.quantity,
-        })),
-      );
+      const currentItemsHash = hashItems(items.map((i) => ({ productId: i.productId, selectedSize: i.selectedSize, quantity: i.quantity })));
 
       if (currentItemsHash !== payload.itemsHash) {
-        logger.error("API /guests/checkout error", { error: "Cart items changed since checkout was calculated. Please go back and recalculate." });
+        logger.error(`${pathAPI} error`, { error: "Cart items changed since checkout was calculated. Please go back and recalculate." });
         return NextResponse.json({ success: false, message: "Cart items changed since checkout was calculated. Please go back and recalculate." }, { status: 400 });
       }
 
@@ -258,10 +238,9 @@ export async function POST(request: NextRequest) {
         purchased: payload.purchased,
         totalItemsSold: payload.totalItemsSold,
       };
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Invalid checkout session";
-      logger.error("API /guests/checkout error", { error: msg });
-      return NextResponse.json({ success: false, message: msg }, { status: 400 });
+    } catch (error) {
+      logError(`${pathAPI} error`, Date.now() - startTime, error);
+      return NextResponse.json({ success: false, message: error }, { status: 500 });
     }
 
     // ── 3. Merge trusted prices into guest data and move receipt images from temp storage ──────────────────────────────
@@ -344,55 +323,28 @@ export async function POST(request: NextRequest) {
         isMember: result.guest.isMember,
         fullname: result.guest.fullname,
         paymentMethod: result.guest.paymentMethod,
-        items: result.cartItems.map((item) => ({
-          ...item,
-          product: { ...item.product, price: item.product.price.toNumber() },
-        })),
+        items: result.cartItems.map((item) => ({ ...item, product: { ...item.product, price: item.product.price.toNumber() } })),
         baseUrl: API_BASE_URL!,
         createdAt: result.guest.createdAt,
       });
     } catch (error) {
-      logger.error("sendOrderConfirmation failed", {
-        error: error instanceof Error ? error.message : "Unknown error",
-        guestId: result.guest.id,
-      });
-      // Non-fatal: order is saved, continue
+      logError("Send Order Confirmation failed with guest ID: " + result.guest.id, Date.now() - startTime, error);
+      return NextResponse.json({ success: false, message: error }, { status: 500 });
     }
 
     // ── 6. Success response ──────────────────────────────────────────────────
     const totalItems = result.cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
-    logger.info("POST /guests/checkout success", {
-      message: `Guest order created with ${totalItems} item(s)`,
-      guestId: result.guest.id,
-      durationMs: Date.now() - startTime,
-    });
+    logResponse(pathAPI, Date.now() - startTime, { message: `Guest order created with ${totalItems} item(s)`, data: body });
 
-    return NextResponse.json(
-      {
-        success: true,
-        message: `Guest order created successfully with ${totalItems} item${totalItems > 1 ? "s" : ""}.`,
-      },
-      { status: 201 },
-    );
+    return NextResponse.json({ success: true, message: `Guest order created successfully with ${totalItems} item${totalItems > 1 ? "s" : ""}.` }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      logger.error("POST /guests/checkout zod error", { error: error.message });
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Validation error",
-          errors: error.issues.map((issue) => ({
-            field: issue.path.join("."),
-            message: issue.message,
-          })),
-        },
-        { status: 400 },
-      );
+      logError(`${pathAPI} zod error`, Date.now() - startTime, error);
+      return NextResponse.json({ success: false, message: "Validation error", errors: error.issues.map((issue) => ({ field: issue.path.join("."), message: issue.message })) }, { status: 400 });
     }
 
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    logger.error("POST /guests/checkout error", { error: errorMessage });
-    return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
+    logError(`${pathAPI} error`, Date.now() - startTime, error);
+    return NextResponse.json({ success: false, message: error }, { status: 500 });
   }
 }

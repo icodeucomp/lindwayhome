@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { logger, prisma } from "@/lib";
+import { logError, prisma } from "@/lib";
 
 import { SelectOption } from "@/types";
 
 // GET - Fetch all locations within a specific province, district, or sub-district
 export async function GET(request: NextRequest) {
+  const pathAPI = "GET /locations/checkout";
+  const startTime = Date.now();
   try {
-    const searchParams = request.nextUrl.searchParams;
+    const { searchParams } = new URL(request.url);
     const type = searchParams.get("type");
     const province = searchParams.get("province");
     const district = searchParams.get("district");
@@ -17,7 +19,6 @@ export async function GET(request: NextRequest) {
 
     switch (type) {
       case "provinces":
-        // Get unique provinces
         const provinces = await prisma.location.findMany({
           select: {
             province: true,
@@ -35,7 +36,6 @@ export async function GET(request: NextRequest) {
           return NextResponse.json({ success: false, message: "Province parameter is required" }, { status: 400 });
         }
 
-        // Get unique districts for a province
         const districts = await prisma.location.findMany({
           where: {
             province: province,
@@ -56,7 +56,6 @@ export async function GET(request: NextRequest) {
           return NextResponse.json({ success: false, message: "Province and district parameters are required" }, { status: 400 });
         }
 
-        // Get unique sub-districts for a province and district
         const subDistricts = await prisma.location.findMany({
           where: {
             province: province,
@@ -78,7 +77,6 @@ export async function GET(request: NextRequest) {
           return NextResponse.json({ success: false, message: "Province, district, and sub_district parameters are required" }, { status: 400 });
         }
 
-        // Get unique villages for a province, district, and sub-district
         const villages = await prisma.location.findMany({
           where: {
             province: province,
@@ -100,17 +98,9 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: false, message: "Invalid type parameter. Use: provinces, districts, sub_districts, or villages" }, { status: 400 });
     }
 
-    return NextResponse.json({
-      success: true,
-      data: result,
-      message: "Success",
-    });
+    return NextResponse.json({ success: true, message: "Success", data: result });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    const errorStack = error instanceof Error ? error.stack : "An unknown error occurred";
-
-    logger.error("API /register error", { error: errorMessage, stack: errorStack });
-
-    return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
+    logError(`${pathAPI} error`, Date.now() - startTime, error);
+    return NextResponse.json({ success: false, message: error }, { status: 500 });
   }
 }

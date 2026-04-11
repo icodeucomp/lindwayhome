@@ -2,27 +2,38 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { Prisma } from "prisma-client/client";
 
-import { checkAuth, logger, prisma } from "@/lib";
+import z from "zod";
+
+import { checkAuth, logError, prisma } from "@/lib";
+
+import { GuestQuerySchema } from "@/types";
 
 // GET - Fetch all guests and carts
 export async function GET(request: NextRequest) {
-  const authError = await checkAuth(request, "/guests");
+  const pathAPI = "GET /guests";
+  const authError = await checkAuth(request, pathAPI);
   if (authError) return authError;
+  const startTime = Date.now();
 
   try {
     const { searchParams } = new URL(request.url);
 
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
-    const search = searchParams.get("search");
-    const order = (searchParams.get("order") || "asc") as Prisma.SortOrder;
-    const isPurchased = searchParams.get("isPurchased");
+    const queryParams = GuestQuerySchema.parse({
+      page: searchParams.get("page") || "1",
+      limit: searchParams.get("limit") || "10",
+      search: searchParams.get("search") || undefined,
+      order: searchParams.get("order") || "asc",
+      isPurchased: searchParams.get("isPurchased") || undefined,
+      year: searchParams.get("year") || undefined,
+      month: searchParams.get("month") || undefined,
+      dateFrom: searchParams.get("dateFrom") || undefined,
+      dateTo: searchParams.get("dateTo") || undefined,
+    });
 
-    const year = searchParams.get("year");
-    const month = searchParams.get("month");
-    const dateFrom = searchParams.get("dateFrom");
-    const dateTo = searchParams.get("dateTo");
+    const { search, order, isPurchased, year, month, dateFrom, dateTo } = queryParams;
 
+    const page = parseInt(queryParams.page);
+    const limit = parseInt(queryParams.limit);
     const skip = (page - 1) * limit;
 
     const where: Prisma.GuestWhereInput = {};
@@ -111,11 +122,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(responseData, { status: 200 });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    const errorStack = error instanceof Error ? error.stack : "An unknown error occurred";
+    if (error instanceof z.ZodError) {
+      logError(`${pathAPI} zod error`, Date.now() - startTime, error);
+      return NextResponse.json({ success: false, message: "Validation error", errors: error.issues.map((issue) => ({ field: issue.path.join("."), message: issue.message })) }, { status: 400 });
+    }
 
-    logger.error("API /guests error", { error: errorMessage, stack: errorStack });
-
-    return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
+    logError(`${pathAPI} error`, Date.now() - startTime, error);
+    return NextResponse.json({ success: false, message: error }, { status: 500 });
   }
 }

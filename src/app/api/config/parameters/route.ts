@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { Prisma } from "prisma-client/client";
 
-import { checkAuth, FileUploader, logger } from "@/lib";
+import { checkAuth, FileUploader, getClientIp, logError, logRequest, logResponse } from "@/lib";
 
 import { ConfigService } from "@/services";
 
@@ -12,39 +12,33 @@ const uploader = new FileUploader();
 
 // GET - Fetch all configuration parameters
 export async function GET(request: NextRequest) {
-  const authError = await checkAuth(request, "/config/parameters");
+  const pathAPI = "GET /config/parameters";
+  const authError = await checkAuth(request, pathAPI);
   if (authError) return authError;
+  const startTime = Date.now();
 
   try {
     const configParameters = await ConfigService.getAllConfigs();
     return NextResponse.json({ success: true, data: configParameters }, { status: 200 });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    const errorStack = error instanceof Error ? error.stack : "An unknown error occurred";
+    logError(pathAPI, Date.now() - startTime, error);
 
-    logger.error("API /config/parameters error", { error: errorMessage, stack: errorStack });
-
-    return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
+    return NextResponse.json({ success: false, message: error }, { status: 500 });
   }
 }
 
 // PUT - Update configuration parameters
 export async function PUT(request: NextRequest) {
-  const authError = await checkAuth(request, "/config/parameters");
+  const pathAPI = "PUT /config/parameters";
+  const authError = await checkAuth(request, pathAPI);
   if (authError) return authError;
+  const startTime = Date.now();
 
   try {
     const body = await request.json();
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || request.headers.get("x-real-ip") || "::1";
-    const start = Date.now();
 
-    logger.info("API Request /config/parameters", {
-      method: request.method,
-      body,
-      url: request.url,
-      pathname: request.nextUrl.pathname,
-      ip,
-    });
+    const ip = getClientIp(request);
+    logRequest(pathAPI, request, body, ip);
 
     const existingConfig = await ConfigService.getConfigValue(Object.keys(body));
 
@@ -83,18 +77,12 @@ export async function PUT(request: NextRequest) {
 
     await Promise.all([ConfigService.updateConfigValues(updatedBody), ...deletedFiles.map((file) => uploader.deleteFile(file.path))]);
 
-    logger.info("API Response /config/parameters", {
-      message: "Parameter has been updated successfully",
-      durationMs: Date.now() - start,
-    });
+    logResponse(pathAPI, Date.now() - startTime, { message: "Parameter has been updated successfully", data: body });
 
     return NextResponse.json({ success: true, message: "Parameter has been updated successfully" }, { status: 200 });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    const errorStack = error instanceof Error ? error.stack : "An unknown error occurred";
+    logError(pathAPI, Date.now() - startTime, error);
 
-    logger.error("API /config/parameters error", { error: errorMessage, stack: errorStack });
-
-    return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
+    return NextResponse.json({ success: false, message: error }, { status: 500 });
   }
 }

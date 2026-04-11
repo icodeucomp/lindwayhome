@@ -1,35 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { Prisma } from "prisma-client/client";
+
 import { z } from "zod";
 
-import { checkAuth, FileUploader, logger, prisma } from "@/lib";
+import { checkAuth, FileUploader, getClientIp, logError, logger, logRequest, logResponse, prisma } from "@/lib";
 
 import { calculateDiscountedPrice } from "@/utils";
 
-import { Categories, CreateProductSchema } from "@/types";
+import { Categories, CreateProductSchema, ProductQuerySchema } from "@/types";
 
 const uploader = new FileUploader();
 
 // GET - Fetch all products
 export async function GET(request: NextRequest) {
+  const pathAPI = "GET /products";
+  const startTime = Date.now();
   try {
     const { searchParams } = new URL(request.url);
 
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
-    const category = searchParams.get("category");
-    const search = searchParams.get("search");
-    const order = (searchParams.get("order") || "asc") as Prisma.SortOrder;
-    const isActive = searchParams.get("isActive");
-    const isFavorite = searchParams.get("isFavorite");
+    const queryParams = ProductQuerySchema.parse({
+      page: searchParams.get("page") || "1",
+      limit: searchParams.get("limit") || "10",
+      category: searchParams.get("category") || undefined,
+      search: searchParams.get("search") || undefined,
+      order: searchParams.get("order") || "asc",
+      isActive: searchParams.get("isActive") || undefined,
+      isFavorite: searchParams.get("isFavorite") || undefined,
+      year: searchParams.get("year") || undefined,
+      month: searchParams.get("month") || undefined,
+      dateFrom: searchParams.get("dateFrom") || undefined,
+      dateTo: searchParams.get("dateTo") || undefined,
+    });
 
-    const year = searchParams.get("year");
-    const month = searchParams.get("month");
-    const dateFrom = searchParams.get("dateFrom");
-    const dateTo = searchParams.get("dateTo");
+    const { category, search, order, isActive, isFavorite, year, month, dateFrom, dateTo } = queryParams;
 
+    const page = parseInt(queryParams.page);
+    const limit = parseInt(queryParams.limit);
     const skip = (page - 1) * limit;
+
     const where: Prisma.ProductWhereInput = {};
 
     if (category) where.category = category as Categories;
@@ -106,31 +115,28 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(responseData, { status: 200 });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    const errorStack = error instanceof Error ? error.stack : "An unknown error occurred";
+    if (error instanceof z.ZodError) {
+      logError(`${pathAPI} zod error`, Date.now() - startTime, error);
+      return NextResponse.json({ success: false, message: "Validation error", errors: error.issues.map((issue) => ({ field: issue.path.join("."), message: issue.message })) }, { status: 400 });
+    }
 
-    logger.error("API /products error", { error: errorMessage, stack: errorStack });
-
-    return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
+    logError(`${pathAPI} error`, Date.now() - startTime, error);
+    return NextResponse.json({ success: false, message: error }, { status: 500 });
   }
 }
 
 // POST - create product
 export async function POST(request: NextRequest) {
-  const authError = await checkAuth(request, "/products");
+  const pathAPI = "POST /products";
+  const authError = await checkAuth(request, pathAPI);
   if (authError) return authError;
+  const startTime = Date.now();
 
   try {
     const body = await request.json();
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || request.headers.get("x-real-ip") || "::1";
-    const start = Date.now();
-    logger.info("API Request /products", {
-      method: request.method,
-      body: body,
-      url: request.url,
-      pathname: request.nextUrl.pathname,
-      ip,
-    });
+
+    const ip = getClientIp(request);
+    logRequest(pathAPI, request, body, ip);
 
     const discountedPrice = calculateDiscountedPrice(body.price, body.discount);
 
@@ -139,7 +145,7 @@ export async function POST(request: NextRequest) {
     const totalStock = createData.sizes.reduce((sum, sizeObj) => sum + sizeObj.quantity, 0);
 
     if (totalStock <= 0) {
-      logger.error("API /products error", { error: "Total stock must be greater than zero" });
+      logger.error(`${pathAPI} error`, { error: "Total stock must be greater than zero" });
       return NextResponse.json({ success: false, message: "Total stock must be greater than zero" }, { status: 400 });
     }
 
@@ -147,7 +153,7 @@ export async function POST(request: NextRequest) {
       const existingProduct = await prisma.product.findUnique({ where: { sku: createData.sku } });
 
       if (existingProduct) {
-        logger.error("API /products error", { error: "Product with this SKU already exists" });
+        logger.error(`${pathAPI} error`, { error: "Product with this SKU already exists" });
         return NextResponse.json({ success: false, message: "Product with this SKU already exists" }, { status: 400 });
       }
     }
@@ -159,23 +165,16 @@ export async function POST(request: NextRequest) {
 
     await prisma.product.create({ data: { ...createData, discountedPrice, stock: totalStock } });
 
-    logger.info("API Response /products", {
-      message: "Product has been added successfully",
-      durationMs: Date.now() - start,
-    });
+    logResponse(pathAPI, Date.now() - startTime, { message: "Product has been added successfully" });
 
     return NextResponse.json({ success: true, message: "Product has been added successfully" }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      logger.error("API /products error", { error: error.message, stack: error.stack });
-      return NextResponse.json({ success: false, message: error.issues }, { status: 400 });
+      logError(`${pathAPI} zod error`, Date.now() - startTime, error);
+      return NextResponse.json({ success: false, message: "Validation error", errors: error.issues.map((issue) => ({ field: issue.path.join("."), message: issue.message })) }, { status: 400 });
     }
 
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    const errorStack = error instanceof Error ? error.stack : "An unknown error occurred";
-
-    logger.error("API /products error", { error: errorMessage, stack: errorStack });
-
-    return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
+    logError(`${pathAPI} error`, Date.now() - startTime, error);
+    return NextResponse.json({ success: false, message: error }, { status: 500 });
   }
 }

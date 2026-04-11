@@ -1,4 +1,3 @@
-// app/api/files/cleanup/route.ts
 import { NextRequest, NextResponse } from "next/server";
 
 import { FileUploader } from "@/lib";

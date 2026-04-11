@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { generateToken, hashPassword, logger, prisma } from "@/lib";
+import { generateToken, getClientIp, hashPassword, logError, logger, logRequest, logResponse, prisma } from "@/lib";
 
 import { z } from "zod";
 
@@ -13,24 +13,21 @@ const RegisterSchema = z.object({
 
 // POST - Register user
 export async function POST(request: NextRequest) {
+  const pathAPI = "POST /register";
+  const startTime = Date.now();
+
   try {
     const body = await request.json();
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || request.headers.get("x-real-ip") || "::1";
-    const start = Date.now();
-    logger.info("API Request /register", {
-      method: request.method,
-      body: body,
-      url: request.url,
-      pathname: request.nextUrl.pathname,
-      ip,
-    });
+
+    const ip = getClientIp(request);
+    logRequest(pathAPI, request, body, ip);
 
     const { email, username, password, role = "ADMIN" } = RegisterSchema.parse(body);
 
     const existingUser = await prisma.user.findFirst({ where: { OR: [{ email }, { username }] } });
 
     if (existingUser) {
-      logger.error("API /register error", { error: "User with this email or username already exists" });
+      logger.error(`${pathAPI} error`, { error: "User with this email or username already exists" });
       return NextResponse.json({ success: false, message: "User with this email or username already exists" }, { status: 400 });
     }
 
@@ -47,47 +44,26 @@ export async function POST(request: NextRequest) {
 
     const token = generateToken(user.id);
 
-    logger.info("API Response /register", {
+    logResponse(pathAPI, Date.now() - startTime, {
       message: "User registered successfully",
-      durationMs: Date.now() - start,
-      data: {
-        token,
-        user: {
-          id: user.id,
-          email: user.email,
-          username: user.username,
-          role: user.role,
-        },
-      },
+      data: { token, user: { id: user.id, email: user.email, username: user.username, role: user.role } },
     });
 
     return NextResponse.json(
       {
         success: true,
         message: "User registered successfully",
-        data: {
-          token,
-          user: {
-            id: user.id,
-            email: user.email,
-            username: user.username,
-            role: user.role,
-          },
-        },
+        data: { token, user: { id: user.id, email: user.email, username: user.username, role: user.role } },
       },
       { status: 201 },
     );
   } catch (error) {
     if (error instanceof z.ZodError) {
-      logger.error("API /register error", { error: error.message, stack: error.stack });
-      return NextResponse.json({ success: false, message: error.issues }, { status: 400 });
+      logError(`${pathAPI} zod error`, Date.now() - startTime, error);
+      return NextResponse.json({ success: false, message: "Validation error", errors: error.issues.map((issue) => ({ field: issue.path.join("."), message: issue.message })) }, { status: 400 });
     }
 
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    const errorStack = error instanceof Error ? error.stack : "An unknown error occurred";
-
-    logger.error("API /register error", { error: errorMessage, stack: errorStack });
-
-    return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
+    logError(`${pathAPI} error`, Date.now() - startTime, error);
+    return NextResponse.json({ success: false, message: error }, { status: 500 });
   }
 }

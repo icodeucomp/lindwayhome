@@ -121,12 +121,12 @@ export const checkAuth = async (request: NextRequest, context: string, role: Rol
   const [authenticationResult, authorizationResult] = await Promise.all([authenticate(request), authorize(request, role)]);
 
   if (authenticationResult.message) {
-    logger.error(`API ${context} error`, { error: authenticationResult.message });
+    logger.error(`${context} error`, { error: authenticationResult.message });
     return NextResponse.json({ success: false, message: authenticationResult.message }, { status: authenticationResult.status });
   }
 
   if (authorizationResult.message) {
-    logger.error(`API ${context} error`, { error: authorizationResult.message });
+    logger.error(`${context} error`, { error: authorizationResult.message });
     return NextResponse.json({ success: false, message: authorizationResult.message }, { status: authorizationResult.status });
   }
 

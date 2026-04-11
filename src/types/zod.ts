@@ -79,22 +79,6 @@ export const GuestSchema = z.object({
   updatedAt: z.date().optional(),
 });
 
-export const CreateProductSchema = ProductSchema.omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const UpdateProductSchema = ProductSchema.partial();
-
-export const CreateGuestSchema = GuestSchema.omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const UpdateGuestSchema = GuestSchema.partial();
-
 export const LocationSchema = z.object({
   id: z.string().optional(),
   code: z.string().min(1, "Code is required"),
@@ -111,12 +95,6 @@ export const LocationSchema = z.object({
   updatedAt: z.date().optional(),
 });
 
-export const CreateLocationSchema = LocationSchema.omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
 export const LocationQuerySchema = z.object({
   page: z.string().optional().default("1"),
   limit: z.string().optional().default("10"),
@@ -124,6 +102,54 @@ export const LocationQuerySchema = z.object({
   province: z.string().optional(),
   district: z.string().optional(),
   sub_district: z.string().optional(),
+});
+
+export const GuestQuerySchema = z.object({
+  page: z.string().optional().default("1"),
+  limit: z.string().optional().default("10"),
+  search: z.string().optional(),
+  order: z.enum(["asc", "desc"]).optional().default("asc"),
+  isPurchased: z.string().optional(),
+  year: z.string().optional(),
+  month: z.string().optional(),
+  dateFrom: z.string().optional(),
+  dateTo: z.string().optional(),
+});
+
+export const ProductQuerySchema = z.object({
+  page: z.string().optional().default("1"),
+  limit: z.string().optional().default("10"),
+  category: z.string().optional(),
+  search: z.string().optional(),
+  order: z.enum(["asc", "desc"]).optional().default("asc"),
+  isActive: z.string().optional(),
+  isFavorite: z.string().optional(),
+  year: z.string().optional(),
+  month: z.string().optional(),
+  dateFrom: z.string().optional(),
+  dateTo: z.string().optional(),
+});
+
+export const CreateProductSchema = ProductSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const UpdateProductSchema = ProductSchema.partial();
+
+export const CreateGuestSchema = GuestSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const UpdateGuestSchema = GuestSchema.partial();
+
+export const CreateLocationSchema = LocationSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export const UpdateLocationSchema = LocationSchema.partial();

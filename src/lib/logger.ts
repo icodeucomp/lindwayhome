@@ -1,3 +1,5 @@
+import { NextRequest } from "next/server";
+
 import winston from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";
 import path from "path";
@@ -57,4 +59,28 @@ if (process.env.NODE_ENV !== "production") {
 // Helper function to log calculations with proper typing
 export const logCalculation = (step: string, data: Record<string, unknown>) => {
   logger.info(`[CALCULATION] ${step}`, { calculation: true, ...data });
+};
+
+export const getClientIp = (request: NextRequest): string => {
+  return request.headers.get("x-forwarded-for")?.split(",")[0] ?? request.headers.get("x-real-ip") ?? "::1";
+};
+
+export const logRequest = (pathAPI: string, request: NextRequest, body: unknown, ip: string): void => {
+  logger.info(pathAPI, {
+    method: request.method,
+    body,
+    url: request.url,
+    pathname: request.nextUrl.pathname,
+    ip,
+  });
+};
+
+export const logError = (pathAPI: string, processingTime: number, error: unknown): void => {
+  const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+  const errorStack = error instanceof Error ? error.stack : "An unknown error occurred";
+  logger.error(pathAPI, { error: errorMessage, stack: errorStack, processingTime });
+};
+
+export const logResponse = (pathAPI: string, processingTime: number, data: unknown): void => {
+  logger.info(pathAPI, { response: data, processingTime });
 };

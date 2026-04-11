@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { checkAuth, logger, prisma } from "@/lib";
+import { checkAuth, getClientIp, logError, logger, logRequest, logResponse, prisma } from "@/lib";
 
 import { z } from "zod";
 
@@ -8,12 +8,13 @@ import { UpdateGuestSchema } from "@/types";
 
 // GET - Fetch one guest and carts by ID
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const authError = await checkAuth(request, "/guests/[id]");
+  const { id } = await params;
+  const pathAPI = `GET /guests/${id}`;
+  const authError = await checkAuth(request, pathAPI);
   if (authError) return authError;
+  const startTime = Date.now();
 
   try {
-    const { id } = await params;
-
     const guest = await prisma.guest.findUnique({
       where: { id },
       include: {
@@ -35,38 +36,30 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     });
 
     if (!guest) {
+      logger.error(`${pathAPI} error`, { error: "Guest not found" });
       return NextResponse.json({ success: false, message: "Guest not found" }, { status: 404 });
     }
 
     return NextResponse.json({ success: true, data: guest }, { status: 200 });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    const errorStack = error instanceof Error ? error.stack : "An unknown error occurred";
-
-    logger.error("API /guests/[id] error", { error: errorMessage, stack: errorStack });
-
-    return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
+    logError(`${pathAPI} error`, Date.now() - startTime, error);
+    return NextResponse.json({ success: false, message: error }, { status: 500 });
   }
 }
 
 // PUT - Update guests and carts by ID
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const authError = await checkAuth(request, "/guests/[id]");
+  const { id } = await params;
+  const pathAPI = `PUT /guests/${id}`;
+  const authError = await checkAuth(request, pathAPI);
   if (authError) return authError;
+  const startTime = Date.now();
 
   try {
-    const { id } = await params;
-
     const body = await request.json();
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || request.headers.get("x-real-ip") || "::1";
-    const start = Date.now();
-    logger.info("API Request /guests/[id]", {
-      method: request.method,
-      body: body,
-      url: request.url,
-      pathname: request.nextUrl.pathname,
-      ip,
-    });
+
+    const ip = getClientIp(request);
+    logRequest(pathAPI, request, body, ip);
 
     const updateData = UpdateGuestSchema.parse(body);
 
@@ -138,10 +131,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return updatedGuest;
     });
 
-    logger.info("API Response /guests/[id]", {
-      message: `Guest updated successfully. ${result.cartItems.reduce((sum, cart) => sum + cart.quantity, 0)} items in cart.`,
-      durationMs: Date.now() - start,
-    });
+    logResponse(pathAPI, Date.now() - startTime, { message: `Guest updated successfully. ${result.cartItems.reduce((sum, cart) => sum + cart.quantity, 0)} items in cart.` });
 
     return NextResponse.json(
       {
@@ -152,15 +142,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     );
   } catch (error) {
     if (error instanceof z.ZodError) {
-      logger.error("API /guests/[id] error", { error: error.message, stack: error.stack });
-      return NextResponse.json({ success: false, message: error.issues }, { status: 400 });
+      logError(`${pathAPI} zod error`, Date.now() - startTime, error);
+      return NextResponse.json({ success: false, message: "Validation error", errors: error.issues.map((issue) => ({ field: issue.path.join("."), message: issue.message })) }, { status: 400 });
     }
 
-    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    const errorStack = error instanceof Error ? error.stack : "An unknown error occurred";
-
-    logger.error("API /guests/[id] error", { error: errorMessage, stack: errorStack });
-
-    return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
+    logError(`${pathAPI} error`, Date.now() - startTime, error);
+    return NextResponse.json({ success: false, message: error }, { status: 500 });
   }
 }
