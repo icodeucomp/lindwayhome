@@ -7,7 +7,7 @@ const uploader = new FileUploader();
 // POST - Delete images
 export async function POST(request: NextRequest) {
   const { subPath } = await request.json();
-  const pathAPI = `POST /files/deletes/${subPath}`;
+  const pathAPI = `POST /files/deletes${subPath}`;
   const startTime = Date.now();
 
   try {
