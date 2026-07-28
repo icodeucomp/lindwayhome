@@ -396,7 +396,6 @@ export const configParametersApi = {
         } catch (error) {
           if (axios.isAxiosError(error)) {
             const responseData = error.response?.data.message;
-            console.log("🚀 ~ responseData:", responseData);
             throw new Error(responseData || "An error occurred");
           }
           throw new Error("An unexpected error occurred");

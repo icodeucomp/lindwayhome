@@ -2,11 +2,15 @@
 
 import * as React from "react";
 
+import Link from "next/link";
+
 import { useRouter } from "next/navigation";
 
 import { useQueryClient } from "@tanstack/react-query";
 
 import toast from "react-hot-toast";
+
+import { FaArrowLeft } from "react-icons/fa";
 
 import { Helper, InputForm } from "./slicing";
 
@@ -131,10 +135,14 @@ export const CreateProductDashboard = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-4xl mx-auto">
       <div className="mb-6">
-        <h1 className="heading">Add New Product</h1>
-        <p className="text-gray">Create a new product for your product item.</p>
+        <Link href="/admin/dashboard/products" className="inline-flex items-center gap-2 mb-3 text-sm font-medium duration-300 text-gray hover:text-dark">
+          <FaArrowLeft className="size-3" />
+          Back to products
+        </Link>
+        <h2 className="text-2xl font-bold text-darker-gray">Add New Product</h2>
+        <p className="text-sm text-gray/70">Fill in the details below to publish a new item to your catalog.</p>
       </div>
 
       <InputForm

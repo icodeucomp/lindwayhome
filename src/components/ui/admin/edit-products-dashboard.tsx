@@ -2,13 +2,17 @@
 
 import * as React from "react";
 
+import Link from "next/link";
+
 import { useRouter } from "next/navigation";
 
 import { useQueryClient } from "@tanstack/react-query";
 
 import toast from "react-hot-toast";
 
-import { InputForm, Helper } from "./slicing";
+import { FaArrowLeft } from "react-icons/fa";
+
+import { ErrorState, LoadingState, Panel, InputForm, Helper } from "./slicing";
 
 import { useAuthStore } from "@/hooks";
 
@@ -67,25 +71,28 @@ export const EditProductDashboard = ({ id }: { id: string }) => {
     },
   });
 
-  React.useEffect(() => {
-    if (product) {
-      setFormData({
-        name: product.data.name,
-        description: product.data.description,
-        notes: product.data.notes,
-        sizes: product.data.sizes,
-        price: Number(product.data.price),
-        discount: Number(product.data.discount),
-        category: product.data.category,
-        sku: product.data.sku,
-        images: product.data.images,
-        isPreOrder: product.data.isPreOrder,
-        isActive: product.data.isActive,
-        isFavorite: product.data.isFavorite,
-        productionNotes: product.data.productionNotes,
-      });
-    }
-  }, [product]);
+  // Hydrate the form once the product arrives. Adjusting state during render (rather than in an
+  // effect) means the form never paints a frame with the empty defaults.
+  const [hydratedId, setHydratedId] = React.useState<string | null>(null);
+
+  if (product && hydratedId !== product.data.id) {
+    setHydratedId(product.data.id);
+    setFormData({
+      name: product.data.name,
+      description: product.data.description,
+      notes: product.data.notes,
+      sizes: product.data.sizes,
+      price: Number(product.data.price),
+      discount: Number(product.data.discount),
+      category: product.data.category,
+      sku: product.data.sku,
+      images: product.data.images,
+      isPreOrder: product.data.isPreOrder,
+      isActive: product.data.isActive,
+      isFavorite: product.data.isFavorite,
+      productionNotes: product.data.productionNotes,
+    });
+  }
 
   const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -164,21 +171,29 @@ export const EditProductDashboard = ({ id }: { id: string }) => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="loader"></div>
-      </div>
+      <Panel>
+        <LoadingState message="Loading product..." />
+      </Panel>
     );
   }
 
   if (error) {
-    return <div className="px-4 py-3 text-red-700 border border-red-200 rounded-lg bg-red-50">Error loading products. Please try again.</div>;
+    return (
+      <Panel>
+        <ErrorState message="We couldn't load this product. Please check your connection and try again." />
+      </Panel>
+    );
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-4xl mx-auto">
       <div className="mb-6">
-        <h1 className="heading">Edit Product</h1>
-        <p className="text-gray">Update product and information item.</p>
+        <Link href="/admin/dashboard/products" className="inline-flex items-center gap-2 mb-3 text-sm font-medium duration-300 text-gray hover:text-dark">
+          <FaArrowLeft className="size-3" />
+          Back to products
+        </Link>
+        <h2 className="text-2xl font-bold text-darker-gray">Edit Product</h2>
+        <p className="text-sm text-gray/70">Update the details of {product?.data.name ?? "this product"}.</p>
       </div>
 
       <InputForm

@@ -4,31 +4,56 @@ import * as React from "react";
 
 import { Button, Img, Modal } from "@/components";
 
-import { FaEye, FaShoppingCart } from "react-icons/fa";
+import { FaCheck, FaEye, FaShoppingCart, FaUsers } from "react-icons/fa";
+
+import { Badge, EmptyState, ErrorState, LoadingState, Panel, Spinner, TableShell, Td, Th } from "./ui";
 
 import { paymentMethodColors, paymentMethodLabels } from "@/static/categories";
 
 import { formatIDR, guestsApi } from "@/utils";
 
-import { ApiResponse, Guest, PaymentMethods } from "@/types";
+import { ApiResponse, Guest } from "@/types";
 
-interface CartsListsProps {
+interface GuestsListsProps {
   guests: Guest[];
   isError: boolean;
   isLoading: boolean;
-  isPending: boolean;
-  updatePurchase: (guestId: string, paymentMethod: PaymentMethods, isMember: boolean) => void;
+  hasFilters: boolean;
+  pendingGuestId: string | null;
+  onRequestPurchase: (guest: Guest) => void;
 }
 
-export const GuestsLists = ({ guests, isLoading, isPending, isError, updatePurchase }: CartsListsProps) => {
-  const [isModalOpen, setIsModalOpen] = React.useState<boolean>(false);
+const PurchaseStatus = ({ guest, isPending, onRequestPurchase }: { guest: Guest; isPending: boolean; onRequestPurchase: (guest: Guest) => void }) => {
+  if (guest.isPurchased) {
+    return (
+      <Badge className="text-green-700 bg-green-100">
+        <FaCheck className="size-3" />
+        Purchased
+      </Badge>
+    );
+  }
 
+  return (
+    <Button
+      onClick={() => onRequestPurchase(guest)}
+      disabled={isPending}
+      className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-amber-800 bg-amber-100 rounded-full hover:bg-amber-200 disabled:opacity-60"
+    >
+      {isPending ? <Spinner className="border-amber-800/30 border-t-amber-800" /> : <span className="rounded-full size-2 bg-amber-500" />}
+      {isPending ? "Updating..." : "Mark as paid"}
+    </Button>
+  );
+};
+
+const DetailRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div>
+    <p className="text-xs font-semibold tracking-wide uppercase text-gray/60">{label}</p>
+    <div className="mt-1 text-sm text-gray">{children}</div>
+  </div>
+);
+
+export const GuestsLists = ({ guests, isLoading, isError, hasFilters, pendingGuestId, onRequestPurchase }: GuestsListsProps) => {
   const [selectedGuestId, setSelectedGuestId] = React.useState<string | null>(null);
-
-  const openModal = (guestId: string) => {
-    setSelectedGuestId(guestId);
-    setIsModalOpen(true);
-  };
 
   const {
     data: guest,
@@ -42,158 +67,171 @@ export const GuestsLists = ({ guests, isLoading, isPending, isError, updatePurch
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-8">
-        <div className="loader"></div>
-      </div>
+      <Panel className="mb-6">
+        <LoadingState message="Loading guests..." />
+      </Panel>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Panel className="mb-6">
+        <ErrorState message="We couldn't load the guest list. Please check your connection and try again." />
+      </Panel>
     );
   }
 
   if (guests.length === 0) {
     return (
-      <div className="py-12 text-center">
-        <svg className="w-12 h-12 mx-auto text-darker-gray" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-        </svg>
-        <h3 className="mt-2 text-sm font-medium text-gray">No guests and carts</h3>
-      </div>
+      <Panel className="mb-6">
+        <EmptyState
+          icon={<FaUsers className="size-6" />}
+          title={hasFilters ? "No guests match your filters" : "No guests yet"}
+          description={hasFilters ? "Try a different keyword or switch the transaction filter." : "Guests will appear here as soon as they start filling their carts."}
+        />
+      </Panel>
     );
   }
 
-  if (isError) {
-    return <div className="px-4 py-3 text-red-700 border border-red-200 rounded-lg bg-red-50">Error loading products. Please try again.</div>;
-  }
+  const detail = guest?.data;
 
   return (
     <>
-      <div className="mb-6 overflow-x-auto rounded-lg">
-        <table className="w-full">
-          <thead className="text-sm font-medium uppercase text-gray bg-gray-50 border-b border-gray-200">
+      {/* Table — medium screens and up */}
+      <Panel className="hidden mb-6 overflow-hidden lg:block">
+        <TableShell>
+          <thead className="border-b bg-gray/5 border-gray/15">
             <tr>
-              <th className="px-6 py-4 tracking-wider text-left">Full Name</th>
-              <th className="px-6 py-4 tracking-wider text-left">Email</th>
-              <th className="px-6 py-4 tracking-wider text-left">Whatsapp Number</th>
-              <th className="px-6 py-4 tracking-wider text-left">Payment Method</th>
-              <th className="px-6 py-4 tracking-wider text-left">Purchase Status</th>
-              <th className="px-6 py-4 tracking-wider text-left">Actions</th>
+              <Th>Full Name</Th>
+              <Th>Email</Th>
+              <Th>Whatsapp Number</Th>
+              <Th>Payment Method</Th>
+              <Th>Purchase Status</Th>
+              <Th className="text-right">Actions</Th>
             </tr>
           </thead>
-          <tbody className="bg-light divide-y divide-gray-200">
-            {guests.map((guest) => (
-              <tr key={guest.id} className="hover:bg-gray-50 transition-colors text-sm">
-                <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{guest.fullname}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-gray-700">{guest.email}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-gray-700">{guest.whatsappNumber}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${paymentMethodColors[guest.paymentMethod]}`}>{paymentMethodLabels[guest.paymentMethod]}</span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {isPending ? (
-                    <div className="px-6">
-                      <div className="loader-text"></div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => updatePurchase(guest.id, guest.paymentMethod, guest.isMember)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${guest.isPurchased ? "bg-green-500" : "bg-red-500 cursor-pointer"}`}
-                        disabled={guest.isPurchased}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${guest.isPurchased ? "translate-x-6" : "translate-x-1"}`} />
-                      </button>
-                      <span className={`text-xs font-medium ${guest.isPurchased ? "text-green-700" : "text-red-700"}`}>{guest.isPurchased ? "Purchased" : "Pending"}</span>
-                    </div>
-                  )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <Button onClick={() => openModal(guest.id)} className="inline-flex items-center gap-1 btn-outline">
+          <tbody className="divide-y divide-gray/10">
+            {guests.map((item) => (
+              <tr key={item.id} className="duration-300 hover:bg-gray/5">
+                <Td className="font-medium whitespace-nowrap text-darker-gray">
+                  <div className="flex items-center gap-2">
+                    {item.fullname}
+                    {item.isMember && <Badge className="bg-purple-100 text-purple-700">Member</Badge>}
+                  </div>
+                </Td>
+                <Td className="whitespace-nowrap">{item.email}</Td>
+                <Td className="whitespace-nowrap">{item.whatsappNumber}</Td>
+                <Td>
+                  <Badge className={paymentMethodColors[item.paymentMethod]}>{paymentMethodLabels[item.paymentMethod]}</Badge>
+                </Td>
+                <Td>
+                  <PurchaseStatus guest={item} isPending={pendingGuestId === item.id} onRequestPurchase={onRequestPurchase} />
+                </Td>
+                <Td className="text-right">
+                  <Button onClick={() => setSelectedGuestId(item.id)} className="inline-flex items-center gap-2 btn-outline">
                     <FaEye className="size-4" />
                     View Details
                   </Button>
-                </td>
+                </Td>
               </tr>
             ))}
           </tbody>
-        </table>
+        </TableShell>
+      </Panel>
+
+      {/* Cards — small screens */}
+      <div className="grid gap-4 mb-6 sm:grid-cols-2 lg:hidden">
+        {guests.map((item) => (
+          <Panel key={item.id} className="p-4 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-semibold truncate text-darker-gray">{item.fullname}</p>
+                <p className="text-sm truncate text-gray/70">{item.email}</p>
+              </div>
+              {item.isMember && <Badge className="text-purple-700 bg-purple-100">Member</Badge>}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className={paymentMethodColors[item.paymentMethod]}>{paymentMethodLabels[item.paymentMethod]}</Badge>
+              <PurchaseStatus guest={item} isPending={pendingGuestId === item.id} onRequestPurchase={onRequestPurchase} />
+            </div>
+
+            <p className="text-sm text-gray/70">{item.whatsappNumber}</p>
+
+            <Button onClick={() => setSelectedGuestId(item.id)} className="flex items-center justify-center w-full gap-2 btn-outline">
+              <FaEye className="size-4" />
+              View Details
+            </Button>
+          </Panel>
+        ))}
       </div>
-      <Modal isVisible={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <h3 className="text-2xl font-bold text-gray">Guest Details</h3>
+
+      <Modal isVisible={selectedGuestId !== null} onClose={() => setSelectedGuestId(null)}>
+        <h3 className="pr-10 text-2xl font-bold text-darker-gray">Guest Details</h3>
+
         {loadGuest ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="loader"></div>
-          </div>
+          <LoadingState message="Loading guest details..." />
         ) : errorGuest ? (
-          <div className="px-4 py-3 text-red-700 border border-red-200 rounded-lg bg-red-50">Error loading guest details. Please try again.</div>
+          <ErrorState message="We couldn't load this guest's details. Please try again." />
         ) : (
-          <div className="flex gap-8 mt-4">
-            <div className="w-full space-y-4 max-w-64">
-              <div className="text-gray">
-                <label className="block text-sm font-medium">Address</label>
-                <p className="mt-1 text-sm">{guest?.data.address}</p>
+          <div className="grid gap-6 mt-6 md:grid-cols-[minmax(0,16rem)_1fr]">
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge className={paymentMethodColors[detail?.paymentMethod as keyof typeof paymentMethodColors]}>{paymentMethodLabels[detail?.paymentMethod as keyof typeof paymentMethodLabels]}</Badge>
+                <Badge className={detail?.isPurchased ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-800"}>{detail?.isPurchased ? "Purchased" : "Not Purchased"}</Badge>
+                {detail?.isMember && <Badge className="text-purple-700 bg-purple-100">Member</Badge>}
               </div>
-              <div className="text-gray">
-                <label className="block text-sm font-medium">Postal Code</label>
-                <p className="mt-1 text-sm">{guest?.data.postalCode}</p>
+
+              <div className="p-4 space-y-4 rounded-lg bg-gray/5">
+                <DetailRow label="Full Name">{detail?.fullname}</DetailRow>
+                <DetailRow label="Email">{detail?.email}</DetailRow>
+                <DetailRow label="Whatsapp">{detail?.whatsappNumber}</DetailRow>
+                <DetailRow label="Address">{detail?.address}</DetailRow>
+                <DetailRow label="Postal Code">{detail?.postalCode}</DetailRow>
+                <DetailRow label="Instagram">{detail?.instagram || "-"}</DetailRow>
+                <DetailRow label="Reference">{detail?.reference || "-"}</DetailRow>
               </div>
-              <div className="text-gray">
-                <label className="block text-sm font-medium">Instagram</label>
-                <p className="mt-1 text-sm">{guest?.data.instagram || "-"}</p>
-              </div>
-              <div className="text-gray">
-                <label className="block text-sm font-medium">Reference</label>
-                <p className="mt-1 text-sm">{guest?.data.reference || "-"}</p>
-              </div>
-              <div className="text-gray">
-                <label className="block text-sm font-medium">Payment Method</label>
-                <span className={`mt-1 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${paymentMethodColors[guest?.data.paymentMethod as keyof typeof paymentMethodColors]}`}>
-                  {paymentMethodLabels[guest?.data.paymentMethod as keyof typeof paymentMethodLabels]}
-                </span>
-              </div>
-              <div className="text-gray">
-                <label className="block text-sm font-medium">Purchase Status</label>
-                <div className="mt-1">
-                  <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${guest?.data.isPurchased ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
-                    {guest?.data.isPurchased ? "Purchased" : "Not Purchased"}
-                  </span>
-                </div>
-              </div>
-              {guest?.data.receiptImage && (
-                <div className="text-gray">
-                  <label className="block mb-2 text-sm font-medium">Receipt Image</label>
-                  <Img src={guest?.data.receiptImage.url} alt={guest?.data.receiptImage.alt} className="w-full h-full rounded-lg" width={400} height={400} />
+
+              {detail?.receiptImage && (
+                <div>
+                  <p className="mb-2 text-xs font-semibold tracking-wide uppercase text-gray/60">Receipt Image</p>
+                  <Img src={detail.receiptImage.url} alt={detail.receiptImage.alt} className="w-full border rounded-lg border-gray/15" width={400} height={400} />
                 </div>
               )}
             </div>
-            <div className="flex-1">
-              {guest?.data.cartItems && guest?.data.cartItems.length > 0 && (
-                <div className="text-gray">
-                  <div className="flex justify-between items-center">
-                    <label className="block mb-2 text-sm font-medium">
-                      <FaShoppingCart className="inline w-4 h-4 mr-1" />
-                      Items ({guest?.data.totalItemsSold})
-                    </label>
-                    <label className="block mb-2 text-sm font-medium">Total: {formatIDR(guest?.data.totalPurchased)}</label>
-                  </div>
-                  <div className="space-y-2">
-                    {guest?.data.cartItems.map((item, index) => (
-                      <div key={index} className="p-3 rounded-lg bg-gray/5 text-gray">
-                        <div className="flex items-center gap-4 text-sm">
-                          <div>
-                            <span className="font-medium">Product ID:</span>
-                            <p className="line-clamp-1">{item.productId}</p>
-                          </div>
-                          <div>
-                            <span className="font-medium">Quantity:</span>
-                            <p className="line-clamp-1">{item.quantity}</p>
-                          </div>
-                          <div>
-                            <span className="font-medium">Size:</span>
-                            <p className="line-clamp-1">{item.selectedSize}</p>
-                          </div>
-                        </div>
+
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="flex items-center gap-2 font-semibold text-darker-gray">
+                  <FaShoppingCart className="size-4 text-gray/60" />
+                  Items ({detail?.totalItemsSold ?? 0})
+                </p>
+                <p className="text-sm text-gray">
+                  Total: <span className="font-bold text-darker-gray">{formatIDR(detail?.totalPurchased ?? 0)}</span>
+                </p>
+              </div>
+
+              {detail?.cartItems && detail.cartItems.length > 0 ? (
+                <div className="space-y-2">
+                  {detail.cartItems.map((item, index) => (
+                    <div key={index} className="grid grid-cols-3 gap-3 p-3 text-sm border rounded-lg border-gray/15">
+                      <div className="col-span-3 sm:col-span-1">
+                        <p className="text-xs font-semibold tracking-wide uppercase text-gray/60">Product ID</p>
+                        <p className="font-mono text-xs truncate text-gray">{item.productId}</p>
                       </div>
-                    ))}
-                  </div>
+                      <div>
+                        <p className="text-xs font-semibold tracking-wide uppercase text-gray/60">Quantity</p>
+                        <p className="text-gray">{item.quantity}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold tracking-wide uppercase text-gray/60">Size</p>
+                        <p className="text-gray">{item.selectedSize}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
+              ) : (
+                <p className="p-4 text-sm text-center rounded-lg text-gray/60 bg-gray/5">This guest has no items in their cart.</p>
               )}
             </div>
           </div>

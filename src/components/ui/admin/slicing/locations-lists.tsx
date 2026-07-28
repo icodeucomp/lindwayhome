@@ -1,93 +1,153 @@
+"use client";
+
 import { Pagination } from "@/components";
-import { ApiResponse, Location } from "@/types";
+
 import { FaEdit, FaMapPin, FaTrash } from "react-icons/fa";
+
+import { EmptyState, ErrorState, LoadingState, Panel, TableShell, Td, Th } from "./ui";
+
+import { ApiResponse, Location } from "@/types";
 
 interface LocationListsProps {
   locationsData: ApiResponse<Location[]> | undefined;
   isLoading: boolean;
+  isError: boolean;
+  hasFilters: boolean;
   currentPage: number;
   handleEdit: (location: Location) => void;
-  setDeleteConfirm: (locationId: string) => void;
+  setDeleteConfirm: (location: Location) => void;
   handlePageChange: (newPage: number) => void;
 }
 
-export const LocationLists = ({ locationsData, isLoading, currentPage, handleEdit, setDeleteConfirm, handlePageChange }: LocationListsProps) => {
+export const LocationLists = ({ locationsData, isLoading, isError, hasFilters, currentPage, handleEdit, setDeleteConfirm, handlePageChange }: LocationListsProps) => {
   const locations = locationsData?.data || [];
   const pagination = locationsData?.pagination;
+
+  if (isLoading) {
+    return (
+      <Panel>
+        <LoadingState message="Loading locations..." />
+      </Panel>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Panel>
+        <ErrorState message="We couldn't load the location list. Please check your connection and try again." />
+      </Panel>
+    );
+  }
+
+  if (locations.length === 0) {
+    return (
+      <Panel>
+        <EmptyState
+          icon={<FaMapPin className="size-6" />}
+          title={hasFilters ? "No locations match your search" : "No locations yet"}
+          description={hasFilters ? "Try a different keyword, or clear the search to see every location." : "Add your first shipping destination to start calculating delivery."}
+        />
+      </Panel>
+    );
+  }
+
   return (
-    <div className="bg-light rounded-lg shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="text-sm font-medium uppercase text-gray bg-gray-50 border-b border-gray-200">
+    <Panel className="overflow-hidden">
+      {/* Table — large screens */}
+      <div className="hidden lg:block">
+        <TableShell>
+          <thead className="border-b bg-gray/5 border-gray/15">
             <tr>
-              <th className="px-6 py-4 tracking-wider text-left">Code</th>
-              <th className="px-6 py-4 tracking-wider text-left">Province</th>
-              <th className="px-6 py-4 tracking-wider text-left">District</th>
-              <th className="px-6 py-4 tracking-wider text-left">Sub-District</th>
-              <th className="px-6 py-4 tracking-wider text-left">Village</th>
-              <th className="px-6 py-4 tracking-wider text-left">Coordinates</th>
-              <th className="px-6 py-4 tracking-wider text-left">Actions</th>
+              <Th>Code</Th>
+              <Th>Province</Th>
+              <Th>District</Th>
+              <Th>Sub-District</Th>
+              <Th>Village</Th>
+              <Th>Coordinates</Th>
+              <Th className="text-right">Actions</Th>
             </tr>
           </thead>
-          <tbody className="bg-light divide-y divide-gray-200">
-            {isLoading ? (
-              <tr>
-                <td colSpan={7} className="px-6 py-12 text-center">
-                  <div className="flex justify-center items-center py-8">
-                    <div className="loader"></div>
+          <tbody className="divide-y divide-gray/10">
+            {locations.map((location) => (
+              <tr key={location.id} className="duration-300 hover:bg-gray/5">
+                <Td className="font-mono font-medium whitespace-nowrap text-darker-gray">{location.code}</Td>
+                <Td className="font-medium whitespace-nowrap text-darker-gray">{location.province}</Td>
+                <Td className="whitespace-nowrap">{location.district}</Td>
+                <Td className="whitespace-nowrap">{location.sub_district}</Td>
+                <Td className="whitespace-nowrap">{location.village}</Td>
+                <Td className="font-mono text-xs whitespace-nowrap text-gray/70">
+                  <span className="block">Lat: {location.approx_lat.toFixed(6)}</span>
+                  <span className="block">Long: {location.approx_long.toFixed(6)}</span>
+                </Td>
+                <Td className="text-right whitespace-nowrap">
+                  <div className="flex justify-end gap-1">
+                    <button
+                      onClick={() => handleEdit(location)}
+                      title="Edit location"
+                      aria-label={`Edit ${location.village}`}
+                      className="p-2 text-blue-600 duration-300 rounded-lg cursor-pointer hover:text-blue-800 hover:bg-blue-50"
+                    >
+                      <FaEdit className="size-4" />
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirm(location)}
+                      title="Delete location"
+                      aria-label={`Delete ${location.village}`}
+                      className="p-2 text-red-600 duration-300 rounded-lg cursor-pointer hover:text-red-800 hover:bg-red-50"
+                    >
+                      <FaTrash className="size-4" />
+                    </button>
                   </div>
-                  <p className="mt-2 text-gray-500">Loading locations...</p>
-                </td>
+                </Td>
               </tr>
-            ) : locations.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-6 py-12 text-center">
-                  <FaMapPin className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                  <p className="text-gray-500">No locations found</p>
-                </td>
-              </tr>
-            ) : (
-              locations.map((location) => (
-                <tr key={location.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{location.code}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{location.province}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{location.district}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{location.sub_district}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{location.village}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div className="flex flex-col">
-                      <span>Lat: {location.approx_lat.toFixed(6)}</span>
-                      <span>Long: {location.approx_long.toFixed(6)}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex justify-end gap-2">
-                      <button onClick={() => handleEdit(location)} className="text-blue-600 hover:text-blue-800 p-1 hover:bg-blue-50 rounded transition-colors cursor-pointer" title="Edit">
-                        <FaEdit className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => setDeleteConfirm(location.id)} className="text-red-600 hover:text-red-800 p-1 hover:bg-red-50 rounded transition-colors cursor-pointer" title="Delete">
-                        <FaTrash className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
+            ))}
           </tbody>
-        </table>
+        </TableShell>
       </div>
 
-      {!isLoading && locations.length > 0 && pagination && (
-        <div className="bg-light px-6 py-4 border-t border-gray-200">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-sm text-gray-700">
-              Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to{" "}
-              <span className="font-medium">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> of <span className="font-medium">{pagination.total}</span> results
+      {/* Cards — small screens */}
+      <div className="divide-y lg:hidden divide-gray/10">
+        {locations.map((location) => (
+          <div key={location.id} className="p-4 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-semibold truncate text-darker-gray">{location.village}</p>
+                <p className="text-sm truncate text-gray/70">
+                  {location.sub_district}, {location.district}
+                </p>
+                <p className="text-sm truncate text-gray/70">{location.province}</p>
+              </div>
+              <span className="px-2.5 py-1 font-mono text-xs font-semibold rounded-full shrink-0 bg-gray/10 text-gray">{location.code}</span>
             </div>
-            <Pagination page={currentPage} setPage={handlePageChange} totalPage={pagination.totalPages || 0} isNumber />
+
+            <p className="font-mono text-xs text-gray/60">
+              {location.approx_lat.toFixed(6)}, {location.approx_long.toFixed(6)}
+            </p>
+
+            <div className="flex gap-2">
+              <button onClick={() => handleEdit(location)} className="flex items-center justify-center flex-1 gap-2 py-2 text-sm font-medium text-blue-600 duration-300 rounded-lg cursor-pointer bg-blue-50 hover:bg-blue-100">
+                <FaEdit className="size-3.5" />
+                Edit
+              </button>
+              <button onClick={() => setDeleteConfirm(location)} className="flex items-center justify-center flex-1 gap-2 py-2 text-sm font-medium text-red-600 duration-300 rounded-lg cursor-pointer bg-red-50 hover:bg-red-100">
+                <FaTrash className="size-3.5" />
+                Delete
+              </button>
+            </div>
           </div>
+        ))}
+      </div>
+
+      {pagination && (
+        <div className="flex flex-col items-center justify-between gap-4 px-4 py-4 border-t sm:px-6 border-gray/15 sm:flex-row">
+          <p className="text-sm text-gray/70">
+            Showing <span className="font-semibold text-darker-gray">{(pagination.page - 1) * pagination.limit + 1}</span> to{" "}
+            <span className="font-semibold text-darker-gray">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> of{" "}
+            <span className="font-semibold text-darker-gray">{pagination.total}</span> results
+          </p>
+          <Pagination page={currentPage} setPage={handlePageChange} totalPage={pagination.totalPages || 0} isNumber />
         </div>
       )}
-    </div>
+    </Panel>
   );
 };

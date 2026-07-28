@@ -1,25 +1,37 @@
 "use client";
 
+import * as React from "react";
+
 import { useAuthStore, useSearchPagination } from "@/hooks";
 
 import { useQueryClient } from "@tanstack/react-query";
 
-import { GuestsLists } from "./slicing";
+import { FaSearch } from "react-icons/fa";
 
-import { Pagination } from "@/components";
+import { ConfirmDialog, FilterSelect, GuestsLists, SearchInput, Toolbar } from "./slicing";
+
+import { Button, Pagination } from "@/components";
 
 import { guestsApi } from "@/utils";
 
-import { ApiResponse, Guest, PaymentMethods } from "@/types";
+import { ApiResponse, Guest } from "@/types";
+
+const TRANSACTION_OPTIONS = [
+  { value: "", label: "All Transactions" },
+  { value: "true", label: "Purchased" },
+  { value: "false", label: "Pending" },
+];
 
 export const GuestsDashboard = () => {
   const queryClient = useQueryClient();
 
   const { isAuthenticated } = useAuthStore();
 
-  const { searchQuery, inputValue, setInputValue, handleSearch, currentPage, handlePageChange, handleCategoryChange, selectedCategory } = useSearchPagination({
+  const { searchQuery, inputValue, setInputValue, handleSearch, handleClearSearch, currentPage, handlePageChange, handleCategoryChange, selectedCategory } = useSearchPagination({
     categoryParamName: "isPurchased",
   });
+
+  const [guestToConfirm, setGuestToConfirm] = React.useState<Guest | null>(null);
 
   const {
     data: guests,
@@ -35,54 +47,57 @@ export const GuestsDashboard = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["guests"] });
       queryClient.invalidateQueries({ queryKey: ["dashboards"] });
+      setGuestToConfirm(null);
     },
   });
 
-  const updatePurchase = (id: string, paymentMethod: PaymentMethods, isMember: boolean) => {
-    if (window.confirm("Are you sure you want to update the purchase status?")) {
-      updateGuests.mutate({ id, guests: { isPurchased: true, paymentMethod, isMember } });
-    }
+  const confirmPurchase = () => {
+    if (!guestToConfirm) return;
+    updateGuests.mutate({
+      id: guestToConfirm.id,
+      guests: { isPurchased: true, paymentMethod: guestToConfirm.paymentMethod, isMember: guestToConfirm.isMember },
+    });
   };
+
+  const totalGuests = guests?.pagination.total ?? 0;
+  const hasFilters = !!searchQuery || !!selectedCategory;
 
   return (
     <>
-      <div className="bg-light rounded-lg border border-gray/30 mb-6 px-6 py-4">
-        <div className="text-gray space-y-1">
-          <h1 className="heading">Guests and Carts Management</h1>
-          <p>Manage transactions, track the number of carts per guest, and view guests who have completed their transactions.</p>
-        </div>
-      </div>
+      <Toolbar>
+        <SearchInput value={inputValue} onChange={setInputValue} onSearch={handleSearch} onClear={handleClearSearch} placeholder="Search by name, email or WhatsApp number..." />
 
-      <div className="p-4 mb-6 rounded-lg shadow bg-light flex flex-col gap-4 sm:flex-row">
-        <div className="flex-1">
-          <input
-            type="text"
-            placeholder="Search products..."
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleSearch();
-            }}
-            className="w-full px-3 py-2 border rounded-lg border-gray/30 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-        <select
-          value={selectedCategory}
-          onChange={(e) => handleCategoryChange(e.target.value)}
-          className="px-3 py-2 border rounded-lg border-gray/30 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        >
-          <option value="">All Transaction</option>
-          {["Purchased", "Pending"].map((category) => (
-            <option key={category} value={category === "Purchased" ? "true" : "false"}>
-              {category}
-            </option>
-          ))}
-        </select>
-      </div>
+        <div className="flex flex-col gap-2 sm:flex-row lg:shrink-0">
+          <Button onClick={handleSearch} className="flex items-center justify-center gap-2 btn-gray">
+            <FaSearch className="size-4" />
+            Search
+          </Button>
 
-      <GuestsLists guests={guests?.data || []} isError={isError} isPending={updateGuests.isPending} isLoading={isLoading} updatePurchase={updatePurchase} />
+          <FilterSelect label="Filter by transaction status" value={selectedCategory} onChange={handleCategoryChange} options={TRANSACTION_OPTIONS} />
+        </div>
+      </Toolbar>
+
+      {!isLoading && !isError && totalGuests > 0 && (
+        <p className="mb-4 text-sm text-gray/70">
+          Showing <span className="font-semibold text-darker-gray">{guests?.data.length}</span> of <span className="font-semibold text-darker-gray">{totalGuests}</span> guests
+          {hasFilters && " matching your filters"}
+        </p>
+      )}
+
+      <GuestsLists guests={guests?.data || []} isError={isError} isLoading={isLoading} hasFilters={hasFilters} pendingGuestId={updateGuests.isPending ? guestToConfirm?.id ?? null : null} onRequestPurchase={setGuestToConfirm} />
 
       <Pagination page={currentPage} setPage={handlePageChange} totalPage={guests?.pagination.totalPages || 0} isNumber />
+
+      <ConfirmDialog
+        isVisible={guestToConfirm !== null}
+        tone="primary"
+        title="Mark as purchased?"
+        description={`This will mark ${guestToConfirm?.fullname}'s order as purchased. This status cannot be reverted.`}
+        confirmLabel="Mark as Purchased"
+        isPending={updateGuests.isPending}
+        onConfirm={confirmPurchase}
+        onClose={() => setGuestToConfirm(null)}
+      />
     </>
   );
 };

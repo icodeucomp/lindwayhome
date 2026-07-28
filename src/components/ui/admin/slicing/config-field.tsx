@@ -65,12 +65,24 @@ export const NumberField = ({ config, value, onChange, decimal }: { config: Conf
   return <NumberInput value={(value as number) || ""} onChange={handleChange} className="input-form" />;
 };
 
-export const BooleanField = ({ value, onChange }: { value: ConfigValue; onChange: (value: ConfigValue) => void }) => (
-  <label className="flex items-center gap-2 cursor-pointer">
-    <input type="checkbox" checked={(value as boolean) || false} onChange={(e) => onChange(e.target.checked)} className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray rounded" />
-    <span className="text-sm text-gray">Enabled</span>
-  </label>
-);
+export const BooleanField = ({ value, onChange }: { value: ConfigValue; onChange: (value: ConfigValue) => void }) => {
+  const isEnabled = (value as boolean) || false;
+
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={isEnabled}
+      onClick={() => onChange(!isEnabled)}
+      className="flex items-center gap-3 cursor-pointer group"
+    >
+      <span className={`relative inline-flex items-center rounded-full h-6 w-11 duration-300 ${isEnabled ? "bg-green-500" : "bg-gray/30"}`}>
+        <span className={`inline-block rounded-full size-4 bg-light shadow duration-300 ${isEnabled ? "translate-x-6" : "translate-x-1"}`} />
+      </span>
+      <span className={`text-sm font-medium ${isEnabled ? "text-darker-gray" : "text-gray/60"}`}>{isEnabled ? "Enabled" : "Disabled"}</span>
+    </button>
+  );
+};
 
 export const SelectField = ({ config, value, onChange }: { config: Config; value: ConfigValue; onChange: (value: ConfigValue) => void }) => (
   <select value={(value as string) || ""} onChange={(e) => onChange(e.target.value)} className="input-form">

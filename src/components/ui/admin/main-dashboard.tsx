@@ -117,7 +117,7 @@ const StockIcon = ({ className }: { className?: string }) => (
 const SelectField = ({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: readonly SelectOption[] }) => (
   <div className="flex items-center gap-2">
     <label className="text-sm font-medium text-gray">{label}:</label>
-    <select value={value} onChange={(e) => onChange(e.target.value)} className="input-form">
+    <select value={value} onChange={(e) => onChange(e.target.value)} className="w-auto cursor-pointer input-form">
       {options.map((option) => (
         <option key={option.value} value={option.value}>
           {option.label}
@@ -128,19 +128,13 @@ const SelectField = ({ label, value, onChange, options }: { label: string; value
 );
 
 const DashboardCard = ({ card }: { card: DashboardCard }) => (
-  <div className="overflow-hidden rounded-lg shadow bg-light">
-    <div className="p-5">
-      <div className="flex items-center">
-        <div className="shrink-0">
-          <div className={`flex items-center justify-center size-12 rounded-lg ${card.bgColor}`}>{card.icon}</div>
-        </div>
-        <div className="flex-1 w-0 ml-5">
-          <dl>
-            <dt className="font-semibold truncate text-gray">{card.title}</dt>
-            <dd className="text-xl font-medium text-gray">{card.value}</dd>
-          </dl>
-        </div>
-      </div>
+  <div className="p-5 overflow-hidden duration-300 border rounded-lg shadow-sm border-gray/15 bg-light hover:shadow-md">
+    <div className="flex items-center gap-4">
+      <div className={`flex items-center justify-center rounded-lg shrink-0 size-12 ${card.bgColor}`}>{card.icon}</div>
+      <dl className="flex-1 w-0">
+        <dt className="text-xs font-semibold tracking-wide uppercase truncate text-gray/70">{card.title}</dt>
+        <dd className="text-xl font-bold truncate text-darker-gray">{card.value}</dd>
+      </dl>
     </div>
   </div>
 );
@@ -165,7 +159,7 @@ const FilterSection = ({
   isRefreshing: boolean;
 }) => (
   <div className="space-y-3">
-    <div className="flex items-center gap-4">
+    <div className="flex flex-wrap items-center gap-3">
       <SelectField label="Month" value={selectedMonth} onChange={onMonthChange} options={MONTHS} />
       <SelectField label="Year" value={selectedYear} onChange={onYearChange} options={YEARS} />
       <Button onClick={onRefresh} className="flex items-center gap-2 disabled:opacity-50 btn-blue" disabled={isRefreshing}>
@@ -187,17 +181,19 @@ const FilterSection = ({
 );
 
 const QuickActions = ({ router }: { router: ReturnType<typeof useRouter> }) => (
-  <div className="rounded-lg shadow bg-light">
-    <div className="px-4 py-5 sm:p-6">
-      <h3 className="mb-4 text-lg font-medium leading-6 text-gray">Quick Actions</h3>
-      <div className="flex gap-4 text-light">
-        <Button onClick={() => router.push("/admin/dashboard/products")} className="btn-blue">
-          Manage Products
-        </Button>
-        <Button onClick={() => router.push("/admin/dashboard/products/create")} className="btn-green">
-          Add New Product
-        </Button>
-      </div>
+  <div className="p-5 border rounded-lg shadow-sm border-gray/15 bg-light sm:p-6">
+    <h3 className="mb-1 text-lg font-semibold text-darker-gray">Quick Actions</h3>
+    <p className="mb-4 text-sm text-gray/70">Jump straight into the tasks you use most.</p>
+    <div className="flex flex-wrap gap-3">
+      <Button onClick={() => router.push("/admin/dashboard/products")} className="btn-blue">
+        Manage Products
+      </Button>
+      <Button onClick={() => router.push("/admin/dashboard/products/create")} className="btn-green">
+        Add New Product
+      </Button>
+      <Button onClick={() => router.push("/admin/dashboard/guests")} className="btn-outline">
+        View Guests
+      </Button>
     </div>
   </div>
 );
@@ -297,7 +293,7 @@ const useDashboard = () => {
         bgColor: "bg-teal-500",
       },
     ],
-    [dashboards]
+    [dashboards],
   );
 
   return {
@@ -323,10 +319,10 @@ export const MainDashboard = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between px-6 py-6 overflow-hidden rounded-lg shadow bg-light">
-        <div className="space-y-2 mb-4 lg:mb-0">
-          <h1 className="text-3xl font-bold text-darker-gray">Welcome back, {user?.username}!</h1>
-          <p className="text-darker-gray">Here&apos;s an overview dashboard of Lindway.</p>
+      <div className="flex flex-col px-5 py-5 overflow-hidden border rounded-lg shadow-sm border-gray/15 bg-light sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mb-4 space-y-1 lg:mb-0">
+          <h2 className="text-2xl font-bold text-darker-gray">Welcome back, {user?.username}!</h2>
+          <p className="text-sm text-gray">Here&apos;s an overview dashboard of Lindway.</p>
         </div>
 
         <div className="lg:ml-6">

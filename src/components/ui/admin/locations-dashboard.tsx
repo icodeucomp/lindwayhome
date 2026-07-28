@@ -1,16 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import * as React from "react";
 
 import { useSearchPagination } from "@/hooks";
 
 import { useQueryClient } from "@tanstack/react-query";
 
-import { LocationLists } from "./slicing";
+import { ConfirmDialog, Field, LocationLists, SearchInput, Spinner, Toolbar } from "./slicing";
 
 import { Button, Modal } from "@/components";
 
-import { FaSearch } from "react-icons/fa";
+import { FaPlus, FaSearch } from "react-icons/fa";
 
 import { locationsApi } from "@/utils";
 
@@ -39,25 +39,27 @@ const initialFormData: FormData = {
 export const LocationsDashboard = () => {
   const queryClient = useQueryClient();
 
-  // Use custom pagination hook
-  const { searchQuery, inputValue, setInputValue, handleSearch, currentPage, handlePageChange } = useSearchPagination({
+  const { searchQuery, inputValue, setInputValue, handleSearch, handleClearSearch, currentPage, handlePageChange } = useSearchPagination({
     defaultPage: 1,
     searchParamName: "search",
     pageParamName: "page",
   });
 
-  const [itemsPerPage] = useState(10);
+  const [itemsPerPage] = React.useState(10);
 
   // Modal state
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"create" | "edit">("create");
-  const [formData, setFormData] = useState<FormData>(initialFormData);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [formErrors, setFormErrors] = useState<Partial<FormData>>({});
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [modalMode, setModalMode] = React.useState<"create" | "edit">("create");
+  const [formData, setFormData] = React.useState<FormData>(initialFormData);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [formErrors, setFormErrors] = React.useState<Partial<FormData>>({});
+  const [deleteConfirm, setDeleteConfirm] = React.useState<Location | null>(null);
 
-  // React Query - Fetch locations
-  const { data: locationsData, isLoading } = locationsApi.useGetLocations<ApiResponse<Location[]>>({
+  const {
+    data: locationsData,
+    isLoading,
+    isError,
+  } = locationsApi.useGetLocations<ApiResponse<Location[]>>({
     key: ["locations", currentPage, searchQuery],
     params: {
       page: currentPage,
@@ -66,7 +68,6 @@ export const LocationsDashboard = () => {
     },
   });
 
-  // React Query - Create mutation
   const createMutation = locationsApi.useCreateLocation({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["locations"] });
@@ -75,7 +76,6 @@ export const LocationsDashboard = () => {
     },
   });
 
-  // React Query - Update mutation
   const updateMutation = locationsApi.useUpdateLocation({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["locations"] });
@@ -85,7 +85,6 @@ export const LocationsDashboard = () => {
     },
   });
 
-  // React Query - Delete mutation
   const deleteMutation = locationsApi.useDeleteLocation({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["locations"] });
@@ -93,7 +92,6 @@ export const LocationsDashboard = () => {
     },
   });
 
-  // Form handlers
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -148,7 +146,9 @@ export const LocationsDashboard = () => {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
     if (!validateForm()) return;
 
     const locationData = {
@@ -171,187 +171,143 @@ export const LocationsDashboard = () => {
     }
   };
 
-  const handleDelete = (id: string) => {
-    deleteMutation.mutate(id);
-  };
-
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   return (
     <>
-      <div className="flex items-center justify-between px-6 py-4 mb-6 border rounded-lg bg-light border-gray/30">
-        <div className="space-y-1 text-gray">
-          <div className="flex items-center gap-2">
-            <h1 className="heading">Location Management</h1>
-          </div>
-          <p>Manage shipping locations and coordinates</p>
+      <Toolbar>
+        <SearchInput value={inputValue} onChange={setInputValue} onSearch={handleSearch} onClear={handleClearSearch} placeholder="Search by code, province, district or village..." />
+
+        <div className="flex flex-col gap-2 sm:flex-row lg:shrink-0">
+          <Button onClick={handleSearch} className="flex items-center justify-center gap-2 btn-gray">
+            <FaSearch className="size-4" />
+            Search
+          </Button>
+
+          <Button onClick={handleCreate} className="flex items-center justify-center gap-2 btn-blue whitespace-nowrap">
+            <FaPlus className="size-3.5" />
+            Add Location
+          </Button>
         </div>
-      </div>
+      </Toolbar>
 
-      <div className="p-4 mb-6 rounded-lg shadow bg-light">
-        <div className="flex flex-col gap-4 sm:flex-row">
-          <div className="flex-1">
-            <input
-              type="text"
-              placeholder="Search products..."
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleSearch();
-              }}
-              className="w-full px-3 py-2 border rounded-lg border-gray/30 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Button onClick={handleSearch} className="btn-gray flex items-center gap-2">
-              <FaSearch className="size-4" />
-              Search
-            </Button>
-
-            <Button onClick={handleCreate} className="btn-blue">
-              Add Location
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <LocationLists currentPage={currentPage} handleEdit={handleEdit} locationsData={locationsData} handlePageChange={handlePageChange} isLoading={isLoading} setDeleteConfirm={setDeleteConfirm} />
+      <LocationLists
+        currentPage={currentPage}
+        handleEdit={handleEdit}
+        locationsData={locationsData}
+        handlePageChange={handlePageChange}
+        isLoading={isLoading}
+        isError={isError}
+        hasFilters={!!searchQuery}
+        setDeleteConfirm={setDeleteConfirm}
+      />
 
       <Modal isVisible={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <h4 className="mb-4 text-xl font-bold text-center sm:text-2xl sm:font-semibold md:text-3xl text-gray">{modalMode === "create" ? "Add New Location" : "Edit Location"}</h4>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">
-              Code <span className="text-red-500">*</span>
-            </label>
-            <input type="text" name="code" value={formData.code} onChange={handleInputChange} className={`input-form ${formErrors.code ? "border-red-500" : "border-gray-300"}`} placeholder="0" />
-            {formErrors.code && <p className="mt-1 text-sm text-red-500">{formErrors.code}</p>}
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">
-              Province <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="province"
-              value={formData.province}
-              onChange={handleInputChange}
-              className={`input-form ${formErrors.province ? "border-red-500" : "border-gray-300"}`}
-              placeholder="DKI JAKARTA"
-            />
-            {formErrors.province && <p className="mt-1 text-sm text-red-500">{formErrors.province}</p>}
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">
-              District <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="district"
-              value={formData.district}
-              onChange={handleInputChange}
-              className={`input-form ${formErrors.district ? "border-red-500" : "border-gray-300"}`}
-              placeholder="JAKARTA PUSAT"
-            />
-            {formErrors.district && <p className="mt-1 text-sm text-red-500">{formErrors.district}</p>}
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">
-              Sub-District <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="sub_district"
-              value={formData.sub_district}
-              onChange={handleInputChange}
-              className={`input-form ${formErrors.sub_district ? "border-red-500" : "border-gray-300"}`}
-              placeholder="GAMBIR"
-            />
-            {formErrors.sub_district && <p className="mt-1 text-sm text-red-500">{formErrors.sub_district}</p>}
-          </div>
-
-          <div className="space-y-1 md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Village <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="village"
-              value={formData.village}
-              onChange={handleInputChange}
-              className={`input-form ${formErrors.village ? "border-red-500" : "border-gray-300"}`}
-              placeholder="GAMBIR"
-            />
-            {formErrors.village && <p className="mt-1 text-sm text-red-500">{formErrors.village}</p>}
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">
-              Latitude <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="approx_lat"
-              value={formData.approx_lat}
-              onChange={handleInputChange}
-              placeholder="-6.2088"
-              className={`input-form ${formErrors.approx_lat ? "border-red-500" : "border-gray-300"}`}
-            />
-            {formErrors.approx_lat && <p className="mt-1 text-sm text-red-500">{formErrors.approx_lat}</p>}
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">
-              Longitude <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="approx_long"
-              value={formData.approx_long}
-              onChange={handleInputChange}
-              placeholder="106.8456"
-              className={`input-form ${formErrors.approx_long ? "border-red-500" : "border-gray-300"}`}
-            />
-            {formErrors.approx_long && <p className="mt-1 text-sm text-red-500">{formErrors.approx_long}</p>}
-          </div>
+        <div className="pr-10 mb-6 space-y-1">
+          <h3 className="text-2xl font-bold text-darker-gray">{modalMode === "create" ? "Add New Location" : "Edit Location"}</h3>
+          <p className="text-sm text-gray/70">Shipping cost is calculated from these coordinates, so double-check them before saving.</p>
         </div>
 
-        <div className="mt-6 flex gap-3 justify-end">
-          <Button onClick={() => setIsModalOpen(false)} className="btn-outline">
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting} className="btn-blue">
-            {isSubmitting && (
-              <div className="flex justify-center items-center py-8">
-                <div className="loader"></div>
-              </div>
-            )}
-            {modalMode === "create" ? "Create Location" : "Update Location"}
-          </Button>
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Field label="Code" htmlFor="code" required error={formErrors.code}>
+              <input type="text" id="code" name="code" value={formData.code} onChange={handleInputChange} className={`input-form ${formErrors.code ? "border-red-500" : ""}`} placeholder="0" />
+            </Field>
+
+            <Field label="Province" htmlFor="province" required error={formErrors.province}>
+              <input
+                type="text"
+                id="province"
+                name="province"
+                value={formData.province}
+                onChange={handleInputChange}
+                className={`input-form ${formErrors.province ? "border-red-500" : ""}`}
+                placeholder="DKI JAKARTA"
+              />
+            </Field>
+
+            <Field label="District" htmlFor="district" required error={formErrors.district}>
+              <input
+                type="text"
+                id="district"
+                name="district"
+                value={formData.district}
+                onChange={handleInputChange}
+                className={`input-form ${formErrors.district ? "border-red-500" : ""}`}
+                placeholder="JAKARTA PUSAT"
+              />
+            </Field>
+
+            <Field label="Sub-District" htmlFor="sub_district" required error={formErrors.sub_district}>
+              <input
+                type="text"
+                id="sub_district"
+                name="sub_district"
+                value={formData.sub_district}
+                onChange={handleInputChange}
+                className={`input-form ${formErrors.sub_district ? "border-red-500" : ""}`}
+                placeholder="GAMBIR"
+              />
+            </Field>
+
+            <Field label="Village" htmlFor="village" required error={formErrors.village} className="md:col-span-2">
+              <input
+                type="text"
+                id="village"
+                name="village"
+                value={formData.village}
+                onChange={handleInputChange}
+                className={`input-form ${formErrors.village ? "border-red-500" : ""}`}
+                placeholder="GAMBIR"
+              />
+            </Field>
+
+            <Field label="Latitude" htmlFor="approx_lat" required error={formErrors.approx_lat} hint="Decimal degrees, e.g. -6.2088">
+              <input
+                type="text"
+                id="approx_lat"
+                name="approx_lat"
+                value={formData.approx_lat}
+                onChange={handleInputChange}
+                placeholder="-6.2088"
+                className={`input-form ${formErrors.approx_lat ? "border-red-500" : ""}`}
+              />
+            </Field>
+
+            <Field label="Longitude" htmlFor="approx_long" required error={formErrors.approx_long} hint="Decimal degrees, e.g. 106.8456">
+              <input
+                type="text"
+                id="approx_long"
+                name="approx_long"
+                value={formData.approx_long}
+                onChange={handleInputChange}
+                placeholder="106.8456"
+                className={`input-form ${formErrors.approx_long ? "border-red-500" : ""}`}
+              />
+            </Field>
+          </div>
+
+          <div className="flex flex-col-reverse gap-3 pt-4 border-t sm:flex-row sm:justify-end border-gray/10">
+            <Button type="button" onClick={() => setIsModalOpen(false)} disabled={isSubmitting} className="btn-outline">
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting} className="flex items-center justify-center gap-2 btn-blue">
+              {isSubmitting && <Spinner />}
+              {isSubmitting ? "Saving..." : modalMode === "create" ? "Create Location" : "Update Location"}
+            </Button>
+          </div>
+        </form>
       </Modal>
 
-      <Modal isVisible={deleteConfirm !== null} onClose={() => setDeleteConfirm(null)}>
-        <h3 className="text-lg font-bold text-gray-900 mb-2">Confirm Deletion</h3>
-        <p className="text-gray-600 mb-6">Are you sure you want to delete this location? This action cannot be undone.</p>
-        <div className="flex gap-3 justify-end">
-          <Button onClick={() => setDeleteConfirm(null)} className="btn-outline">
-            Cancel
-          </Button>
-          <Button onClick={() => handleDelete(deleteConfirm || "")} disabled={deleteMutation.isPending} className="btn-red">
-            {deleteMutation.isPending && (
-              <div className="flex justify-center items-center py-8">
-                <div className="loader"></div>
-              </div>
-            )}
-            Delete
-          </Button>
-        </div>
-      </Modal>
+      <ConfirmDialog
+        isVisible={deleteConfirm !== null}
+        title="Delete this location?"
+        description={`"${deleteConfirm?.village}, ${deleteConfirm?.district}" will be permanently removed. This action cannot be undone.`}
+        confirmLabel="Delete Location"
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deleteConfirm && deleteMutation.mutate(deleteConfirm.id)}
+        onClose={() => setDeleteConfirm(null)}
+      />
     </>
   );
 };

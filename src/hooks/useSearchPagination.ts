@@ -16,6 +16,7 @@ interface SearchPaginationResult {
   inputValue: string;
   setInputValue: (value: string) => void;
   handleSearch: () => void;
+  handleClearSearch: () => void;
   currentPage: number;
   handlePageChange: (newPage: number) => void;
   selectedCategory: string;
@@ -71,6 +72,15 @@ export const useSearchPagination = (options?: SearchPaginationOptions): SearchPa
     setSearchQuery(inputValue);
   }, [inputValue, defaultPage, searchParamName, pageParamName, updateSearchParams]);
 
+  const handleClearSearch = React.useCallback(() => {
+    setInputValue("");
+    setSearchQuery("");
+    updateSearchParams({
+      [searchParamName]: "",
+      [pageParamName]: String(defaultPage),
+    });
+  }, [defaultPage, searchParamName, pageParamName, updateSearchParams]);
+
   const handlePageChange = React.useCallback(
     (newPage: number) => {
       updateSearchParams({
@@ -96,6 +106,7 @@ export const useSearchPagination = (options?: SearchPaginationOptions): SearchPa
     inputValue,
     setInputValue,
     handleSearch,
+    handleClearSearch,
     currentPage,
     handlePageChange,
     selectedCategory,

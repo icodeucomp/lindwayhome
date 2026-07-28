@@ -1,4 +1,4 @@
-import { sendEmail } from "./nodemailer";
+import { sendEmail } from "./resend";
 
 import { generateOrderConfirmationHTML } from "./order-confirmation-template";
 
