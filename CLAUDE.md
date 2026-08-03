@@ -337,64 +337,232 @@ product override (active locale)
 
 ## B4. Target data model `[TARGET]`
 
-All ids are `cuid()` (D7). All new tables follow the existing `@@map("snake_case")` convention.
+All ids are `cuid()` (D7). All tables follow the existing `@@map("snake_case")` convention. Sections B4.1 → B4.9 read top-to-bottom as the complete target `schema.prisma`.
+
+**One invariant Prisma cannot express:** every translatable entity must always have an `EN` translation row; `ID` is optional (D3). Enforce this in the service layer on create — the whole fallback chain assumes EN exists.
 
 ### B4.1 Taxonomy
 
-```
-BrandingType   id · code unique · name · slug unique · description? · image Json? · order · isActive
-AudienceType   id · code unique · name · slug unique · order · isActive
-GarmentType    id · code unique · name · slug unique · order · isActive
+```prisma
+model BrandingType {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  name        String
+  slug        String    @unique
+  description String?
+  image       Json?
+  order       Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  products    Product[]
+
+  @@map("branding_types")
+}
+
+model AudienceType {
+  id        String            @id @default(cuid())
+  code      String            @unique
+  name      String
+  slug      String            @unique
+  order     Int               @default(0)
+  isActive  Boolean           @default(true)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  products  ProductAudience[]
+
+  @@map("audience_types")
+}
+
+model GarmentType {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  name      String
+  slug      String    @unique
+  order     Int       @default(0)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  products  Product[]
+
+  @@map("garment_types")
+}
 ```
 
-Admin-managed; adding a sixth branding is a row, not a deploy. Labels are not translated (D2).
+Admin-managed; adding a sixth branding is a row, not a deploy. `name` is not translated (D2). These three tables also drive the Collections mega-menu (D16), so `order` and `isActive` are what an admin uses to arrange the header.
 
 ### B4.2 Size, size guide, and package dimensions
 
-```
-Size             id · code unique (XS,S,M,…) · label · order · isActive
+```prisma
+model Size {
+  id        String           @id @default(cuid())
+  code      String           @unique  // XS, S, M … MUST match a package_dimensions config key
+  label     String
+  order     Int              @default(0)
+  isActive  Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
-SizeGuide        id · title · description? · publishedAt DateTime? · order · isActive
-SizeGuideRow     id · sizeGuideId · sizeId · measurements Json · order
-                 @@unique([sizeGuideId, sizeId])
-SizeGuideTranslation   sizeGuideId · locale · title · description?
-                 @@unique([sizeGuideId, locale])
+  variants  ProductVariant[]
+  guideRows SizeGuideRow[]
+
+  @@map("sizes")
+}
+
+model SizeGuide {
+  id           String                 @id @default(cuid())
+  order        Int                    @default(0)
+  publishedAt  DateTime?              // null = draft
+  isActive     Boolean                @default(true)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  rows         SizeGuideRow[]
+  translations SizeGuideTranslation[]
+  products     Product[]
+
+  @@index([publishedAt])
+  @@map("size_guides")
+}
+
+model SizeGuideRow {
+  id           String    @id @default(cuid())
+  sizeGuideId  String
+  sizeId       String
+  measurements Json      // { length: 98, waist: 62, bottom_width: 140 }
+  order        Int       @default(0)
+
+  sizeGuide    SizeGuide @relation(fields: [sizeGuideId], references: [id], onDelete: Cascade)
+  size         Size      @relation(fields: [sizeId], references: [id])
+
+  @@unique([sizeGuideId, sizeId])
+  @@map("size_guide_rows")
+}
+
+model SizeGuideTranslation {
+  id              String    @id @default(cuid())
+  sizeGuideId     String
+  locale          Locale
+  title           String
+  description     String?
+  parameterLabels Json?     // { length: "Panjang", waist: "Lingkar Pinggang" }
+
+  sizeGuide       SizeGuide @relation(fields: [sizeGuideId], references: [id], onDelete: Cascade)
+
+  @@unique([sizeGuideId, locale])
+  @@map("size_guide_translations")
+}
 ```
 
 - `publishedAt = null` means draft; the public Size Guide page lists only published guides (D1).
-- **No grouping field.** The public page renders published guides as a flat list, ordered by `order` then title. v1's hardcoded Women / Men / Baby split with Kebaya / Batik tabs is not reproduced — the guide `title` carries that meaning instead (e.g. "Women — Batik"), so admins can introduce new groupings without a schema change (D1).
-- `measurements` is free-form JSON (`{ length: 98, waist: 62, bottom_width: 140 }`) so parameters differ per garment and per audience.
+- **No grouping field.** The public page renders published guides as a flat list ordered by `order`. v1's hardcoded Women / Men / Baby split with Kebaya / Batik tabs is not reproduced — the translated `title` carries that meaning instead (e.g. "Women — Batik"), so admins can introduce new groupings without a schema change (D1).
+- **Title and description live only in the translation**, matching the Article and FAQ pattern. Admin lists join the EN row.
+- `measurements` keys are stable identifiers; their **display labels** are per-locale in `SizeGuideTranslation.parameterLabels`. Translating JSON keys directly would be unworkable.
 - **Package dimensions do not live here.** They live on `ProductVariant` — see D6 for why.
+- `Size.code` must match a `package_dimensions` config key exactly, or checkout returns 404 for that size. Warn in the admin form when a new Size has no matching dimensions row.
 
 ### B4.3 Product
 
-```
-Product        id · sku unique · slug unique
-               brandingTypeId  (required)
-               garmentTypeId?  (single)
-               sizeGuideId?
-               price Decimal(12,2) · discount Int · discountedPrice Decimal(12,2)
-               images Json[]
-               stock Int            (derived from variants)
-               releasedAt DateTime? (drives New Arrivals)
-               soldCount Int @default(0)
-               bestSellerRank Int?  (manual override)
-               isPreOrder · isFavorite · isActive
-               productionNotes?
+```prisma
+model Product {
+  id              String               @id @default(cuid())
+  sku             String               @unique  // also the image folder name
+  slug            String               @unique  // public URL, single locale (D4)
 
-ProductAudience    productId · audienceTypeId          @@id([productId, audienceTypeId])
-ProductVariant     id · productId · sizeId · quantity · packageDimensions Json?
-                   @@unique([productId, sizeId])
-ProductTranslation productId · locale · name
-                   description Json?  notes Json?  fabricInformation Json?
-                   shippingDelivery Json?  returnPolicy Json?
-                   @@unique([productId, locale])
+  brandingTypeId  String                        // required (D5)
+  garmentTypeId   String?                       // single
+  sizeGuideId     String?
+
+  price           Decimal              @db.Decimal(12, 2)
+  discount        Int                  @default(0)
+  discountedPrice Decimal              @db.Decimal(12, 2)
+
+  images          Json[]                        // file nodes
+  stock           Int                  @default(0)  // derived: sum(variants.quantity)
+
+  releasedAt      DateTime?                     // drives New Arrivals
+  soldCount       Int                  @default(0)  // += on order verification
+  bestSellerRank  Int?                          // manual override
+
+  isPreOrder      Boolean              @default(false)
+  isFavorite      Boolean              @default(false)
+  isActive        Boolean              @default(true)
+  productionNotes String?
+
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  brandingType    BrandingType         @relation(fields: [brandingTypeId], references: [id])
+  garmentType     GarmentType?         @relation(fields: [garmentTypeId], references: [id])
+  sizeGuide       SizeGuide?           @relation(fields: [sizeGuideId], references: [id])
+  audiences       ProductAudience[]
+  variants        ProductVariant[]
+  translations    ProductTranslation[]
+  promotions      PromotionProduct[]
+  cartItems       Cart[]
+
+  @@index([brandingTypeId])
+  @@index([garmentTypeId])
+  @@index([releasedAt])
+  @@index([soldCount])
+  @@index([bestSellerRank])
+  @@index([isActive, isFavorite])
+  @@map("products")
+}
+
+model ProductAudience {
+  productId      String
+  audienceTypeId String
+
+  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  audienceType   AudienceType @relation(fields: [audienceTypeId], references: [id], onDelete: Cascade)
+
+  @@id([productId, audienceTypeId])
+  @@map("product_audiences")
+}
+
+model ProductVariant {
+  id                String   @id @default(cuid())
+  productId         String
+  sizeId            String
+  quantity          Int      @default(0)
+  packageDimensions Json?    // { weight_g, length_cm, width_cm, height_cm } — else config default
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  product           Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size              Size     @relation(fields: [sizeId], references: [id])
+
+  @@unique([productId, sizeId])
+  @@map("product_variants")
+}
+
+model ProductTranslation {
+  id                String  @id @default(cuid())
+  productId         String
+  locale            Locale
+  name              String
+  description       Json?   // Tiptap
+  notes             Json?   // Tiptap — falls back to config product_defaults
+  fabricInformation Json?   // Tiptap — falls back to config
+  shippingDelivery  Json?   // Tiptap — falls back to config
+  returnPolicy      Json?   // Tiptap — falls back to config
+
+  product           Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, locale])
+  @@map("product_translations")
+}
 ```
 
 - **One branding (required), one garment, many audiences** (D5) — so a product can be unisex.
+- `Product` no longer carries `name`, `description`, `notes`, `category`, or `sizes`. Name and content moved to `ProductTranslation`; category became three relations; sizes became `ProductVariant`.
 - `isFavorite` keeps its v1 meaning: an admin flag for featured products, now surfaced on that product's branding page (D11). It is **not** the wishlist.
-- The five translated content fields hold Tiptap JSON (D10). All are nullable; empty means fall back per §B3.2.
-- `ProductVariant.packageDimensions` is `{ weight_g, length_cm, width_cm, height_cm }`, nullable, falling back to the `package_dimensions` config group.
+- The five translated content fields hold Tiptap JSON (D10). All are nullable; empty falls back per §B6.1.
+- Product search filters on `ProductTranslation.name`/`description` with `contains`. A plain btree index does not help `contains`, so none is declared — add a `pg_trgm` GIN index later if search gets slow.
 
 ### B4.4 Stock and metrics
 
@@ -404,47 +572,199 @@ ProductTranslation productId · locale · name
 
 ### B4.5 Content
 
-```
-ArticleCategory             id · slug unique · order · isActive
-ArticleCategoryTranslation  categoryId · locale · name · description?
-Article                     id · slug unique · categoryId · image Json · imageAlt? ·
-                            featured · publishedAt DateTime?
-ArticleTranslation          articleId · locale · title · excerpt? · content Json (Tiptap)
+```prisma
+model ArticleCategory {
+  id           String                       @id @default(cuid())
+  slug         String                       @unique
+  order        Int                          @default(0)
+  isActive     Boolean                      @default(true)
+  createdAt    DateTime                     @default(now())
+  updatedAt    DateTime                     @updatedAt
 
-Faq                         id · topic · order · isActive
-FaqTranslation              faqId · locale · question · answer
+  articles     Article[]
+  translations ArticleCategoryTranslation[]
 
-ContactInquiry              id · fullname · email · phone? · inquiryType InquiryType ·
-                            otherDetail? · message · status InquiryStatus @default(NEW) ·
-                            handledAt? · handledById? · createdAt
-                            @@index([status]) @@index([inquiryType]) @@index([createdAt])
-```
+  @@map("article_categories")
+}
 
-```
-enum InquiryType     PRODUCT_INQUIRY · ORDER_SUPPORT · CUSTOM_ORDER ·
-                     WHOLESALE_B2B · PARTNERSHIP · OTHER
-enum InquiryStatus   NEW · IN_PROGRESS · HANDLED · ARCHIVED
+model ArticleCategoryTranslation {
+  id          String          @id @default(cuid())
+  categoryId  String
+  locale      Locale
+  name        String
+  description String?
+
+  category    ArticleCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, locale])
+  @@map("article_category_translations")
+}
+
+model Article {
+  id           String               @id @default(cuid())
+  slug         String               @unique
+  categoryId   String
+  image        Json                 // file node — same pipeline as product images
+  imageAlt     String?
+  featured     Boolean              @default(false)
+  publishedAt  DateTime?            // null = draft
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  category     ArticleCategory      @relation(fields: [categoryId], references: [id])
+  translations ArticleTranslation[]
+
+  @@index([categoryId])
+  @@index([publishedAt])
+  @@index([featured])
+  @@map("articles")
+}
+
+model ArticleTranslation {
+  id        String  @id @default(cuid())
+  articleId String
+  locale    Locale
+  title     String
+  excerpt   String?
+  content   Json    // Tiptap
+
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, locale])
+  @@map("article_translations")
+}
+
+model Faq {
+  id           String           @id @default(cuid())
+  topic        String           // groups FAQs so one component serves several pages
+  order        Int              @default(0)
+  isActive     Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  translations FaqTranslation[]
+
+  @@index([topic])
+  @@map("faqs")
+}
+
+model FaqTranslation {
+  id       String @id @default(cuid())
+  faqId    String
+  locale   Locale
+  question String
+  answer   Json   // Tiptap — answers usually need lists and links
+  faq      Faq    @relation(fields: [faqId], references: [id], onDelete: Cascade)
+
+  @@unique([faqId, locale])
+  @@map("faq_translations")
+}
+
+model ContactInquiry {
+  id          String        @id @default(cuid())
+  fullname    String
+  email       String
+  phone       String?
+  inquiryType InquiryType
+  otherDetail String?       // only when inquiryType = OTHER
+  message     String
+  status      InquiryStatus @default(NEW)
+  handledAt   DateTime?
+  handledById String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  handledBy   User?         @relation(fields: [handledById], references: [id])
+
+  @@index([status])
+  @@index([inquiryType])
+  @@index([createdAt])
+  @@map("contact_inquiries")
+}
 ```
 
 `Article.image` is a **file node** (`Json`), matching the `resolveFiles` pipeline used everywhere else — not a bare String as in the source notes.
 
-`otherDetail` is only populated when `inquiryType = OTHER` (D10 of the notes → §B5.4).
+`FaqTranslation.answer` is Tiptap JSON rather than plain text, since FAQ answers routinely need lists and links. Say so if a plain string is preferred — it is a one-line change while the schema is still on paper.
 
 ### B4.6 Pricing entities
 
 Multiple concurrent promotions and targeted member discounts cannot be expressed as key-value config, so they become tables:
 
-```
-Promotion             id · name · discountType DiscountType · value Decimal ·
-                      scope PromotionScope (ALL_PRODUCTS | SPECIFIC_PRODUCTS) ·
-                      priority Int · startsAt? · endsAt? · isActive
-PromotionProduct      promotionId · productId        @@id([promotionId, productId])
+```prisma
+model Promotion {
+  id           String             @id @default(cuid())
+  name         String
+  discountType DiscountType
+  value        Decimal            @db.Decimal(12, 2)  // percent if PERCENTAGE, rupiah if FIXED
+  scope        PromotionScope     @default(ALL_PRODUCTS)
+  priority     Int                @default(0)         // higher wins; no stacking
+  startsAt     DateTime?
+  endsAt       DateTime?
+  isActive     Boolean            @default(true)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
 
-Member                id · email unique · fullname? · joinedAt · isActive
-MemberDiscount        id · name · discountType · value ·
-                      scope MemberScope (ALL_MEMBERS | SPECIFIC_MEMBERS) ·
-                      priority Int · startsAt? · endsAt? · isActive
-MemberDiscountMember  memberDiscountId · memberId    @@id([memberDiscountId, memberId])
+  products     PromotionProduct[]
+
+  @@index([isActive, startsAt, endsAt])
+  @@map("promotions")
+}
+
+model PromotionProduct {
+  promotionId String
+  productId   String
+
+  promotion   Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([promotionId, productId])
+  @@map("promotion_products")
+}
+
+model Member {
+  id        String                 @id @default(cuid())
+  email     String                 @unique
+  fullname  String?
+  joinedAt  DateTime               @default(now())
+  isActive  Boolean                @default(true)
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+
+  discounts MemberDiscountMember[]
+
+  @@map("members")
+}
+
+model MemberDiscount {
+  id           String                 @id @default(cuid())
+  name         String
+  discountType DiscountType
+  value        Decimal                @db.Decimal(12, 2)
+  scope        MemberScope            @default(ALL_MEMBERS)
+  priority     Int                    @default(0)
+  startsAt     DateTime?
+  endsAt       DateTime?
+  isActive     Boolean                @default(true)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  members      MemberDiscountMember[]
+
+  @@index([isActive, startsAt, endsAt])
+  @@map("member_discounts")
+}
+
+model MemberDiscountMember {
+  memberDiscountId String
+  memberId         String
+
+  memberDiscount   MemberDiscount @relation(fields: [memberDiscountId], references: [id], onDelete: Cascade)
+  member           Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([memberDiscountId, memberId])
+  @@map("member_discount_members")
+}
 ```
 
 `Member` is new and necessary: targeting "these specific members" requires a member list, which v1 does not have (membership is only a boolean on order rows). Membership activation upserts a `Member` by email; `Guest.isMember` remains as the historical snapshot on the order.
@@ -472,6 +792,64 @@ Removed from config, now tables: `promotions` → `Promotion`, `members` → `Me
 **Deleted outright:** the `videos` group and its `videos_curated_collection` key, together with the `/curated-collections` page, `video-carousel.tsx`, and the carousel section on the v1 home page (D16). Nothing replaces them. The `VIDEO`/`VIDEOS` `ParameterType` values and the video upload endpoint stay — they are generic and cost nothing to keep.
 
 `origin_lat`/`origin_long` are seeded to Jakarta (`-6.2088`, `106.8456`) while the brand operates from Denpasar. The v2 seed must correct this, **and** the hardcoded fallbacks in `ShippingService` (A9.11).
+
+### B4.8 Models carried over from v1
+
+Unchanged except where noted. `Guest`, `Cart`, `ConfigParameterGroup`, `ConfigParameter`, and `Location` keep their v1 shape exactly (§A6) — `Guest` and `Cart` in particular must not drift, because the checkout token and the order transaction depend on them (D8).
+
+```prisma
+model User {
+  id        String           @id @default(cuid())
+  email     String           @unique
+  username  String           @unique
+  password  String                          // bcrypt, 12 rounds
+  role      Role             @default(ADMIN)
+  isActive  Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  handledInquiries ContactInquiry[]         // NEW back-relation (F-47)
+
+  @@map("users")
+}
+```
+
+Two notes on `Cart`:
+
+- `selectedSize` stays a **String**, not a FK to `Size`. It feeds `hashItems` (`productId:size:quantity`) inside the checkout token, so changing it would alter the signature shape of the one invariant that must not move (D8). Variants are resolved by `(productId, size.code)`.
+- Still no price snapshot on the line. Historical totals live on `Guest`.
+
+### B4.9 Enums
+
+```prisma
+enum Locale         { EN  ID }
+enum Role           { SUPER_ADMIN  ADMIN }
+enum PaymentMethod  { BANK_TRANSFER  QRIS }
+enum DiscountType   { PERCENTAGE  FIXED }
+enum PromotionScope { ALL_PRODUCTS  SPECIFIC_PRODUCTS }
+enum MemberScope    { ALL_MEMBERS  SPECIFIC_MEMBERS }
+enum InquiryType    { PRODUCT_INQUIRY  ORDER_SUPPORT  CUSTOM_ORDER  WHOLESALE_B2B  PARTNERSHIP  OTHER }
+enum InquiryStatus  { NEW  IN_PROGRESS  HANDLED  ARCHIVED }
+enum ParameterType  { TEXT  NUMBER  DECIMAL  BOOLEAN  SELECT  MULTI_SELECT  IMAGE  IMAGES
+                      VIDEO  VIDEOS  JSON  TEXTAREA  COLOR  DATE  DATETIME }
+```
+
+`Categories` is **deleted** — replaced by the three taxonomy tables. `DiscountType` gains a second job: it was only ever a config *value* in v1 (`tax_type`, `promo_type`, `member_type`), and now it is also a real column on `Promotion` and `MemberDiscount`.
+
+### B4.10 Table count
+
+29 models, up from 7. Eight are translation or join tables — the cost of bilingual content plus many-to-many taxonomy. Sections B4.1–B4.9 spell out 24 of them; the five marked *unchanged* below are copied verbatim from §A6.
+
+| Group | Models |
+| --- | --- |
+| Access | `User` |
+| Taxonomy | `BrandingType`, `AudienceType`, `GarmentType` |
+| Sizing | `Size`, `SizeGuide`, `SizeGuideRow`, `SizeGuideTranslation` |
+| Catalog | `Product`, `ProductAudience`, `ProductVariant`, `ProductTranslation` |
+| Orders | `Guest`, `Cart` *(unchanged)* |
+| Pricing | `Promotion`, `PromotionProduct`, `Member`, `MemberDiscount`, `MemberDiscountMember` |
+| Content | `ArticleCategory`, `ArticleCategoryTranslation`, `Article`, `ArticleTranslation`, `Faq`, `FaqTranslation`, `ContactInquiry` |
+| Settings | `ConfigParameterGroup`, `ConfigParameter`, `Location` *(unchanged)* |
 
 ## B5. Target functional requirements `[TARGET]`
 
