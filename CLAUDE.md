@@ -2,347 +2,624 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-It is written as a **PRD of the system as it actually exists today** — information architecture, functional requirements, flows, and database schema are all descriptions of shipped behavior, not aspirations. Where the implementation has a gap or a surprise, it is recorded in §9 rather than smoothed over.
+## 0. How to read this document
+
+The project is mid-way through a major revision ("v2"). This document therefore describes **two systems**, and every section is tagged:
+
+- **`[SHIPPED]`** — exists in the codebase right now. Safe to reference, call, and modify.
+- **`[TARGET]`** — the agreed v2 design. **Does not exist yet.** Never import, query, or call anything marked `[TARGET]` until Part C says that phase is done.
+- **`[OPEN]`** — deliberately undecided. Do not invent an answer; ask.
+
+Part A is the current system. Part B is the target. Part C is the migration order. Part D holds the locked decisions with their rationale, so they are not relitigated. Part E is shared conventions that apply to both.
+
+When a phase in Part C completes, move the affected subsections from `[TARGET]` to `[SHIPPED]` and delete the superseded Part A text. Keeping stale `[SHIPPED]` text is worse than having no document.
 
 ---
 
-## 1. Product overview
+# PART A — System as shipped today (v1)
 
-**Lindway Home** is an Indonesian fashion e-commerce storefront for the Lindway brand (Denpasar, Bali), built as a single Next.js 16 App Router application with its own admin dashboard.
+## A1. Product overview `[SHIPPED]`
 
-Defining product decisions:
+**Lindway Home** is an Indonesian fashion e-commerce storefront for the Lindway brand (Denpasar, Bali) — a single Next.js 16 App Router application with its own admin dashboard.
 
-- **Guest-only checkout.** Customers never create accounts. Each completed checkout writes one `Guest` row — `Guest` *is* the order, not a customer profile. Repeat buyers are correlated only by email string.
-- **Manual payment confirmation.** There is no payment gateway. The buyer transfers via bank or QRIS, uploads a receipt image, and an admin later verifies and flips the order to purchased.
-- **Config-driven pricing.** Tax, promo, member discount, shipping rates, zone multipliers, and per-size parcel dimensions all live in database rows (`ConfigParameter`), editable from the admin Parameters page — not in code.
-- **Distance-based shipping.** Cost is computed from a haversine distance between a configured origin and the buyer's village-level destination, combined with volumetric weight and a zone multiplier. There is no third-party courier API.
-- **Three product lines**, modeled both as the `Categories` enum and as separate public routes: `MY_LINDWAY`, `LURE_BY_LINDWAY`, `SIMPLY_LINDWAY`.
+Defining decisions:
 
-### 1.1 Users
+- **Guest-only checkout.** No customer accounts. Each completed checkout writes one `Guest` row — `Guest` *is* the order. Repeat buyers correlate only by email string.
+- **Manual payment confirmation.** No payment gateway. Buyer transfers via bank or QRIS, uploads a receipt, an admin later verifies and flips the order to purchased.
+- **Config-driven pricing.** Tax, promo, member discount, shipping rates, zone multipliers, per-size parcel dimensions live in `ConfigParameter` rows, editable from the admin Parameters page.
+- **Distance-based shipping.** Haversine distance from a configured origin to the buyer's village, combined with volumetric weight and a zone multiplier. No courier API.
+- **Three product lines** as the `Categories` enum and as separate routes.
+
+### A1.1 Users
 
 | Persona | Access | What they do |
 | --- | --- | --- |
-| Shopper (anonymous) | Public routes, no login, no account | Browse lines, view products, build a cart in `localStorage`, check out as guest, upload payment receipt, optionally activate membership |
-| Admin (`ADMIN`) | `/admin/*` + admin APIs | Manage products, verify and fulfil orders, edit store parameters, manage shipping locations |
-| Super admin (`SUPER_ADMIN`) | Same as admin | Role hierarchy exists (`SUPER_ADMIN > ADMIN`) but **no handler currently requires `SUPER_ADMIN`** — every `checkAuth` call uses the default `ADMIN` level |
+| Shopper (anonymous) | Public routes, no login | Browse, build a `localStorage` cart, check out as guest, upload receipt, optionally activate membership |
+| Admin (`ADMIN`) | `/admin/*` + admin APIs | Products, order verification, store parameters, shipping locations |
+| Super admin (`SUPER_ADMIN`) | Same as admin | Hierarchy exists (`SUPER_ADMIN > ADMIN`) but **no handler requires it** — every `checkAuth` uses the default `ADMIN` level |
 
----
+## A2. Access model `[SHIPPED]`
 
-## 2. Access model
+JWT, 1-day expiry, stored in `localStorage` under `auth_token`, attached by an axios request interceptor as `Authorization: Bearer`.
 
-JWT-based, 1-day expiry, stored in `localStorage` under `auth_token` and attached by an axios request interceptor as `Authorization: Bearer`.
-
-- There is **no `middleware.ts`**. Route protection is **per-handler**: an admin route calls `checkAuth(request, pathAPI)` from `@/lib` as its first statement and returns early if the result is non-null (`null` means authorized).
-- The dashboard's visual guard (`useAuthStore` in `layout-dashboard.tsx`) is **client-side only**. Real enforcement lives in the API handlers, so any new admin-only handler must call `checkAuth` itself or it is effectively public.
+- There is **no `middleware.ts`**. Protection is **per-handler**: an admin route calls `checkAuth(request, pathAPI)` from `@/lib` first and returns early if the result is non-null (`null` means authorized).
+- The dashboard guard (`useAuthStore` in `layout-dashboard.tsx`) is **client-side only**. Real enforcement is in the API handlers, so a new admin handler that forgets `checkAuth` is effectively public.
 - `checkAuth` runs `authenticate` and `authorize` in parallel; both re-read the user from the database and reject inactive users.
 
----
-
-## 3. Information architecture
-
-### 3.1 Public site map
+## A3. Information architecture `[SHIPPED]`
 
 ```
 /                                   Home — hero, featured products, curated collection video carousel
-├─ /my-lindway                      Product line landing + listing
-├─ /simply-lindway                  Product line landing + listing
-├─ /lure-by-lindway                 Product line landing + listing
-├─ /product/[category]/[id]         Product detail — gallery, size picker, add to cart, related products
+├─ /my-lindway  /simply-lindway  /lure-by-lindway     Product line landing + listing
+├─ /product/[category]/[id]         Product detail
 ├─ /cart                            Cart + checkout wizard (summary → payment → complete)
-├─ /order/payment/success/[id]      Post-order membership activation prompt (see §5.4)
-└─ Content pages
-   ├─ /about                        About us
-   ├─ /contact-us
-   ├─ /size-guide                   Size tables incl. baby/kids modals
-   ├─ /return-exchanges
-   ├─ /curated-collections
-   ├─ /shop                         "How to Shop"
-   ├─ /our-fabrics
-   └─ /care-instructions
+├─ /order/payment/success/[id]      Membership activation prompt (NOT a receipt page)
+└─ /about  /contact-us  /size-guide  /return-exchanges
+   /curated-collections  /shop  /our-fabrics  /care-instructions
+
+/admin/login
+/admin/dashboard  ├─ /products (+/create, /[id]/edit)  ├─ /guests  ├─ /parameters  └─ /locations
 ```
 
-### 3.2 Public navigation
+Header has two nav bands: `navFeatureLists` (hardcoded in `header.tsx`, the 3 brands) and `navLists` (`src/static/navigation.ts`, the 8 content pages). Cart badge counts **distinct products**, not total quantity.
 
-The header has **two nav bands**, sourced from two different places:
+## A4. Functional requirements `[SHIPPED]`
 
-- **Brand band** — `navFeatureLists` (hardcoded in `header.tsx`): My Lindway, Simply Lindway, Lure by Lindway.
-- **Content band** — `navLists` (`src/static/navigation.ts`): About us, Contact us, Size Guide, Return & Exchanges, Curated Collections, How to Shop, Our Fabrics, Care Instructions.
+**Storefront** — F-1 product listing per line (`GET /api/products` with page/limit/search/order/isActive/isFavorite + date filters; search matches id, name, description, SKU) · F-2 product detail with size picker and pre-order badge · F-3 `isFavorite` featured products on home · F-4 curated-collection video carousel from `videos_curated_collection` · F-5 static content pages.
 
-Also in the header: logo → `/`, social/contact links (Google Maps, WhatsApp, Instagram, Facebook), and a cart icon with a badge showing **distinct products** (`getCartItemByProduct`), not total quantity. The header switches between light and dark logo/text variants via an `isDark` prop. On mobile both bands collapse into one dropdown.
+**Cart** — F-6 hand-rolled subscribe/`forceUpdate` store persisted to `localStorage` with a TTL wrapper (`lindway_cart`, `lindway_cart_selection`, 1-day); nothing is stored server-side before checkout · F-7 items keyed `${id}-${selectedSize}` · F-8 grouped by product line, only *selected* items check out, with per-item / per-category / select-all toggles and bulk removal.
 
-The footer repeats both lists plus a `featureLists` block ("Discover the Brand" per line) and the same social links. Note the footer's brand block renders `item.href` for every menu entry, so all entries under a line point to that line's page.
+**Checkout** — F-9 cascading province → district → sub-district → village picker · F-10 shipping and price calculation (§A5.1) · F-11 server-signed `checkoutToken` (§A5.2) · F-12 QRIS or bank transfer, receipt required for **both** · F-13 order creation in a transaction · F-14 Resend confirmation email.
 
-### 3.3 Admin site map
+**Membership** — F-15 activation via `PATCH /api/guests/membership/[id]` from the post-order page · F-16 member discount applies if *any* prior `Guest` with the same email has `isMember: true`.
 
-```
-/admin/login                            Login form
-/admin/dashboard                        Metrics overview
-├─ /admin/dashboard/products            Product list (search, filter, paginate)
-│  ├─ /admin/dashboard/products/create
-│  └─ /admin/dashboard/products/[id]/edit
-├─ /admin/dashboard/guests              Orders/transactions list + detail + verification
-├─ /admin/dashboard/parameters          Store configuration (dynamic form)
-└─ /admin/dashboard/locations           Shipping destination master data
-```
+**Admin** — F-17 login · F-18 dashboard metrics (raw SQL `unnest(sizes)` per line) · F-19 product CRUD with multi-image upload · F-20 `stock` recomputed as the sum of `sizes[].quantity`, zero rejected · F-21 SKU uniqueness · F-22 order list/filter/detail · F-23 flipping `isPurchased` re-validates and **decrements** stock (§A5.3) · F-24 parameter management rendered from `ParameterType` · F-25 location CRUD.
 
-Sidebar items are defined by `NAV_ITEMS` in `layout-dashboard.tsx` (Dashboard, Products, Guests, Parameters, Locations); the active item is resolved by longest matching prefix, with `/admin/dashboard` matched exactly.
+**Files & ops** — F-26 two-phase upload (§A5.5) · F-27 explicit delete · F-28 temp sweep gated by `x-cron-secret`, needs an external scheduler · F-29 Winston daily-rotating logs (`application-`, `error-`, `calculation-`; 30d/20MB), `logCalculation` reserved for the pricing pipeline.
 
----
+## A5. Key flows `[SHIPPED]`
 
-## 4. Functional requirements
+### A5.1 Shipping & price calculation — `GET /api/guests/checkout`
 
-### 4.1 Storefront
+Inputs: destination, `email`, `items`, `purchased` subtotal, `totalItemsSold`.
 
-- **F-1 Product listing per line** — `GET /api/products?category=…` with `page`, `limit`, `search`, `order`, `isActive`, `isFavorite`, and date filters (`year`, `month`, `dateFrom`, `dateTo`). Search matches id, name, description, and SKU.
-- **F-2 Product detail** — gallery, description, notes, size selection from the `sizes` JSON, pre-order badge (`isPreOrder`), discounted price display, and a related-products section.
-- **F-3 Favorites/featured** — `isFavorite` flags products surfaced on the home page.
-- **F-4 Curated collections** — a video carousel driven by the `videos_curated_collection` config key, fetched through the public parameters endpoint.
-- **F-5 Static content pages** — about, contact, size guide, returns, fabrics, care instructions, how-to-shop.
-
-### 4.2 Cart
-
-- **F-6 Client-side cart** — a hand-rolled subscribe/`forceUpdate` store (`useCart`) persisted to `localStorage` with a TTL wrapper: keys `lindway_cart` and `lindway_cart_selection`, 1-day expiry. Nothing about the cart is stored server-side before checkout.
-- **F-7 Size-aware line items** — items are keyed `${id}-${selectedSize}`, so the same product in two sizes is two independent lines.
-- **F-8 Selection model** — the cart is grouped by product line, and only *selected* items are checked out. Supports per-item toggle, per-category toggle (with partial-selection state), select/deselect all, and bulk removal of selected items.
-
-### 4.3 Checkout
-
-- **F-9 Cascading destination picker** — province → district → sub-district → village, each level fetched from `GET /api/locations/checkout?type=…` (distinct values from the `Location` table).
-- **F-10 Shipping & price calculation** — `GET /api/guests/checkout`; see §5.1.
-- **F-11 Server-authoritative pricing** — prices are locked into a signed `checkoutToken`; see §5.2. This is the single most important invariant in the codebase.
-- **F-12 Payment step** — choose QRIS (renders the `qris_image` config value) or bank transfer (renders account details), then upload a receipt image. A receipt is required for **both** methods.
-- **F-13 Order creation** — `POST /api/guests/checkout` validates stock, creates the `Guest` + one `Cart` row per item in a transaction, then sends a confirmation email.
-- **F-14 Order confirmation email** — via Resend, rendered from `order-confirmation-template.tsx`, sent after the transaction commits.
-
-### 4.4 Membership
-
-- **F-15 Membership activation** — after checkout the buyer lands on `/order/payment/success/[id]`, which prompts "Activate Membership?" and calls `PATCH /api/guests/membership/[id]` to set `isMember = true` on that order row.
-- **F-16 Member discount** — at calculation time the checkout GET looks up *any* prior `Guest` row with the same email and `isMember: true`; if found, the `member_discount` / `member_type` config values apply.
-
-### 4.5 Admin
-
-- **F-17 Login** — `POST /api/auth/login`, stores JWT + user in `localStorage`.
-- **F-18 Dashboard metrics** — `GET /api/dashboard`, filterable by year/month/date range: pending orders, purchased orders, purchased amount, items sold, total guests, total products, and total stock per product line (computed with a raw SQL `unnest(sizes)` aggregation).
-- **F-19 Product CRUD** — create/edit/delete with multi-image upload, per-size quantity rows, discount, SKU, category, and the `isPreOrder` / `isFavorite` / `isActive` flags. Deleting a product also deletes its entire image folder.
-- **F-20 Derived stock** — `stock` is always recomputed as the sum of `sizes[].quantity` on create and update; a total of zero is rejected.
-- **F-21 SKU uniqueness** — enforced on create, and on update when the SKU changes.
-- **F-22 Order management** — list/filter orders (`search`, `isPurchased`, date filters, pagination), view detail with cart items and receipt image.
-- **F-23 Order verification → stock decrement** — flipping `isPurchased` to true via `PUT /api/guests/[id]` re-validates product availability and **decrements per-size quantities and `stock`** inside a transaction. See §5.3.
-- **F-24 Parameter management** — `GET`/`PUT /api/config/parameters`; the form renders dynamically from each parameter's `ParameterType`, including image/video parameters that go through the same temp-upload pipeline.
-- **F-25 Location master data** — full CRUD over `Location` rows (code, administrative levels, approximate lat/long), which is what makes the destination picker and distance calculation work.
-
-### 4.6 Files & operations
-
-- **F-26 Two-phase upload** — images (5MB cap, jpeg/jpg/png/webp/gif) and videos upload to a temp folder first; see §5.5.
-- **F-27 Explicit delete** — `POST /api/files/deletes` removes a file by sub-path.
-- **F-28 Temp sweep** — `POST /api/files/cleanup` deletes temp files older than the TTL (default 1 hour), gated by an `x-cron-secret` header matching `CRON_SECRET`. Requires an external scheduler; nothing in the app triggers it.
-- **F-29 Audit logging** — Winston daily-rotating files under `logs/` (`application-`, `error-`, `calculation-`; 30 days, 20MB). `logCalculation` is reserved for the shipping/pricing pipeline so pricing disputes can be traced end to end.
-
----
-
-## 5. Key flows
-
-### 5.1 Shipping & price calculation (`GET /api/guests/checkout`)
-
-Inputs: destination (province/district/sub_district/village), `email`, cart `items`, `purchased` subtotal, `totalItemsSold`.
-
-1. Validate params via `ShippingCalculateSchema`.
-2. In parallel: look up member status by email, load pricing config (`tax_rate`, `tax_type`, `promotion_discount`, `promo_type`, `member_discount`, `member_type`), load shipping config, load shipping zones.
-3. Resolve destination coordinates from `Location` (404 if the village isn't in the table).
+1. Validate via `ShippingCalculateSchema`.
+2. In parallel: member lookup by email; pricing config (`tax_rate`, `tax_type`, `promotion_discount`, `promo_type`, `member_discount`, `member_type`); shipping config; shipping zones.
+3. Destination coordinates from `Location` (404 if the village is absent).
 4. Haversine distance from `origin_lat`/`origin_long` using `earth_radius_km`.
-5. For each item, resolve parcel dimensions by size from the `product_dimensions` config group (404 if that size has no dimensions row).
-6. `calculateShippingCost` — compare actual vs volumetric weight (`volume_divider`), apply `price_per_kg`, `price_per_km`, `base_price`, the zone multiplier or `price_override`, and floor at `min_shipping`.
-7. `calculateTotalPrice` — apply member discount, promo, tax (each `PERCENTAGE` or `FIXED`), then add shipping.
-8. Sign a `checkoutToken` and return it alongside the full breakdown.
+5. Per item, parcel dimensions by size from the `product_dimensions` config group (404 if that size has no row).
+6. `calculateShippingCost` — actual vs volumetric weight (`volume_divider`), then `price_per_kg`, `price_per_km`, `base_price`, zone multiplier or `price_override`, floored at `min_shipping`.
+7. `calculateTotalPrice` — member discount, promo, tax (each `PERCENTAGE` or `FIXED`), then add shipping.
+8. Sign a `checkoutToken` and return it with the breakdown.
 
-Every step emits `logCalculation` entries.
+Every step emits `logCalculation`.
 
-### 5.2 Price integrity — the checkout token
+### A5.2 Price integrity — the checkout token
 
-`src/utils/checkout-token.ts`. The token is base64url of `{ data, sig }` where `sig` is HMAC-SHA256 over the JSON payload:
+`src/utils/checkout-token.ts`. Base64url of `{ data, sig }` where `sig` is HMAC-SHA256 over:
 
 ```ts
 { shippingCost, totalPurchased, purchased, totalItemsSold, itemsHash, expiresAt }  // 15-minute window
 ```
 
-`hashItems` normalizes items to a sorted `productId:size:quantity` string and HMACs it.
+`hashItems` normalizes to a sorted `productId:size:quantity` string and HMACs it. `POST /api/guests/checkout` requires the token, verifies signature and expiry, recomputes `hashItems(items)` and rejects on mismatch, then builds `Guest` with prices taken **only** from the payload.
 
-`POST /api/guests/checkout` then:
+> **KNOWN DEFECT — see A9.1.** The `purchased` subtotal is supplied by the client and signed without being checked against database prices. The token is authoritative but its input is not. Fixed in v2 (§B6.3).
 
-1. Requires `checkoutToken` in the body.
-2. Verifies signature and expiry.
-3. Recomputes `hashItems(items)` and rejects if it differs from `payload.itemsHash` ("cart items changed").
-4. Builds the `Guest` record with prices taken **only** from the token payload — client-supplied price fields are overwritten before `CreateGuestSchema.parse`.
-
-> **Invariant:** prices must never flow from the request body into the `Guest` record. Any new priced field must be signed into the token in the GET and read back from the payload in the POST.
-
-### 5.3 Order lifecycle & stock
+### A5.3 Order lifecycle & stock
 
 ```
 cart (localStorage)
-  → GET /guests/checkout            calculate + sign token
-  → POST /guests/checkout           stock CHECKED (not decremented), Guest + Cart rows created,
-                                    receipt moved out of temp, confirmation email sent
-  → admin PUT /guests/[id]          isPurchased: false → true
-                                    re-validate, then DECREMENT sizes[].quantity and stock
+  → GET  /guests/checkout    calculate + sign token
+  → POST /guests/checkout    stock CHECKED (not decremented), Guest + Cart rows created,
+                             receipt moved out of temp, confirmation email sent
+  → admin PUT /guests/[id]   isPurchased false → true: re-validate, then DECREMENT
+                             sizes[].quantity and stock
 ```
 
-Stock is verified at order creation but only *reserved* by convention — the actual decrement happens when an admin confirms payment. Two orders placed against the last unit will both succeed at creation; the second fails at admin verification.
+Stock is reserved only by convention. Two orders against the last unit both succeed at creation; the second fails at admin verification.
 
-### 5.4 Post-order page
+### A5.4 Post-order page
 
-`/order/payment/success/[id]` is not an order-receipt page — it renders `MembershipConfirm`, an "Activate Membership?" prompt for that guest id. Confirming calls `PATCH /api/guests/membership/[id]`; declining redirects to `/`.
+`/order/payment/success/[id]` renders `MembershipConfirm` — an "Activate Membership?" prompt, not a receipt. Confirming calls `PATCH /api/guests/membership/[id]`; declining redirects to `/`.
 
-### 5.5 File upload — temp → permanent
+### A5.5 File upload — temp → permanent
 
-1. Client uploads to `POST /api/files/uploads/images|videos`; `FileUploader` writes to `<baseUploadPath>/temp/` and returns a file node with `isMoved: false`.
-2. The node travels inside the entity payload (product images, receipt image, image/video config values).
-3. On save, `resolveFiles(existingData, incomingData, folder)` recursively walks arbitrary JSON, moves every node with `isMoved: false` into `folder`, and **deletes files present in `existingData` but absent from `incomingData`** — this is how image removal on edit works.
+1. Client uploads to `POST /api/files/uploads/images|videos`; `FileUploader` writes to `<baseUploadPath>/temp/` and returns a node with `isMoved: false`.
+2. The node travels inside the entity payload.
+3. On save, `resolveFiles(existingData, incomingData, folder)` walks arbitrary JSON, moves every `isMoved: false` node into `folder`, and **deletes files present in `existingData` but absent from `incomingData`** — this is how image removal works.
 
-Pass the real previous value as `existingData` on updates (`[]` / `{}` on create), or orphans accumulate. Product images land in `<uploads>/<category>/<sku>/`; receipts in `<uploads>/receipts/`.
+Pass the real previous value as `existingData` on updates (`[]`/`{}` on create), or orphans accumulate. Product images: `<uploads>/<category>/<sku>/`. Receipts: `<uploads>/receipts/`.
 
-`baseUploadPath` defaults to `process.env.NEXT_PUBLIC_UPLOADS_PATH || "uploads"`, resolved relative to the process cwd, while URLs are always `/uploads/<...>`. It is **not** `public/uploads` by default, so serving those URLs is the deployment's responsibility (reverse proxy or a symlink into `public/`).
+`baseUploadPath` defaults to `NEXT_PUBLIC_UPLOADS_PATH || "uploads"` relative to cwd, while URLs are always `/uploads/<...>`. It is **not** `public/uploads`, so serving those URLs is the deployment's job.
 
----
+## A6. Database schema `[SHIPPED]`
 
-## 6. Database schema
-
-PostgreSQL via Prisma 7. Generated client is imported as `prisma-client/client` (a `file:generated/prisma` dependency), **not** `@prisma/client`.
-
-### 6.1 Entity relationships
+PostgreSQL via Prisma 7. Client imported as `prisma-client/client` (a `file:generated/prisma` dependency), **not** `@prisma/client`.
 
 ```
-User                        (standalone — admin accounts only)
-
-Product 1 ──< Cart >── 1 Guest      Cart is the order-line join table
-Guest    (one row per checkout = one order)
-
-ConfigParameterGroup 1 ──< ConfigParameter    (cascade delete)
-
-Location                    (standalone master data for the destination picker)
+User                                    (standalone, admin accounts)
+Product 1 ──< Cart >── 1 Guest          Cart is the order-line join table
+ConfigParameterGroup 1 ──< ConfigParameter   (cascade delete)
+Location                                (standalone master data)
 ```
 
-### 6.2 Tables
-
-**`users`** — admin accounts.
-
-| Field | Type | Notes |
-| --- | --- | --- |
-| `id` | cuid | PK |
-| `email` | String | unique |
-| `username` | String | unique |
-| `password` | String | bcrypt, 12 rounds |
-| `role` | `Role` | default `ADMIN` |
-| `isActive` | Boolean | default true; inactive users are rejected at auth |
-
-**`products`**
-
-| Field | Type | Notes |
-| --- | --- | --- |
-| `id` | cuid | PK |
-| `name`, `description`, `notes` | String | all required |
-| `sizes` | `Json[]` | `{ size, quantity }[]` — **not** a relation |
-| `price` | `Decimal(12,2)` | |
-| `discount` | Int | |
-| `discountedPrice` | `Decimal(12,2)` | computed server-side by `calculateDiscountedPrice`, never trusted from the client |
-| `category` | `Categories` | default `MY_LINDWAY` |
-| `images` | `Json[]` | file nodes — **not** a relation |
-| `stock` | Int | derived: sum of `sizes[].quantity` |
-| `sku` | String | unique; also the image folder name |
-| `productionNotes` | String? | |
-| `isPreOrder`, `isFavorite`, `isActive` | Boolean | |
-
-**`guests`** — one row per order.
-
-| Field | Type | Notes |
-| --- | --- | --- |
-| `id` | cuid | PK; also the membership-activation link id |
-| `email` | String | **not unique** — repeat buyers create new rows |
-| `fullname`, `whatsappNumber`, `address` | String | |
-| `postalCode` | Int | |
-| `isMember` | Boolean | set by the membership endpoint, read back by email on future checkouts |
-| `shippingCost`, `totalPurchased`, `purchased` | `Decimal(12,2)` | token-derived only |
-| `totalItemsSold` | Int | |
-| `isPurchased` | Boolean | admin verification flag; flipping it decrements stock |
-| `paymentMethod` | `PaymentMethod` | default `BANK_TRANSFER` |
-| `receiptImage` | `Json` | single file node |
-| `instagram`, `reference` | String? | optional attribution |
-
-**`carts`** — order lines.
-
-| Field | Type | Notes |
-| --- | --- | --- |
-| `quantity` | Int | |
-| `selectedSize` | String | |
-| `productId` / `guestId` | FK | no cascade configured |
-
-Price is **not** snapshotted on the line — historical order totals live on `Guest`, while per-line price is read live from the related product.
-
-**`config_parameter_groups`** — `name` (unique), `label`, `description?`, `order`, `isActive`.
-
-**`config_parameters`** — `key` (unique), `label`, `description`, `value` (`Json`), `type` (`ParameterType`, drives admin form rendering), `validation` (`Json?`), `order`, `isActive`, `groupId` (cascade delete).
-
-**`locations`** — `code` (unique), `province`, `district`, `sub_district`, `village`, `approx_lat`/`approx_long` (`Decimal`). Indexed on all four administrative levels.
-
-### 6.3 Enums
-
-- `Role` — `SUPER_ADMIN`, `ADMIN`
-- `Categories` — `MY_LINDWAY`, `LURE_BY_LINDWAY`, `SIMPLY_LINDWAY`
-- `PaymentMethod` — `BANK_TRANSFER`, `QRIS`
-- `DiscountType` — `PERCENTAGE`, `FIXED` (used as *config values* for `tax_type`/`promo_type`/`member_type`, not as a column type)
-- `ParameterType` — `TEXT`, `NUMBER`, `DECIMAL`, `BOOLEAN`, `SELECT`, `MULTI_SELECT`, `IMAGE`, `IMAGES`, `VIDEO`, `VIDEOS`, `JSON`, `TEXTAREA`, `COLOR`, `DATE`, `DATETIME`
-
-### 6.4 Seeded configuration (`prisma/seed.ts`)
-
-Groups and keys created by the seed — these are the store's business tunables:
-
-| Group | Keys |
+| Table | Notable fields |
 | --- | --- |
-| `shipping` | `volume_divider`, `price_per_kg`, `price_per_km`, `base_price`, `min_shipping`, `origin_lat`, `origin_long`, `earth_radius_km`, `shipping_zones` |
-| `product_dimensions` | `XS`, `S`, `M`, `L`, `XL`, `XXL`, `XXXL` — each `{ weight_g, length_cm, width_cm, height_cm }` |
-| `tax` | `tax_rate`, `tax_type` |
-| `member` | `member_discount`, `member_type` |
-| `promotion` | `promotion_discount`, `promo_type` |
-| `images` | `qris_image` |
-| `videos` | `videos_curated_collection` |
+| `users` | `email`/`username` unique, bcrypt(12) `password`, `role`, `isActive` |
+| `products` | `sizes Json[]` (`{size, quantity}[]`), `images Json[]`, `price`/`discountedPrice` `Decimal(12,2)`, `category` enum, `stock` derived, `sku` unique (also the image folder), `isPreOrder`/`isFavorite`/`isActive` |
+| `guests` | one row per order; `email` **not unique**; `shippingCost`/`totalPurchased`/`purchased` token-derived; `isPurchased` drives the stock decrement; `receiptImage Json` |
+| `carts` | `quantity`, `selectedSize` String, FKs to product and guest, **no price snapshot** |
+| `config_parameter_groups` | `name` unique, `label`, `order`, `isActive` |
+| `config_parameters` | `key` unique, `value Json`, `type ParameterType`, `validation Json?`, `groupId` cascade |
+| `locations` | `code` unique, four administrative levels (all indexed), `approx_lat`/`approx_long` |
 
-Adding a new tunable means adding it to the seed and re-seeding — the Parameters page renders whatever rows exist, driven by `type`. Always read values through `ConfigService` (`@/services`), never with raw Prisma queries.
+**Enums** — `Role` (SUPER_ADMIN, ADMIN) · `Categories` (MY_LINDWAY, LURE_BY_LINDWAY, SIMPLY_LINDWAY) · `PaymentMethod` (BANK_TRANSFER, QRIS) · `DiscountType` (PERCENTAGE, FIXED — used as *config values*, not as a column type) · `ParameterType` (TEXT, NUMBER, DECIMAL, BOOLEAN, SELECT, MULTI_SELECT, IMAGE, IMAGES, VIDEO, VIDEOS, JSON, TEXTAREA, COLOR, DATE, DATETIME).
 
-`ShippingService.getShippingConfig()` applies hardcoded fallbacks per key, and `getShippingZones()` falls back to `DEFAULT_SHIPPING_ZONES`, so a missing row silently yields a default rather than an error.
+**Seeded config** — `shipping` (9 keys) · `product_dimensions` (XS…XXXL) · `tax` · `members` · `promotions` · `images` (`qris_image`) · `videos` (`videos_curated_collection`).
 
----
+`ShippingService.getShippingConfig()` applies hardcoded per-key fallbacks and `getShippingZones()` falls back to `DEFAULT_SHIPPING_ZONES`, so a missing row silently yields a default instead of an error.
 
-## 7. API surface
+## A7. API surface `[SHIPPED]`
 
 All responses are `{ success, message?, data?, pagination? }`. "Admin" means the handler calls `checkAuth`.
 
 | Endpoint | Auth | Purpose |
 | --- | --- | --- |
-| `GET /api` · `POST /api` | public | health check / echo |
+| `GET`·`POST /api` | public | health check / echo |
 | `POST /api/auth/login` | public | issue JWT |
-| `POST /api/auth/register` | **public** | create admin user — see §9 |
-| `GET /api/products` | public | list + filter |
-| `POST /api/products` | admin | create |
-| `GET /api/products/[id]` | public | detail |
-| `PUT` · `DELETE /api/products/[id]` | admin | update / delete (+ image folder) |
-| `GET /api/guests/checkout` | public | calculate shipping + total, issue `checkoutToken` |
+| `POST /api/auth/register` | **public** | create admin user — see A9.2 |
+| `GET /api/products` · `GET /api/products/[id]` | public | list / detail |
+| `POST /api/products` · `PUT`·`DELETE /api/products/[id]` | admin | create / update / delete (+ image folder) |
+| `GET /api/guests/checkout` | public | calculate + issue `checkoutToken` |
 | `POST /api/guests/checkout` | public | create order (token-verified) |
-| `GET /api/guests` | admin | list orders |
-| `GET` · `PUT /api/guests/[id]` | admin | detail / update (+ stock decrement) |
-| `PATCH /api/guests/membership/[id]` | **public** | activate membership — driven by the post-order link |
+| `GET /api/guests` · `GET`·`PUT /api/guests/[id]` | admin | list / detail / update (+ stock decrement) |
+| `PATCH /api/guests/membership/[id]` | **public** | activate membership |
 | `GET /api/locations/checkout` | public | cascading dropdown options |
-| `GET` · `POST /api/locations` | admin | list / create |
-| `GET` · `PUT` · `DELETE /api/locations/[id]` | admin | detail / update / delete |
-| `GET` · `PUT /api/config/parameters` | admin | full parameter tree / bulk update |
-| `GET /api/config/parameters/public` | public | `?keyParams=` allowlist, one request per key set |
+| `GET`·`POST /api/locations` · `GET`·`PUT`·`DELETE /api/locations/[id]` | admin | location CRUD |
+| `GET`·`PUT /api/config/parameters` | admin | full tree / bulk update |
+| `GET /api/config/parameters/public` | public | `?keyParams=` allowlist |
 | `GET /api/dashboard` | admin | metrics |
-| `POST /api/files/uploads/images` · `/videos` | **public** | upload to temp (5MB images) |
+| `POST /api/files/uploads/images`·`/videos` | **public** | upload to temp (5MB images) |
 | `POST /api/files/deletes` | **public** | delete by sub-path |
 | `POST /api/files/cleanup` | `x-cron-secret` | sweep expired temp files |
 
-### 7.1 Handler shape
+## A9. Known gaps in v1 `[SHIPPED]`
 
-Match this when adding routes:
+Ordered by severity. Items marked **→ fixed in v2** are addressed by the revision; the rest remain open.
+
+1. **Client-supplied subtotal is signed unchecked** — `GET /api/guests/checkout` takes `purchased` from the query string and signs it into the token without comparing it to database prices. A buyer can pay an arbitrary total. `itemsHash` does not cover price. **→ fixed in v2 (§B6.3).**
+2. **`POST /api/auth/register` is unauthenticated and accepts `role`** — anyone reaching the API can create a `SUPER_ADMIN`. **→ fixed in v2 (§B5.6).**
+3. **Secrets in the client bundle** — `NEXT_PUBLIC_JWT_SECRET` and `NEXT_PUBLIC_CHECKOUT_TOKEN` are server-side signing secrets, but the `NEXT_PUBLIC_` prefix inlines them into the browser bundle. Both fall back to hardcoded defaults (`"lindway"`, `"default_secret_for_checkout_token"`). **→ fixed in v2 (§B5.6).**
+4. **Upload and delete endpoints are unauthenticated** — no `checkAuth`; delete is constrained only by an upload-directory containment check. **→ fixed in v2 (§B5.6).**
+5. **`GET /api/dashboard` interpolates `year`/`month` into `$queryRawUnsafe`** — admin-gated but still raw interpolation. **→ removed in v2 (§B4.4).**
+6. **`guestsApi.useDeleteGuests` calls `DELETE /api/guests/[id]`, which does not exist** — returns 405.
+7. **Overselling window** — stock checked at creation, decremented only at verification (§A5.3).
+8. **Admin dashboard guard is client-side only.**
+9. **Uploads served outside Next's static pipeline by default** — a misconfigured deployment yields broken image URLs rather than an error.
+10. **No `SUPER_ADMIN`-gated route exists** despite the hierarchy.
+11. **Missing shipping config rows fail silently** into hardcoded defaults, so a partially-seeded database produces plausible but wrong prices.
+12. **Bank account details are hardcoded** in `payment-step.tsx` instead of living in config. **→ fixed in v2 (§B4.7).**
+
+---
+
+# PART B — Target design (v2)
+
+## B1. What v2 changes
+
+Five shifts, in order of blast radius:
+
+1. **Bilingual (EN/ID)** — every public route moves under `/[lang]/`, and translatable content moves into per-entity translation tables.
+2. **Taxonomy replaces the category enum** — three independent admin-managed axes (branding, audience, garment) instead of one enum.
+3. **Sizes become relational** — a `Size` master plus `ProductVariant` per product×size, with reusable size guides.
+4. **Pricing gains real promotion and member-discount entities** — multiple concurrent promotions, product targeting, member targeting. This forces the price pipeline to become per-line.
+5. **New content subsystems** — Journal, FAQ, Contact inquiries, plus richer product content via Tiptap.
+
+The checkout token, shipping/zone calculation, order lifecycle, upload pipeline, guest checkout, membership, logging, auth, and handler conventions are **preserved**. See §B6.3 for the two unavoidable exceptions.
+
+## B2. Target information architecture `[TARGET]`
+
+### B2.1 Public routes
+
+All public routes are prefixed with `/[lang]` where lang ∈ `en` | `id`. `/admin/*` is **not** localized.
+
+```
+/[lang]/                                   Home
+/[lang]/new-arrivals                       Sorted by releasedAt
+/[lang]/best-sellers                       Sorted by bestSellerRank, then soldCount
+/[lang]/collections/[brandingSlug]         Branding landing + listing + its favorite products
+/[lang]/shop/[garmentSlug]                 Garment listing (Dresses, Tops, Skirts …)
+/[lang]/shop/for/[audienceSlug]            Audience listing (Women, Men, Kids)
+/[lang]/product/[slug]                     Product detail
+/[lang]/cart                               Cart + checkout wizard
+/[lang]/order/payment/success/[id]         Membership activation prompt
+/[lang]/journal                            Article list
+/[lang]/journal/[slug]                     Article detail
+/[lang]/our-world                          [OPEN] content undecided — placeholder
+/[lang]/about/our-story
+/[lang]/about/our-production
+/[lang]/about/our-artisan
+/[lang]/about/sustainability
+/[lang]/customer-care/size-guide           Published SizeGuide records
+/[lang]/customer-care/how-to-shop
+/[lang]/customer-care/shipping-delivery
+/[lang]/customer-care/return-exchanges
+/[lang]/customer-care/care-instructions
+/[lang]/customer-care/faq
+/[lang]/contact-us
+/[lang]/our-fabrics                        Stays static (decision D11)
+```
+
+Product and article URLs use `slug`, not `id`. **Slug is single, not per-locale** — switching language keeps the same URL (D4). Admin routes keep using `id`.
+
+### B2.2 Navigation
+
+**Header** — New Arrivals · Collections (5 branding sub-items) · Our World · Journal · About (Our Story, Our Production, Our Artisan, Sustainability, Journal — the duplicate Journal entry is intentional, D13) · Wishlist counter · Bag counter · EN/ID switch.
+
+**Footer** — four columns: Collections (5 brandings) · Shop (New Arrivals, Best Sellers, Dresses, Tops, Skirts, Kids, Men) · Customer Care (Size Guide, How to Shop, Shipping & Delivery, Return & Exchanges, Care Instructions, Contact Us, FAQ) · About (4 items + Journal).
+
+> **`[OPEN]`** Garment and audience listings are reachable only from the footer. For a fashion store that is usually the primary shopping path. Confirm whether the header needs a Shop entry.
+
+### B2.3 Admin navigation
+
+The sidebar grows past a flat list and is grouped:
+
+```
+Overview   Dashboard
+Catalog    Products · Branding Types · Audience Types · Garment Types · Sizes · Size Guides
+Sales      Orders · Members · Promotions · Member Discounts
+Content    Articles · Article Categories · FAQ · Contact Inbox
+Settings   Parameters · Locations
+```
+
+## B3. Localization `[TARGET]`
+
+### B3.1 Scope
+
+| Content | Translated | Mechanism |
+| --- | --- | --- |
+| Static UI copy | Yes | `en.json` / `id.json` via `get-dictionary.ts` |
+| Article | Yes | `ArticleTranslation` |
+| FAQ | Yes | `FaqTranslation` |
+| Product (name + 5 rich-text fields) | Yes, **ID optional** | `ProductTranslation` |
+| Branding / Audience / Garment labels | **No** | single label column |
+| Size guide title, description, measurement labels | Yes | `SizeGuideTranslation` |
+| Public-facing config values (`product_defaults`, media alt) | Yes | value shape `{ en, id }` |
+| Server-side config values (rates, coordinates, zones) | No | scalar as today |
+| Config parameter **labels** (admin UI) | No | EN only |
+| Admin dashboard UI | No | EN only, outside `[lang]` |
+| Order confirmation email | No | EN only (D3) |
+
+### B3.2 Fallback is per-field, never per-record
+
+If an admin fills the ID name but not the ID description, the page shows **ID name + EN description**. A record-level fallback would drop the whole record to EN and is wrong.
+
+One helper owns this so the behavior is identical everywhere:
+
+```ts
+resolveTranslation(translations, locale)   // → merged object, field-by-field, ID over EN
+```
+
+For the four product content fields the chain has four levels (D9):
+
+```
+product override (active locale)
+  → product override (EN)
+    → global default (active locale)
+      → global default (EN)
+```
+
+### B3.3 Consequences that must not be forgotten
+
+- **Product search must join translations.** `GET /api/products` currently searches `name`/`description` on the product table. It must search the active locale **plus EN**, or untranslated products become invisible in ID.
+- **Admin forms use an EN | ID tab**, not both languages side by side. A product form otherwise carries 5 rich-text editors × 2 locales on one screen.
+- **`generateStaticParams`** for the `[lang]` segment, plus `hreflang` tags on public pages.
+
+## B4. Target data model `[TARGET]`
+
+All ids are `cuid()` (D7). All new tables follow the existing `@@map("snake_case")` convention.
+
+### B4.1 Taxonomy
+
+```
+BrandingType   id · code unique · name · slug unique · description? · image Json? · order · isActive
+AudienceType   id · code unique · name · slug unique · order · isActive
+GarmentType    id · code unique · name · slug unique · order · isActive
+```
+
+Admin-managed; adding a sixth branding is a row, not a deploy. Labels are not translated (D2).
+
+### B4.2 Size, size guide, and package dimensions
+
+```
+Size             id · code unique (XS,S,M,…) · label · order · isActive
+
+SizeGuide        id · title · description? · publishedAt DateTime? · isActive
+SizeGuideRow     id · sizeGuideId · sizeId · measurements Json · order
+                 @@unique([sizeGuideId, sizeId])
+SizeGuideTranslation   sizeGuideId · locale · title · description?
+                 @@unique([sizeGuideId, locale])
+```
+
+- `publishedAt = null` means draft; the public Size Guide page lists only published guides (D1).
+- `measurements` is free-form JSON (`{ length: 98, waist: 62, bottom_width: 140 }`) so parameters differ per garment and per audience.
+- **Package dimensions do not live here.** They live on `ProductVariant` — see D6 for why.
+
+### B4.3 Product
+
+```
+Product        id · sku unique · slug unique
+               brandingTypeId  (required)
+               garmentTypeId?  (single)
+               sizeGuideId?
+               price Decimal(12,2) · discount Int · discountedPrice Decimal(12,2)
+               images Json[]
+               stock Int            (derived from variants)
+               releasedAt DateTime? (drives New Arrivals)
+               soldCount Int @default(0)
+               bestSellerRank Int?  (manual override)
+               isPreOrder · isFavorite · isActive
+               productionNotes?
+
+ProductAudience    productId · audienceTypeId          @@id([productId, audienceTypeId])
+ProductVariant     id · productId · sizeId · quantity · packageDimensions Json?
+                   @@unique([productId, sizeId])
+ProductTranslation productId · locale · name
+                   description Json?  notes Json?  fabricInformation Json?
+                   shippingDelivery Json?  returnPolicy Json?
+                   @@unique([productId, locale])
+```
+
+- **One branding (required), one garment, many audiences** (D5) — so a product can be unisex.
+- `isFavorite` keeps its v1 meaning: an admin flag for featured products, now surfaced on that product's branding page (D11). It is **not** the wishlist.
+- The five translated content fields hold Tiptap JSON (D10). All are nullable; empty means fall back per §B3.2.
+- `ProductVariant.packageDimensions` is `{ weight_g, length_cm, width_cm, height_cm }`, nullable, falling back to the `package_dimensions` config group.
+
+### B4.4 Stock and metrics
+
+`Product.stock` stays derived — recomputed as `sum(ProductVariant.quantity)` on every write, still rejecting a total of zero. The dashboard's `$queryRawUnsafe unnest(sizes)` is deleted and replaced with a normal Prisma `groupBy` over variants joined to branding, which closes gap A9.5.
+
+`soldCount` increments when an admin flips `isPurchased` to true, inside the same transaction as the stock decrement. `bestSellerRank` is a nullable manual override; Best Sellers sorts by rank first, then `soldCount` (D13).
+
+### B4.5 Content
+
+```
+ArticleCategory             id · slug unique · order · isActive
+ArticleCategoryTranslation  categoryId · locale · name · description?
+Article                     id · slug unique · categoryId · image Json · imageAlt? ·
+                            featured · publishedAt DateTime?
+ArticleTranslation          articleId · locale · title · excerpt? · content Json (Tiptap)
+
+Faq                         id · topic · order · isActive
+FaqTranslation              faqId · locale · question · answer
+
+ContactInquiry              id · fullname · email · phone? · inquiryType InquiryType ·
+                            otherDetail? · message · status InquiryStatus ·
+                            handledAt? · handledById? · createdAt
+```
+
+`Article.image` is a **file node** (`Json`), matching the `resolveFiles` pipeline used everywhere else — not a bare String as in the source notes.
+
+`otherDetail` is only populated when `inquiryType = OTHER` (D10 of the notes → §B5.4).
+
+### B4.6 Pricing entities
+
+Multiple concurrent promotions and targeted member discounts cannot be expressed as key-value config, so they become tables:
+
+```
+Promotion             id · name · discountType DiscountType · value Decimal ·
+                      scope PromotionScope (ALL_PRODUCTS | SPECIFIC_PRODUCTS) ·
+                      priority Int · startsAt? · endsAt? · isActive
+PromotionProduct      promotionId · productId        @@id([promotionId, productId])
+
+Member                id · email unique · fullname? · joinedAt · isActive
+MemberDiscount        id · name · discountType · value ·
+                      scope MemberScope (ALL_MEMBERS | SPECIFIC_MEMBERS) ·
+                      priority Int · startsAt? · endsAt? · isActive
+MemberDiscountMember  memberDiscountId · memberId    @@id([memberDiscountId, memberId])
+```
+
+`Member` is new and necessary: targeting "these specific members" requires a member list, which v1 does not have (membership is only a boolean on order rows). Membership activation upserts a `Member` by email; `Guest.isMember` remains as the historical snapshot on the order.
+
+> **`[OPEN]` Stacking rule.** When two promotions match one product, the proposal is **no stacking — highest `priority` wins**, because it is predictable and traceable in a pricing dispute. Confirm, or specify stacking with a cap.
+
+### B4.7 Config parameters after the split
+
+The rule that decides where a setting lives:
+
+> **ConfigParameter** = exactly one value per store, scalar or small JSON, no relations, no lifecycle.
+> **Table** = many rows, has relations, targeting, dates, or its own status.
+
+| Group | Keys | Note |
+| --- | --- | --- |
+| `shipping` | `volume_divider`, `price_per_kg`, `price_per_km`, `base_price`, `min_shipping`, `origin_lat`, `origin_long`, `earth_radius_km`, `shipping_zones` | unchanged |
+| `package_dimensions` | `XS`…`XXXL` | **renamed** from `product_dimensions` (D6); now a *default*, overridable per variant |
+| `tax` | `tax_rate`, `tax_type` | unchanged |
+| `product_defaults` | `default_notes`, `default_fabric_information`, `default_shipping_delivery`, `default_return_policy` | **new**, each `{ en, id }` Tiptap JSON |
+| `store_profile` | `bank_accounts`, contact/social links | **new** — moves the hardcoded bank details out of `payment-step.tsx` (A9.12) |
+| `media` | `qris_image`, `videos_curated_collection` | merges the old `images` + `videos` groups |
+
+Removed from config, now tables: `promotions` → `Promotion`, `members` → `MemberDiscount`.
+
+`origin_lat`/`origin_long` are seeded to Jakarta (`-6.2088`, `106.8456`) while the brand operates from Denpasar. The v2 seed must correct this, **and** the hardcoded fallbacks in `ShippingService` (A9.11).
+
+## B5. Target functional requirements `[TARGET]`
+
+Numbering continues from v1. F-1…F-29 remain unless superseded.
+
+### B5.1 Catalog & discovery
+- **F-30 Localized routing** — `/[lang]/…`, dictionary-driven static copy, language switch preserving the current path.
+- **F-31 Taxonomy CRUD** — admin manages branding, audience, and garment types.
+- **F-32 Multi-axis product filtering** — listings filter by branding, audience, garment, and combinations.
+- **F-33 New Arrivals** — `releasedAt` descending, distinct from `createdAt`.
+- **F-34 Best Sellers** — `bestSellerRank` ascending, then `soldCount` descending.
+- **F-35 Wishlist** — `localStorage` only, mirroring the `useCart` store; header counter; no backend (D11).
+- **F-36 Branding page favorites** — products with `isFavorite` surface on their branding page.
+
+### B5.2 Product content
+- **F-37 Size & variant management** — pick a size guide, then set quantity and package dimensions per size in that guide.
+- **F-38 Size guide reuse & fork** — reuse an existing guide, or edit the measurements and save as a new guide.
+- **F-39 Tiptap content fields** — description, notes, fabric information, shipping & delivery, return policy, all per locale.
+- **F-40 Global content defaults** — the four defaults live in `product_defaults`; a product only stores overrides (D9).
+- **F-41 Public size guide page** — lists published guides.
+
+### B5.3 Journal & FAQ
+- **F-42 Article CRUD** with categories, draft/publish via `publishedAt`, featured flag, and translations.
+- **F-43 Journal listing & detail** at `/[lang]/journal`.
+- **F-44 FAQ CRUD** grouped by `topic` so one component serves several pages.
+
+### B5.4 Contact
+- **F-45 Contact form** — full name, email, phone (optional), inquiry type (6 radio options: Product Inquiry, Order Support, Custom Order, Wholesale/B2B, Partnership, Other), a textarea revealed when Other is chosen, and a message. The v1 tab concept (General / Partnership / Career) is dropped.
+- **F-46 Dual notification** — Resend email to the customer (acknowledgement) and to the admin (new inquiry).
+- **F-47 Contact inbox** — admin lists, reads, and marks inquiries handled. *Assumption: included because "menandai sudah ditangani" implies it. Say so if it should be email-only.*
+
+### B5.5 Pricing
+- **F-48 Promotion management** — several concurrent promotions, each targeting all products or a chosen set, with a validity window.
+- **F-49 Member registry** — `Member` rows created on membership activation, listable and searchable by admin.
+- **F-50 Targeted member discounts** — apply to all members or a chosen set, with a validity window.
+- **F-51 Server-computed subtotal** — the checkout GET derives the subtotal from database prices instead of trusting the client (fixes A9.1).
+
+### B5.6 Security fixes carried by v2
+- **F-52** `POST /api/auth/register` requires `SUPER_ADMIN` and ignores a client-supplied `role` escalation.
+- **F-53** File upload and delete endpoints require `checkAuth`.
+- **F-54** Signing secrets move off the `NEXT_PUBLIC_` prefix, with no hardcoded fallback — startup fails loudly if unset.
+
+## B6. Target flows `[TARGET]`
+
+### B6.1 Product content resolution
+
+```
+render field (locale L)
+  → ProductTranslation[L].field            if present
+  → ProductTranslation[en].field           if present
+  → config product_defaults[field][L]      if present
+  → config product_defaults[field].en
+```
+
+One helper implements this for all four content fields. `name` and `description` have no global default, so their chain stops at EN.
+
+### B6.2 Package dimension resolution
+
+```
+ProductVariant.packageDimensions                    per product × size
+  → config package_dimensions[size.code]            store-wide default
+    → 404 "Dimensions for size X not found"
+```
+
+`ShippingService.getProductDimensionsBySize(size)` becomes `getPackageDimensions(productId, sizeCode)`.
+
+### B6.3 Price pipeline — the two frozen-zone exceptions
+
+The token invariant is unchanged and strengthened: **prices reach `Guest` only from the signed token.** What changes is how the signed numbers are produced.
+
+```
+for each cart line:
+    unit  = product.discountedPrice
+    promo = best applicable Promotion (targeted or global, in window, highest priority)
+    line  = (unit − promo) × quantity
+subtotal = Σ line                                  ← computed server-side from the DB (F-51)
+memberDiscount = best applicable MemberDiscount for this email
+taxed    = (subtotal − memberDiscount) + tax
+total    = taxed + shippingCost
+sign token { shippingCost, totalPurchased, purchased, totalItemsSold, itemsHash, expiresAt }
+```
+
+Two departures from "freeze the checkout subsystem", both forced by the decisions above and both intentional:
+
+1. `GET /api/guests/checkout` stops accepting `purchased` and `totalItemsSold` from the client and derives them.
+2. `calculateTotalPrice` becomes per-line rather than a single global percentage.
+
+Everything else — `hashItems`, the 15-minute window, HMAC signing, the POST verification order, the stock transaction — stays byte-identical. `logCalculation` gains per-line entries so a pricing dispute can still be traced end to end.
+
+### B6.4 Membership
+
+Unchanged from v1 (`PATCH /api/guests/membership/[id]`) with one addition: activation upserts a `Member` row by email, so admins can target that member later.
+
+## B7. Open questions `[OPEN]`
+
+Do not guess these; ask.
+
+1. **Header entry for garment/audience listings** — footer-only today (§B2.2).
+2. **`/our-world` content** — placeholder until the client decides (D13).
+3. **`/curated-collections`** — absent from the new navigation. Keep the page, delete it, or fold it into Our World? The `videos_curated_collection` config key depends on the answer.
+4. **Promotion stacking rule** — proposal is highest-priority-wins, no stacking (§B4.6).
+5. **Contact inbox** — assumed included (F-47); confirm or reduce to email-only.
+6. **Size guide grouping on the public page** — v1 groups by Women / Men / Baby with Kebaya / Batik tabs. Does `SizeGuide` need a group field to reproduce that, or is a flat list of published guides enough?
+
+---
+
+# PART C — Migration plan
+
+Each phase ends with `npx tsc --noEmit` clean, `npm run lint` clean, and the affected flow exercised by hand. Move the phase's sections from `[TARGET]` to `[SHIPPED]` and delete the superseded Part A text before starting the next one.
+
+**The database is dropped and rebuilt, not migrated (D-note).** There is no production data to preserve, so phase 1 runs `npm run db:reset` and reseeds. Confirm before running it — it is destructive and irreversible.
+
+| Phase | Scope | Rationale |
+| --- | --- | --- |
+| **0 — Foundation** | `[lang]` routing + dictionaries · design tokens (`#BA8164`, `#39322C`, `#FAF6F5`, `#F7F3F0`, `#D2D2CA`) · Raleway + Inter via `next/font/google` · new header/footer shell · `tiptap-editor.tsx` shared component | Touches every file. Doing it later means redoing every other phase |
+| **1 — Data model** | Drop and rebuild the schema: taxonomy, Size/SizeGuide/Variant, Product + translations, pricing entities, content models · new seed · admin CRUD for taxonomy, sizes, size guides | Everything downstream depends on these tables |
+| **2 — Catalog** | Product form (size guide → variants → package dimensions), listings per axis, product detail, New Arrivals, Best Sellers, wishlist | Consumes phase 1 |
+| **3 — Pricing** | Promotion + member discount entities and admin, per-line price pipeline, server-computed subtotal (F-51) | Isolated; the most delicate, so it runs alone |
+| **4 — Content** | Journal, FAQ, Contact form + inbox, public size guide page | Independent of 2 and 3; can run in parallel if needed |
+| **5 — Hardening** | F-52…F-54 security fixes, `DELETE /api/guests/[id]` (A9.6), Denpasar origin coordinates, seed corrections | Deliberately last so it is not lost in the churn |
+
+Phases 0 and 1 must not be split — both touch the whole tree, and a half-migrated schema means doing the work twice.
+
+---
+
+# PART D — Locked decisions
+
+Agreed in discussion. Do not reopen without a new decision recorded here.
+
+| # | Decision | Rationale |
+| --- | --- | --- |
+| **D1** | Size guide is one model with title, description, per-size rows, flexible JSON parameters, and draft/publish via `publishedAt` | Same entity serves the public page and per-product assignment |
+| **D2** | i18n covers static UI, Article, FAQ, Product, and size guides. Branding/audience/garment labels are **not** translated | Brand and category names read the same in both languages |
+| **D3** | Product ID translations are optional with **per-field** fallback to EN. Admin UI is EN-only and outside `[lang]`. Order emails are EN-only | Admin can publish in EN and translate later without blocking |
+| **D4** | Public URLs use a single non-localized `slug`; admin URLs use `id` | Better SEO, and the URL survives a language switch |
+| **D5** | One branding (required), one garment, many audiences | Supports unisex products without over-modeling |
+| **D6** | `product_dimensions` → `package_dimensions`. Body measurements live on `SizeGuideRow`; package dimensions live on `ProductVariant`, defaulting to config | Measurements belong to the pattern and are shared; packing belongs to the individual product. Storing packing on the guide would force a fork of the whole guide on every dimension tweak and fill the database with near-duplicates |
+| **D7** | All models use `cuid()` | Matches the existing codebase; overrides the `uuid()` in the source notes |
+| **D8** | Checkout token, shipping/zone calculation, order lifecycle, upload pipeline, config parameters, guest checkout, membership, logging, auth, and handler conventions are preserved — except the two exceptions in §B6.3 | The pricing path is the most delicate code in the repo |
+| **D9** | Four content fields have global `{ en, id }` defaults in config; products store only overrides, resolved through a four-level chain | Admin edits the default once instead of filling every product |
+| **D10** | Tiptap stores **JSON**, through one shared `tiptap-editor.tsx` | Structured storage; one component keeps behavior consistent |
+| **D11** | `isFavorite` keeps its v1 meaning (admin-featured, shown on the branding page). Wishlist is `localStorage`-only. `/our-fabrics` stays static | Wishlist is per-visitor and cannot reuse a shared product flag |
+| **D12** | Config holds singleton settings only; anything with relations, targeting, dates, or status becomes a table | Multiple promotions and targeted member discounts cannot be modeled as key-value pairs |
+| **D13** | Journal appears both as a top-level menu and under About (intentional). `/our-world` is a placeholder. New Arrivals uses `releasedAt`; Best Sellers uses automatic `soldCount` plus a manual `bestSellerRank` | Confirmed with the client |
+| **D14** | Raleway + Inter via `next/font/google`; the full palette is replaced. Alethia Next OTF files stay in `public/fonts` but are unused | v2 is an intentional visual overhaul; keeping the old font files is cheaper than restoring them |
+
+---
+
+# PART E — Conventions (apply to both versions)
+
+## E1. Commands
+
+```bash
+npm run dev            # dev server (localhost:3000)
+npm run build          # production build
+npm run lint           # eslint (flat config, next/core-web-vitals + next/typescript)
+npx tsc --noEmit       # typecheck — no npm script for this
+
+npm run db:generate    # regenerate Prisma client into generated/prisma
+npm run db:migrate     # prisma migrate dev
+npm run db:seed        # tsx prisma/seed.ts
+npm run db:studio      # prisma studio
+npm run db:reset       # migrate reset --force (DESTRUCTIVE — confirm first)
+```
+
+**There is no test framework installed** — no runner, no test files. Verification is `npx tsc --noEmit` + `npm run lint` + exercising the flow by hand.
+
+`generated/prisma` is gitignored, so a fresh clone must run `npm install` → `npm run db:generate` before `npm run dev`, or `prisma-client/client` will not resolve. Prisma is configured via `prisma.config.ts` (not `package.json`); the schema's `datasource` has no `url`, so `DATABASE_URL` is injected from that file. After editing `prisma/schema.prisma`, run `db:generate` or type errors will be stale and misleading.
+
+## E2. Environment variables
+
+`DATABASE_URL`, `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_JWT_SECRET`, `NEXT_PUBLIC_CHECKOUT_TOKEN`, `NEXT_PUBLIC_UPLOADS_PATH`, `RESEND_API_KEY`, `RESEND_EMAIL_FROM`, `CRON_SECRET`.
+
+The two signing secrets lose their `NEXT_PUBLIC_` prefix in phase 5 (F-54). Do not add new secrets with that prefix.
+
+## E3. API handler shape
+
+Match this in every route:
 
 ```ts
 const pathAPI = "POST /products";
@@ -363,67 +640,25 @@ try {
 }
 ```
 
-List endpoints share a query convention (`page`, `limit`, `search`, `order`, `year`, `month`, `dateFrom`, `dateTo`) parsed by a `*QuerySchema`.
+Responses are always `{ success, message?, data?, pagination? }`. List endpoints share the query convention `page`, `limit`, `search`, `order`, `year`, `month`, `dateFrom`, `dateTo`, parsed by a `*QuerySchema`.
 
----
+## E4. Client data layer
 
-## 8. Technical reference
+`src/utils/api.ts` is the single axios + TanStack Query layer — grouped objects (`productsApi`, `guestsApi`, `guestCheckoutApi`, `configParametersApi`, `locationsApi`, `dashboardApi`, `filesApi`) exporting hooks. Mutations already raise `react-hot-toast` on success and error and unwrap array-shaped Zod responses into a newline-joined message; **do not re-toast at the call site**. Default `staleTime`/`gcTime` are 6 hours; queries retry 3×.
 
-### 8.1 Commands
+Two state stores, deliberately different: `useAuth` is Zustand; `useCart` is the hand-rolled subscribe store (F-6), and `useWishlist` will mirror it. `src/lib/redis.ts` is entirely commented out and `ioredis` is unused — there is no server-side caching layer.
 
-```bash
-npm run dev            # dev server (localhost:3000)
-npm run build          # production build
-npm run start          # serve production build
-npm run lint           # eslint (flat config, next/core-web-vitals + next/typescript)
-npx tsc --noEmit       # typecheck — no npm script for this
+## E5. Imports & types
 
-npm run db:generate    # regenerate Prisma client into generated/prisma
-npm run db:migrate     # prisma migrate dev
-npm run db:seed        # tsx prisma/seed.ts — seeds admin user + all ConfigParameter rows
-npm run db:studio      # prisma studio
-npm run db:reset       # migrate reset --force (destructive)
-```
+Barrel exports throughout — import from `@/lib`, `@/utils`, `@/types`, `@/services`, `@/components`, `@/hooks` rather than deep paths, and add new files to the matching `index.ts`. Zod schemas and their inferred types live in `src/types/zod.ts`; `Create*` / `Update*` variants derive from a base schema via `.omit()` / `.partial()`.
 
-**There is no test framework installed** — no runner, no test files. Verification is `npx tsc --noEmit` + `npm run lint` + manually exercising the flow.
+Always read configuration through `ConfigService` (`@/services`), never with raw Prisma queries.
 
-Prisma is configured via `prisma.config.ts` (not `package.json`); the schema's `datasource` block has no `url`, so `DATABASE_URL` is injected from that config file. After changing `prisma/schema.prisma` you must run `db:generate` or type errors will be stale and misleading.
+## E6. Style
 
-### 8.2 Environment variables
-
-`DATABASE_URL`, `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_JWT_SECRET`, `NEXT_PUBLIC_CHECKOUT_TOKEN`, `NEXT_PUBLIC_UPLOADS_PATH`, `RESEND_API_KEY`, `RESEND_EMAIL_FROM`, `CRON_SECRET`.
-
-### 8.3 Client data layer
-
-`src/utils/api.ts` is the single axios + TanStack Query layer — grouped objects (`productsApi`, `guestsApi`, `guestCheckoutApi`, `configParametersApi`, `locationsApi`, `dashboardApi`, `filesApi`) exporting hooks. Mutations already surface `react-hot-toast` success/error and unwrap array-shaped Zod error responses into a newline-joined message; **don't re-toast at the call site**. Default `staleTime`/`gcTime` are 6 hours; queries retry 3×.
-
-Two state stores, deliberately different: `useAuth` is Zustand; `useCart` is the hand-rolled store described in F-6. `src/lib/redis.ts` is entirely commented out and `ioredis` is an unused dependency — there is no server-side caching layer.
-
-### 8.4 Imports & types
-
-Barrel exports throughout — import from `@/lib`, `@/utils`, `@/types`, `@/services`, `@/components`, `@/hooks` rather than deep paths, and add new files to the corresponding `index.ts`. Zod schemas and their inferred types all live in `src/types/zod.ts`; `Create*` / `Update*` variants are derived from a base schema via `.omit()` / `.partial()`.
-
-### 8.5 Conventions
-
-- Prettier-less but consistent: ~200-char lines, double quotes, semicolons, blank line between import groups (framework → third-party → `@/` aliases).
-- Tailwind v4 (`@tailwindcss/postcss`, no `tailwind.config`); theme tokens live in `src/app/globals.css`. Names like `text-gray`, `text-dark`, `text-darker-gray` are project tokens, not Tailwind defaults.
-- `react-icons` for icons; `framer-motion` via the `motion` wrapper in `src/components/motion.tsx`.
+- No Prettier, but consistent: ~200-char lines, double quotes, semicolons, a blank line between import groups (framework → third-party → `@/` aliases).
+- Tailwind v4 (`@tailwindcss/postcss`, no `tailwind.config`); theme tokens live in `src/app/globals.css` under `@theme inline`.
+- `react-icons` for icons; `framer-motion` through the `motion` wrapper in `src/components/motion.tsx`.
 - Larger UI is a container in `src/components/ui/<feature>/` plus a `slicing/` subfolder for its parts.
 - `next.config.ts` has `output: "standalone"` deliberately commented out — leave it unless deployment changes.
-
----
-
-## 9. Known gaps and constraints
-
-Documented so they are decisions, not surprises. None of these are fixed as of this writing.
-
-1. **`POST /api/auth/register` is unauthenticated and accepts `role`** — anyone who can reach the API can create a `SUPER_ADMIN` account. This is the most severe open issue.
-2. **Secrets in the client bundle** — `NEXT_PUBLIC_JWT_SECRET` and `NEXT_PUBLIC_CHECKOUT_TOKEN` are used only for server-side HMAC/JWT signing, but the `NEXT_PUBLIC_` prefix inlines them into the browser bundle. Both also fall back to hardcoded defaults (`"lindway"`, `"default_secret_for_checkout_token"`). Don't propagate this pattern to new secrets.
-3. **Upload and delete endpoints are unauthenticated** — `POST /api/files/uploads/images|videos` and `POST /api/files/deletes` have no `checkAuth`; the delete path is only constrained by an upload-directory containment check.
-4. **`GET /api/dashboard` interpolates `year`/`month` into `$queryRawUnsafe`** — admin-gated, but still raw string interpolation of user input into SQL.
-5. **`guestsApi.useDeleteGuests` calls `DELETE /api/guests/[id]`, which does not exist** — that route only implements `GET` and `PUT`, so the call returns 405.
-6. **Overselling window** — stock is checked at order creation but decremented only at admin verification (§5.3).
-7. **Admin dashboard guard is client-side only** — bypassing it exposes the UI shell, though APIs still reject unauthenticated calls.
-8. **Uploads are served outside Next's static pipeline by default** (§5.5); a misconfigured deployment yields broken image URLs rather than an error.
-9. **No `SUPER_ADMIN`-gated route exists** despite the role hierarchy being implemented.
-10. **Missing shipping config rows fail silently** into hardcoded defaults (§6.4), so a partially-seeded database produces plausible but wrong prices.
+- Tiptap content is admin-authored HTML/JSON rendered into public pages: **sanitize on render**. A compromised admin account otherwise executes script in every visitor's browser.
