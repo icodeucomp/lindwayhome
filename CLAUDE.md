@@ -240,23 +240,40 @@ All public routes are prefixed with `/[lang]` where lang ∈ `en` | `id`. `/admi
 /[lang]/about/our-production
 /[lang]/about/our-artisan
 /[lang]/about/sustainability
+/[lang]/about/our-fabrics                  Stays static (decision D11)
 /[lang]/customer-care/size-guide           Published SizeGuide records
 /[lang]/customer-care/how-to-shop
 /[lang]/customer-care/shipping-delivery
 /[lang]/customer-care/return-exchanges
 /[lang]/customer-care/care-instructions
 /[lang]/customer-care/faq
-/[lang]/contact-us
-/[lang]/our-fabrics                        Stays static (decision D11)
+/[lang]/customer-care/contact-us
 ```
 
 Product and article URLs use `slug`, not `id`. **Slug is single, not per-locale** — switching language keeps the same URL (D4). Admin routes keep using `id`.
 
 ### B2.2 Navigation
 
-**Header** — New Arrivals · Collections (5 branding sub-items) · Our World · Journal · About (Our Story, Our Production, Our Artisan, Sustainability, Journal — the duplicate Journal entry is intentional, D13) · Wishlist counter · Bag counter · EN/ID switch.
+**Header** — New Arrivals · Collections · Our World · Journal · About (Our Story, Our Production, Our Artisan, Sustainability, Our Fabrics, Journal — the duplicate Journal entry is intentional, D13) · Wishlist counter · Bag counter · EN/ID switch.
 
-**Footer** — four columns: Collections (5 brandings) · Shop (New Arrivals, Best Sellers, Dresses, Tops, Skirts, Kids, Men) · Customer Care (Size Guide, How to Shop, Shipping & Delivery, Return & Exchanges, Care Instructions, Contact Us, FAQ) · About (4 items + Journal).
+**Collections is a three-column mega-menu** driven entirely by the taxonomy tables (D16) — no hardcoded lists:
+
+```
+Collections ▾
+  Branding              Audience              Garment
+  My Lindway            Women                 Dresses
+  Simply Lindway        Men                   Tops
+  Lure by Lindway       Kids                  Skirts
+  Studio by Lindway                           …
+  Lindway × AWP
+  → /collections/[slug]  → /shop/for/[slug]    → /shop/[slug]
+```
+
+Each column renders `isActive` rows ordered by `order`, so adding a branding or garment type appears in the nav without a deploy. This is also how garment and audience listings become reachable from the header, not just the footer.
+
+**Footer** — four columns: Collections (5 brandings) · Shop (New Arrivals, Best Sellers, Dresses, Tops, Skirts, Kids, Men) · Customer Care (Size Guide, How to Shop, Shipping & Delivery, Return & Exchanges, Care Instructions, Contact Us, FAQ) · About (Our Story, Our Production, Our Artisan, Sustainability, Our Fabrics, Journal).
+
+Both content pages moved home relative to v1: `/contact-us` now lives under Customer Care, and `/our-fabrics` under About.
 
 > **`[OPEN]`** Garment and audience listings are reachable only from the footer. For a fashion store that is usually the primary shopping path. Confirm whether the header needs a Shop entry.
 
@@ -266,11 +283,14 @@ The sidebar grows past a flat list and is grouped:
 
 ```
 Overview   Dashboard
+           Contact Inbox        ← standalone top-level item, badge = count of status NEW
 Catalog    Products · Branding Types · Audience Types · Garment Types · Sizes · Size Guides
 Sales      Orders · Members · Promotions · Member Discounts
-Content    Articles · Article Categories · FAQ · Contact Inbox
+Content    Articles · Article Categories · FAQ
 Settings   Parameters · Locations
 ```
+
+Contact Inbox is a menu of its own rather than a Content sub-item (D15) — it is a work queue an admin returns to daily, not content to author.
 
 ## B3. Localization `[TARGET]`
 
@@ -334,7 +354,7 @@ Admin-managed; adding a sixth branding is a row, not a deploy. Labels are not tr
 ```
 Size             id · code unique (XS,S,M,…) · label · order · isActive
 
-SizeGuide        id · title · description? · publishedAt DateTime? · isActive
+SizeGuide        id · title · description? · publishedAt DateTime? · order · isActive
 SizeGuideRow     id · sizeGuideId · sizeId · measurements Json · order
                  @@unique([sizeGuideId, sizeId])
 SizeGuideTranslation   sizeGuideId · locale · title · description?
@@ -342,6 +362,7 @@ SizeGuideTranslation   sizeGuideId · locale · title · description?
 ```
 
 - `publishedAt = null` means draft; the public Size Guide page lists only published guides (D1).
+- **No grouping field.** The public page renders published guides as a flat list, ordered by `order` then title. v1's hardcoded Women / Men / Baby split with Kebaya / Batik tabs is not reproduced — the guide `title` carries that meaning instead (e.g. "Women — Batik"), so admins can introduce new groupings without a schema change (D1).
 - `measurements` is free-form JSON (`{ length: 98, waist: 62, bottom_width: 140 }`) so parameters differ per garment and per audience.
 - **Package dimensions do not live here.** They live on `ProductVariant` — see D6 for why.
 
@@ -394,8 +415,15 @@ Faq                         id · topic · order · isActive
 FaqTranslation              faqId · locale · question · answer
 
 ContactInquiry              id · fullname · email · phone? · inquiryType InquiryType ·
-                            otherDetail? · message · status InquiryStatus ·
+                            otherDetail? · message · status InquiryStatus @default(NEW) ·
                             handledAt? · handledById? · createdAt
+                            @@index([status]) @@index([inquiryType]) @@index([createdAt])
+```
+
+```
+enum InquiryType     PRODUCT_INQUIRY · ORDER_SUPPORT · CUSTOM_ORDER ·
+                     WHOLESALE_B2B · PARTNERSHIP · OTHER
+enum InquiryStatus   NEW · IN_PROGRESS · HANDLED · ARCHIVED
 ```
 
 `Article.image` is a **file node** (`Json`), matching the `resolveFiles` pipeline used everywhere else — not a bare String as in the source notes.
@@ -437,9 +465,11 @@ The rule that decides where a setting lives:
 | `tax` | `tax_rate`, `tax_type` | unchanged |
 | `product_defaults` | `default_notes`, `default_fabric_information`, `default_shipping_delivery`, `default_return_policy` | **new**, each `{ en, id }` Tiptap JSON |
 | `store_profile` | `bank_accounts`, contact/social links | **new** — moves the hardcoded bank details out of `payment-step.tsx` (A9.12) |
-| `media` | `qris_image`, `videos_curated_collection` | merges the old `images` + `videos` groups |
+| `media` | `qris_image` | replaces the old `images` group |
 
 Removed from config, now tables: `promotions` → `Promotion`, `members` → `MemberDiscount`.
+
+**Deleted outright:** the `videos` group and its `videos_curated_collection` key, together with the `/curated-collections` page, `video-carousel.tsx`, and the carousel section on the v1 home page (D16). Nothing replaces them. The `VIDEO`/`VIDEOS` `ParameterType` values and the video upload endpoint stay — they are generic and cost nothing to keep.
 
 `origin_lat`/`origin_long` are seeded to Jakarta (`-6.2088`, `106.8456`) while the brand operates from Denpasar. The v2 seed must correct this, **and** the hardcoded fallbacks in `ShippingService` (A9.11).
 
@@ -471,7 +501,7 @@ Numbering continues from v1. F-1…F-29 remain unless superseded.
 ### B5.4 Contact
 - **F-45 Contact form** — full name, email, phone (optional), inquiry type (6 radio options: Product Inquiry, Order Support, Custom Order, Wholesale/B2B, Partnership, Other), a textarea revealed when Other is chosen, and a message. The v1 tab concept (General / Partnership / Career) is dropped.
 - **F-46 Dual notification** — Resend email to the customer (acknowledgement) and to the admin (new inquiry).
-- **F-47 Contact inbox** — admin lists, reads, and marks inquiries handled. *Assumption: included because "menandai sudah ditangani" implies it. Say so if it should be email-only.*
+- **F-47 Contact inbox** — a dedicated admin section (`/admin/dashboard/inquiries`) for managing incoming inquiries, not just an email relay. It lists inquiries with pagination and the shared list-query convention, filters by `status` and `inquiryType` plus the usual date filters, searches name/email/message, opens a detail view with the full message, and transitions `status` (`NEW → IN_PROGRESS → HANDLED`, or `ARCHIVED`). Moving to `HANDLED` stamps `handledAt` and `handledById` from the authenticated admin. Unread count (`status = NEW`) shows as a sidebar badge.
 
 ### B5.5 Pricing
 - **F-48 Promotion management** — several concurrent promotions, each targeting all products or a chosen set, with a validity window.
@@ -539,12 +569,8 @@ Unchanged from v1 (`PATCH /api/guests/membership/[id]`) with one addition: activ
 
 Do not guess these; ask.
 
-1. **Header entry for garment/audience listings** — footer-only today (§B2.2).
-2. **`/our-world` content** — placeholder until the client decides (D13).
-3. **`/curated-collections`** — absent from the new navigation. Keep the page, delete it, or fold it into Our World? The `videos_curated_collection` config key depends on the answer.
-4. **Promotion stacking rule** — proposal is highest-priority-wins, no stacking (§B4.6).
-5. **Contact inbox** — assumed included (F-47); confirm or reduce to email-only.
-6. **Size guide grouping on the public page** — v1 groups by Women / Men / Baby with Kebaya / Batik tabs. Does `SizeGuide` need a group field to reproduce that, or is a flat list of published guides enough?
+1. **`/our-world` content** — deferred pending client confirmation (D13). The route exists as a placeholder; do not design its data model until the answer arrives.
+2. **Promotion stacking rule** — proposal is highest-priority-wins, no stacking (§B4.6). This one blocks phase 3.
 
 ---
 
@@ -556,14 +582,16 @@ Each phase ends with `npx tsc --noEmit` clean, `npm run lint` clean, and the aff
 
 | Phase | Scope | Rationale |
 | --- | --- | --- |
-| **0 — Foundation** | `[lang]` routing + dictionaries · design tokens (`#BA8164`, `#39322C`, `#FAF6F5`, `#F7F3F0`, `#D2D2CA`) · Raleway + Inter via `next/font/google` · new header/footer shell · `tiptap-editor.tsx` shared component | Touches every file. Doing it later means redoing every other phase |
-| **1 — Data model** | Drop and rebuild the schema: taxonomy, Size/SizeGuide/Variant, Product + translations, pricing entities, content models · new seed · admin CRUD for taxonomy, sizes, size guides | Everything downstream depends on these tables |
+| **0 — Foundation** | `[lang]` routing + dictionaries · design tokens (`#BA8164`, `#39322C`, `#FAF6F5`, `#F7F3F0`, `#D2D2CA`) · Raleway + Inter via `next/font/google` · new header/footer shell · `tiptap-editor.tsx` shared component · delete `/curated-collections` and `video-carousel.tsx` (D16) | Touches every file. Doing it later means redoing every other phase |
+| **1 — Data model** | Drop and rebuild the schema: taxonomy, Size/SizeGuide/Variant, Product + translations, pricing entities, content models · new seed (without `videos_curated_collection`) · admin CRUD for taxonomy, sizes, size guides · wire the Collections mega-menu to the taxonomy tables | Everything downstream depends on these tables |
 | **2 — Catalog** | Product form (size guide → variants → package dimensions), listings per axis, product detail, New Arrivals, Best Sellers, wishlist | Consumes phase 1 |
 | **3 — Pricing** | Promotion + member discount entities and admin, per-line price pipeline, server-computed subtotal (F-51) | Isolated; the most delicate, so it runs alone |
 | **4 — Content** | Journal, FAQ, Contact form + inbox, public size guide page | Independent of 2 and 3; can run in parallel if needed |
 | **5 — Hardening** | F-52…F-54 security fixes, `DELETE /api/guests/[id]` (A9.6), Denpasar origin coordinates, seed corrections | Deliberately last so it is not lost in the churn |
 
 Phases 0 and 1 must not be split — both touch the whole tree, and a half-migrated schema means doing the work twice.
+
+One ordering caveat: the header shell is built in phase 0, but the Collections mega-menu reads taxonomy tables that only exist after phase 1. Build the menu against a hardcoded placeholder list in phase 0 and swap it for the real query in phase 1 — do not defer the whole header, since every page depends on it.
 
 ---
 
@@ -573,7 +601,7 @@ Agreed in discussion. Do not reopen without a new decision recorded here.
 
 | # | Decision | Rationale |
 | --- | --- | --- |
-| **D1** | Size guide is one model with title, description, per-size rows, flexible JSON parameters, and draft/publish via `publishedAt` | Same entity serves the public page and per-product assignment |
+| **D1** | Size guide is one model with title, description, per-size rows, flexible JSON parameters, and draft/publish via `publishedAt`. The public page is a **flat list** — no grouping field | Same entity serves the public page and per-product assignment. A flat list keeps grouping a matter of naming and ordering, so new categories need no schema change |
 | **D2** | i18n covers static UI, Article, FAQ, Product, and size guides. Branding/audience/garment labels are **not** translated | Brand and category names read the same in both languages |
 | **D3** | Product ID translations are optional with **per-field** fallback to EN. Admin UI is EN-only and outside `[lang]`. Order emails are EN-only | Admin can publish in EN and translate later without blocking |
 | **D4** | Public URLs use a single non-localized `slug`; admin URLs use `id` | Better SEO, and the URL survives a language switch |
@@ -583,10 +611,12 @@ Agreed in discussion. Do not reopen without a new decision recorded here.
 | **D8** | Checkout token, shipping/zone calculation, order lifecycle, upload pipeline, config parameters, guest checkout, membership, logging, auth, and handler conventions are preserved — except the two exceptions in §B6.3 | The pricing path is the most delicate code in the repo |
 | **D9** | Four content fields have global `{ en, id }` defaults in config; products store only overrides, resolved through a four-level chain | Admin edits the default once instead of filling every product |
 | **D10** | Tiptap stores **JSON**, through one shared `tiptap-editor.tsx` | Structured storage; one component keeps behavior consistent |
-| **D11** | `isFavorite` keeps its v1 meaning (admin-featured, shown on the branding page). Wishlist is `localStorage`-only. `/our-fabrics` stays static | Wishlist is per-visitor and cannot reuse a shared product flag |
+| **D11** | `isFavorite` keeps its v1 meaning (admin-featured, shown on the branding page). Wishlist is `localStorage`-only. Our Fabrics stays static, moving to `/about/our-fabrics` | Wishlist is per-visitor and cannot reuse a shared product flag |
 | **D12** | Config holds singleton settings only; anything with relations, targeting, dates, or status becomes a table | Multiple promotions and targeted member discounts cannot be modeled as key-value pairs |
 | **D13** | Journal appears both as a top-level menu and under About (intentional). `/our-world` is a placeholder. New Arrivals uses `releasedAt`; Best Sellers uses automatic `soldCount` plus a manual `bestSellerRank` | Confirmed with the client |
 | **D14** | Raleway + Inter via `next/font/google`; the full palette is replaced. Alethia Next OTF files stay in `public/fonts` but are unused | v2 is an intentional visual overhaul; keeping the old font files is cheaper than restoring them |
+| **D15** | Contact Inbox is a standalone top-level admin menu with full inquiry management (filter, search, detail, status transitions), not an email relay and not a Content sub-item | It is a daily work queue, not authored content; status tracking is what makes an inquiry not get dropped |
+| **D16** | The Collections header menu is a three-column mega-menu rendered from `BrandingType`, `AudienceType`, and `GarmentType`. Curated Collections is deleted — page, component, home-page section, and the `videos_curated_collection` config key | Driving the nav from the taxonomy tables means a new branding or garment appears in the menu without a deploy, and it gives garment/audience listings a header entry point |
 
 ---
 
