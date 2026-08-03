@@ -1,7 +1,18 @@
 @import "tailwindcss";
 
 body {
-  font-family: "Alethia Next", sans-serif !important;
+  font-family: var(--font-inter), sans-serif;
+  background-color: #faf6f5;
+  color: #39322c;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-raleway), sans-serif;
 }
 
 .inner-border {
@@ -139,19 +150,32 @@ input[type="number"]::-webkit-outer-spin-button {
 
 @theme inline {
   /* ===============================
-     COLORS
+     COLORS — v2 palette (D14)
   =============================== */
-  --color-primary: #0e2d65;
-  --color-secondary: #b91c1c;
-  --color-gray: #4b5563;
-  --color-darker-gray: #374151;
-  --color-light: #ffffff;
-  --color-dark: #181c14;
+  --color-primary: #ba8164; /* headline, buttons, eyebrow, active states */
+  --color-body: #39322c; /* body copy, captions */
+  --color-light: #faf6f5; /* main background */
+  --color-muted: #f7f3f0; /* muted background */
+  --color-footer: #d2d2ca; /* footer background */
+  --color-border: #d2d2ca; /* hairlines, dividers */
+
+  /* Legacy aliases — v1 components still reference these. Remove each one as its
+     component is rewritten in phases 2-4; do not introduce new usages. */
+  --color-secondary: #ba8164;
+  --color-gray: #39322c;
+  --color-darker-gray: #39322c;
+  --color-dark: #39322c;
+
+  /* ===============================
+     FONTS (D14)
+  =============================== */
+  --font-heading: var(--font-raleway); /* headline, nav, buttons, labels */
+  --font-sans: var(--font-inter); /* body, caption, description */
 
   /* ===============================
      SHADOWS
   =============================== */
-  --shadow-custom-border: 0 0 0 2px rgba(185, 28, 28, 0.9);
+  --shadow-custom-border: 0 0 0 2px rgba(186, 129, 100, 0.9);
 
   /* ===============================
      FONT SIZE

@@ -2,11 +2,11 @@
 
 import * as React from "react";
 
-import Link from "next/link";
+
 
 import { useCartStore } from "@/hooks";
 
-import { Button, Container, Img, Motion } from "@/components";
+import { Button, Container, Img, LocaleLink, Motion } from "@/components";
 
 import { CardProduct } from "../card-product";
 
@@ -131,9 +131,9 @@ export const DetailProduct = ({ id, category }: { id: string; category: string }
           Back
         </button>
         <nav className="text-base sm:text-lg text-gray">
-          <Link href={`/${category}`} className="text-darker-gray">
+          <LocaleLink href={`/${category}`} className="text-darker-gray">
             {formatDashToSpace(category)}
-          </Link>
+          </LocaleLink>
           <span className="mx-2">/</span>
           {product && <span className="text-gray/50">{product.data.name}</span>}
         </nav>
@@ -195,9 +195,9 @@ export const DetailProduct = ({ id, category }: { id: string; category: string }
             <div className="mb-6 space-y-2 sm:space-y-4">
               <div className="flex items-start justify-between gap-4 sm:justify-start">
                 <p className="text-sm font-medium text-gray">Size</p>
-                <Link href="/size-guide" className="text-sm text-blue-500 underline hover:text-blue-700">
+                <LocaleLink href="/customer-care/size-guide" className="text-sm text-blue-500 underline hover:text-blue-700">
                   Size Guide
-                </Link>
+                </LocaleLink>
               </div>
               <div className="grid grid-cols-5 gap-2">
                 {product.data.sizes.map((item, index) => (
@@ -245,9 +245,9 @@ export const DetailProduct = ({ id, category }: { id: string; category: string }
                 <PiWarningCircleLight size={30} className="shrink-0 text-gray" />
                 <div>
                   <p>{product.data.productionNotes}</p>
-                  <Link href="/shop" className="block text-blue-500 underline hover:text-blue-700">
+                  <LocaleLink href="/customer-care/how-to-shop" className="block text-blue-500 underline hover:text-blue-700">
                     Learn How to Shop
-                  </Link>
+                  </LocaleLink>
                 </div>
               </div>
             </div>

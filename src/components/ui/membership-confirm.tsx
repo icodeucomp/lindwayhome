@@ -2,16 +2,19 @@
 
 import { useState } from "react";
 
-import Link from "next/link";
+
 
 import { guestsApi } from "@/utils";
 
-import { Button } from "@/components";
+import { Button, LocaleLink } from "@/components";
+
+import { useLocaleHref } from "@/hooks";
 
 type Status = "idle" | "loading" | "success" | "error";
 
 export const MembershipConfirm = ({ guestId }: { guestId: string }) => {
   const [status, setStatus] = useState<Status>("idle");
+  const localeHref = useLocaleHref();
 
   const { mutate: updateGuest } = guestsApi.useUpdateMembershipGuests({
     onSuccess: () => setStatus("success"),
@@ -24,7 +27,7 @@ export const MembershipConfirm = ({ guestId }: { guestId: string }) => {
   };
 
   const handleDecline = () => {
-    window.location.href = "/";
+    window.location.href = localeHref("/");
   };
 
   const wrapper = "min-h-screen bg-gray-100 flex items-center justify-center px-4";
@@ -94,9 +97,9 @@ export const MembershipConfirm = ({ guestId }: { guestId: string }) => {
           <h1 className="text-2xl font-bold text-darker-gray mb-3">Something went wrong</h1>
           <p className="text-red-500 mb-8 text-sm">Failed to activate membership. Please try again.</p>
           <div className="flex gap-3">
-            <Link href="/" className="flex-1">
+            <LocaleLink href="/" className="flex-1">
               <Button className="w-full border border-gray-300 text-gray bg-white hover:bg-gray-50 rounded-xl py-2.5 font-medium transition">Go Home</Button>
-            </Link>
+            </LocaleLink>
             <Button onClick={() => setStatus("idle")} className="flex-1 bg-darker-gray hover:bg-gray text-white rounded-xl py-2.5 font-medium transition">
               Try again
             </Button>
@@ -122,9 +125,9 @@ export const MembershipConfirm = ({ guestId }: { guestId: string }) => {
           You have successfully joined <span className="font-semibold text-darker-gray capitalize">Lindway Member</span>. We&apos;re excited to have you on board!
         </p>
 
-        <Link href="/">
+        <LocaleLink href="/">
           <Button className="bg-darker-gray hover:bg-gray text-white w-full rounded-xl py-2.5 font-medium transition">Back to Home</Button>
-        </Link>
+        </LocaleLink>
       </div>
     </div>
   );

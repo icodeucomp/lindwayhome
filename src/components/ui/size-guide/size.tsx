@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 
-import Link from "next/link";
 
-import { Container, Background, Img, Motion } from "@/components";
+
+import { Container, Background, Img, LocaleLink, Motion } from "@/components";
 
 import { WomenModal } from "./women-modal";
 import { MenModal } from "./men-modal";
@@ -75,9 +75,9 @@ export const Size = () => {
             <h4 className="text-base font-medium sm:text-lg">Still Unsure?</h4>
             <p>Send us a message—we&apos;ll guide you with care. Your comfort matters just as much as your style.</p>
           </div>
-          <Link href="/contact-us" className="block py-2 mx-auto text-sm border-b border-gray w-max sm:text-base">
+          <LocaleLink href="/customer-care/contact-us" className="block py-2 mx-auto text-sm border-b border-gray w-max sm:text-base">
             Chat with Us
-          </Link>
+          </LocaleLink>
         </Motion>
       </Container>
       <WomenModal isVisible={isModalWomen} onClose={() => setIsModalWomen(false)} />

@@ -126,13 +126,6 @@ async function seedConfigurations() {
     order: 6,
   });
 
-  const videoGroup = await ConfigService.createConfigGroup({
-    name: "videos",
-    label: "Video Settings",
-    description: "Configure videos for displayed on the website",
-    order: 7,
-  });
-
   // ── Tax ───────────────────────────────────────────────────────────────────
 
   await ConfigService.createConfig({
@@ -238,28 +231,9 @@ async function seedConfigurations() {
     order: 1,
   });
 
-  // ── Videos ────────────────────────────────────────────────────────────────
-
-  await ConfigService.createConfig({
-    key: "videos_curated_collection",
-    label: "Default Videos Curated Collection",
-    description: "Base videos to displayed on curated collections page",
-    value: [
-      {
-        originalName: "samplevideo-1.mp4",
-        filename: "samplevideo-1.mp4",
-        url: `${API_BASE_URL}/images/samplevideo-1.mp4`,
-        path: `/images/samplevideo-1.mp4`,
-        size: faker.number.int({ min: 50000, max: 500000 }),
-        mimeType: "video/mp4",
-        alt: faker.commerce.productDescription(),
-        isMoved: true,
-      },
-    ],
-    type: "VIDEOS",
-    groupId: videoGroup.id,
-    order: 1,
-  });
+  // The `videos` group and its `videos_curated_collection` key were deleted with the
+  // Curated Collections page (D16). The VIDEO/VIDEOS ParameterType values and the video
+  // upload endpoint stay — they are generic and cost nothing to keep.
 
   // ── Shipping Calculation ──────────────────────────────────────────────────
 

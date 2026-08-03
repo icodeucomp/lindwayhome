@@ -1,0 +1,45 @@
+{
+  "nav": {
+    "newArrivals": "Koleksi Terbaru",
+    "bestSellers": "Paling Laris",
+    "collections": "Koleksi",
+    "ourWorld": "Dunia Kami",
+    "journal": "Jurnal",
+    "about": "Tentang",
+    "shop": "Belanja",
+    "customerCare": "Layanan Pelanggan",
+    "wishlist": "Favorit",
+    "bag": "Tas Belanja",
+    "branding": "Brand",
+    "audience": "Kategori",
+    "garment": "Jenis Busana"
+  },
+  "about": {
+    "ourStory": "Kisah Kami",
+    "ourProduction": "Produksi Kami",
+    "ourArtisan": "Pengrajin Kami",
+    "sustainability": "Keberlanjutan",
+    "ourFabrics": "Kain Kami"
+  },
+  "customerCare": {
+    "sizeGuide": "Panduan Ukuran",
+    "howToShop": "Cara Belanja",
+    "shippingDelivery": "Pengiriman",
+    "returnExchanges": "Pengembalian & Penukaran",
+    "careInstructions": "Petunjuk Perawatan",
+    "contactUs": "Hubungi Kami",
+    "faq": "Tanya Jawab"
+  },
+  "common": {
+    "loading": "Memuat",
+    "readMore": "Selengkapnya",
+    "viewAll": "Lihat Semua",
+    "search": "Cari",
+    "comingSoon": "Segera hadir",
+    "backToHome": "Kembali ke beranda"
+  },
+  "footer": {
+    "address": "Jalan Hayam Wuruk Gang XVII No. 36 Denpasar Timur, Bali 80239, Indonesia",
+    "rights": "Hak cipta dilindungi."
+  }
+}

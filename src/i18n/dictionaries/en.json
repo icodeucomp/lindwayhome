@@ -1,0 +1,45 @@
+{
+  "nav": {
+    "newArrivals": "New Arrivals",
+    "bestSellers": "Best Sellers",
+    "collections": "Collections",
+    "ourWorld": "Our World",
+    "journal": "Journal",
+    "about": "About",
+    "shop": "Shop",
+    "customerCare": "Customer Care",
+    "wishlist": "Wishlist",
+    "bag": "Bag",
+    "branding": "Branding",
+    "audience": "Audience",
+    "garment": "Garment"
+  },
+  "about": {
+    "ourStory": "Our Story",
+    "ourProduction": "Our Production",
+    "ourArtisan": "Our Artisan",
+    "sustainability": "Sustainability",
+    "ourFabrics": "Our Fabrics"
+  },
+  "customerCare": {
+    "sizeGuide": "Size Guide",
+    "howToShop": "How to Shop",
+    "shippingDelivery": "Shipping & Delivery",
+    "returnExchanges": "Return & Exchanges",
+    "careInstructions": "Care Instructions",
+    "contactUs": "Contact Us",
+    "faq": "FAQ"
+  },
+  "common": {
+    "loading": "Loading",
+    "readMore": "Read More",
+    "viewAll": "View All",
+    "search": "Search",
+    "comingSoon": "Coming soon",
+    "backToHome": "Back to home"
+  },
+  "footer": {
+    "address": "Jalan Hayam Wuruk Gang XVII No. 36 Denpasar Timur, Bali 80239, Indonesia",
+    "rights": "All rights reserved."
+  }
+}

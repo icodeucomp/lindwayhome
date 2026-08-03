@@ -8,6 +8,8 @@ import { Header } from "@/components/ui";
 
 import { formatSpaceToDash } from "@/utils";
 
+import { useLocaleHref } from "@/hooks";
+
 interface HeroProps {
   imagePath: string;
   title: string;
@@ -16,9 +18,10 @@ interface HeroProps {
 
 export const Hero = ({ description, title, imagePath }: HeroProps) => {
   const router = useRouter();
+  const localeHref = useLocaleHref();
 
   const handleClick = () => {
-    router.push(`/${formatSpaceToDash(title)}`, { scroll: false });
+    router.push(localeHref(`/${formatSpaceToDash(title)}`), { scroll: false });
 
     setTimeout(() => {
       const element = document.getElementById("section");

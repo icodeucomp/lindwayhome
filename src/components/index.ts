@@ -12,3 +12,5 @@ export * from "./scroll-to-top";
 export * from "./query-client-wrapper";
 export * from "./circulate-progress";
 export * from "./progress-bar";
+export * from "./locale-link";
+export * from "./tiptap-editor";

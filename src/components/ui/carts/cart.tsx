@@ -4,7 +4,7 @@ import * as React from "react";
 
 import { useRouter } from "next/navigation";
 
-import { useCartStore } from "@/hooks";
+import { useCartStore, useLocaleHref } from "@/hooks";
 
 import toast from "react-hot-toast";
 
@@ -18,6 +18,7 @@ import { FaShoppingCart } from "react-icons/fa";
 
 export const CartProduct = () => {
   const router = useRouter();
+  const localeHref = useLocaleHref();
   const {
     cart,
     selectedItems,
@@ -98,7 +99,7 @@ export const CartProduct = () => {
               <h3 className="text-lg font-medium sm:text-xl text-darker-gray">Your cart is empty</h3>
               <p className="text-sm sm:text-base text-gray/70">Add some products to get started</p>
             </div>
-            <Button type="button" onClick={() => router.push("/my-lindway")} className="px-6 py-2 mt-4 rounded-lg bg-primary hover:bg-primary/90 text-light">
+            <Button type="button" onClick={() => router.push(localeHref("/my-lindway"))} className="px-6 py-2 mt-4 rounded-lg bg-primary hover:bg-primary/90 text-light">
               Continue Shopping
             </Button>
           </div>

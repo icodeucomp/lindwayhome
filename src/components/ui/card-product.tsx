@@ -1,6 +1,4 @@
-import Link from "next/link";
-
-import { ImageSlider } from "@/components";
+import { ImageSlider, LocaleLink } from "@/components";
 
 import { PiWarningCircleLight } from "react-icons/pi";
 
@@ -21,9 +19,9 @@ export const CardProduct = ({ discountedPrice, images, name, price, notes, produ
       </ImageSlider>
       <div className="p-2 space-y-2 sm:space-y-4 text-gray">
         <div className="space-y-2">
-          <Link href={`/product/${formatUnderscoreToDash(category)}/${id}`} className="block text-lg font-medium sm:text-xl w-max hover:text-darker-gray hover:font-semibold">
+          <LocaleLink href={`/product/${formatUnderscoreToDash(category)}/${id}`} className="block text-lg font-medium sm:text-xl w-max hover:text-darker-gray hover:font-semibold">
             {name}
-          </Link>
+          </LocaleLink>
           <div className="flex items-center justify-between text-lg font-light sm:text-xl">
             <p>{formatIDR(+discountedPrice)}</p>
             <p className="line-through text-gray/50">{formatIDR(+price)}</p>
@@ -34,9 +32,9 @@ export const CardProduct = ({ discountedPrice, images, name, price, notes, produ
           <PiWarningCircleLight size={22} className="text-gray" />
           <p className="text-xs sm:text-sm">
             {productionNotes} <br />{" "}
-            <Link href="/shop" className="underline w-max">
+            <LocaleLink href="/customer-care/how-to-shop" className="underline w-max">
               Learn how to shop
-            </Link>
+            </LocaleLink>
           </p>
         </div>
       </div>

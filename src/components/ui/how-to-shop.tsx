@@ -2,9 +2,7 @@
 
 import * as React from "react";
 
-import Link from "next/link";
-
-import { Container, Img, Motion } from "@/components";
+import { Container, Img, LocaleLink, Motion } from "@/components";
 
 import { FaChevronDown, FaChevronUp } from "react-icons/fa";
 
@@ -29,9 +27,9 @@ const accordionData = [
         </p>
         <p className="text-xs sm:text-sm md:text-base">
           Need help choosing a size? Visit our{" "}
-          <Link href="/size-guide" className="inline-flex font-medium underline">
+          <LocaleLink href="/customer-care/size-guide" className="inline-flex font-medium underline">
             Size Guide
-          </Link>{" "}
+          </LocaleLink>{" "}
           for detailed measurements.
         </p>
       </div>
@@ -48,9 +46,9 @@ const accordionData = [
         </p>
         <p className="text-xs sm:text-sm md:text-base">
           Custom or Special Orders:{" "}
-          <Link href="/" className="inline-flex font-medium underline">
+          <LocaleLink href="/" className="inline-flex font-medium underline">
             Click Order via WhatsApp
-          </Link>{" "}
+          </LocaleLink>{" "}
           to chat with our team. Share your size, preferred style, and any special requests—we&apos;ll guide you through the next steps.
         </p>
       </div>

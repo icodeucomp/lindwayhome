@@ -42,7 +42,7 @@ Defining decisions:
 
 JWT, 1-day expiry, stored in `localStorage` under `auth_token`, attached by an axios request interceptor as `Authorization: Bearer`.
 
-- There is **no `middleware.ts`**. Protection is **per-handler**: an admin route calls `checkAuth(request, pathAPI)` from `@/lib` first and returns early if the result is non-null (`null` means authorized).
+- `src/proxy.ts` (Next 16's replacement for `middleware.ts`) exists but does **locale routing only** — it never authenticates. Protection is **per-handler**: an admin route calls `checkAuth(request, pathAPI)` from `@/lib` first and returns early if the result is non-null (`null` means authorized).
 - The dashboard guard (`useAuthStore` in `layout-dashboard.tsx`) is **client-side only**. Real enforcement is in the API handlers, so a new admin handler that forgets `checkAuth` is effectively public.
 - `checkAuth` runs `authenticate` and `authorize` in parallel; both re-read the user from the database and reject inactive users.
 
@@ -954,13 +954,15 @@ Do not guess these; ask.
 
 # PART C — Migration plan
 
-Each phase ends with `npx tsc --noEmit` clean, `npm run lint` clean, and the affected flow exercised by hand. Move the phase's sections from `[TARGET]` to `[SHIPPED]` and delete the superseded Part A text before starting the next one.
+Each phase ends with `npx tsc --noEmit` clean, `npm run build` clean, and the affected flow exercised by hand. Move the phase's sections from `[TARGET]` to `[SHIPPED]` and delete the superseded Part A text before starting the next one.
+
+**Lint has a pre-existing baseline that phase 0 did not create.** `npm run lint` reported 10 `react-hooks/set-state-in-effect` errors on the pre-v2 commit; phase 0 removed 3 (with the deleted Curated Collections files) and added none, leaving 7. Each survivor sits in a file a later phase rewrites — `my-lindway`/`simply-lindway`/`lure-by-lindway` and `detail-product` in phase 2, `cart` in phase 2/3, `config-field` in phase 1, `useSearchPagination` whenever a listing touches it. Treat "no new lint errors" as the gate until those rewrites land, then restore "lint clean".
 
 **The database is dropped and rebuilt, not migrated (D-note).** There is no production data to preserve, so phase 1 runs `npm run db:reset` and reseeds. Confirm before running it — it is destructive and irreversible.
 
 | Phase | Scope | Rationale |
 | --- | --- | --- |
-| **0 — Foundation** | `[lang]` routing + dictionaries · design tokens (`#BA8164`, `#39322C`, `#FAF6F5`, `#F7F3F0`, `#D2D2CA`) · Raleway + Inter via `next/font/google` · new header/footer shell · `tiptap-editor.tsx` shared component · delete `/curated-collections` and `video-carousel.tsx` (D16) | Touches every file. Doing it later means redoing every other phase |
+| **0 — Foundation** ✅ **DONE** | `[lang]` routing + dictionaries · design tokens (`#BA8164`, `#39322C`, `#FAF6F5`, `#F7F3F0`, `#D2D2CA`) · Raleway + Inter via `next/font/google` · new header/footer shell · `tiptap-editor.tsx` shared component · delete `/curated-collections` and `video-carousel.tsx` (D16) | Touches every file. Doing it later means redoing every other phase |
 | **1 — Data model** | Drop and rebuild the schema: taxonomy, Size/SizeGuide/Variant, Product + translations, pricing entities, content models · new seed (without `videos_curated_collection`) · admin CRUD for taxonomy, sizes, size guides · wire the Collections mega-menu to the taxonomy tables | Everything downstream depends on these tables |
 | **2 — Catalog** | Product form (size guide → variants → package dimensions), listings per axis, product detail, New Arrivals, Best Sellers, wishlist | Consumes phase 1 |
 | **3 — Pricing** | Promotion + member discount entities and admin, per-line price pipeline, server-computed subtotal (F-51) | Isolated; the most delicate, so it runs alone |

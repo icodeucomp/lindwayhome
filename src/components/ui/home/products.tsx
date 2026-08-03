@@ -1,8 +1,6 @@
 "use client";
 
-import Link from "next/link";
-
-import { Container, Img, Motion } from "@/components";
+import { Container, Img, LocaleLink, Motion } from "@/components";
 
 import { ApiResponse, Product } from "@/types";
 
@@ -51,18 +49,18 @@ export const Products = () => {
           <div className="w-full space-y-1 text-center sm:space-y-2 text-gray">
             <h4 className="text-xl font-semibold sm:text-2xl">My Lindway</h4>
             <p className="text-base font-light sm:text-lg">Embracing Artistry, Celebrating Culture</p>
-            <Link href="/my-lindway" className="block p-1 mx-auto text-xs font-medium border-b sm:p-2 sm:text-sm text-gray w-max">
+            <LocaleLink href="/my-lindway" className="block p-1 mx-auto text-xs font-medium border-b sm:p-2 sm:text-sm text-gray w-max">
               Discover Collection
-            </Link>
+            </LocaleLink>
           </div>
         </Motion>
         <Motion tag="div" initialY={50} animateY={0} duration={0.2} delay={0.1} className="flex flex-col-reverse items-center gap-2 sm:gap-4 sm:flex-row">
           <div className="w-full space-y-1 text-center sm:space-y-2 text-gray">
             <h4 className="text-xl font-semibold sm:text-2xl">Simply Lindway</h4>
             <p className="text-base font-light sm:text-lg">Pure Cotton Comfort</p>
-            <Link href="/simply-lindway" className="block p-1 mx-auto text-xs font-medium border-b sm:p-2 sm:text-sm text-gray w-max">
+            <LocaleLink href="/simply-lindway" className="block p-1 mx-auto text-xs font-medium border-b sm:p-2 sm:text-sm text-gray w-max">
               Discover Collection
-            </Link>
+            </LocaleLink>
           </div>
           <Img src="/images/home-product-simply-lindway.webp" alt="simply lindway image" className="w-full max-w-2xl min-h-72 sm:min-h-80" position="top" cover />
         </Motion>
@@ -71,9 +69,9 @@ export const Products = () => {
           <div className="w-full space-y-1 text-center sm:space-y-2 text-gray">
             <h4 className="text-xl font-semibold sm:text-2xl">Lure by Lindway</h4>
             <p className="text-base font-light sm:text-lg">Traditional Soul, Modern Edge</p>
-            <Link href="/lure-by-lindway" className="block p-1 mx-auto text-xs font-medium border-b sm:p-2 sm:text-sm text-gray w-max">
+            <LocaleLink href="/lure-by-lindway" className="block p-1 mx-auto text-xs font-medium border-b sm:p-2 sm:text-sm text-gray w-max">
               Discover Collection
-            </Link>
+            </LocaleLink>
           </div>
         </Motion>
       </div>

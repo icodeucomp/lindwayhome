@@ -5,3 +5,5 @@ export * from "./useForm";
 export * from "./useAuth";
 export * from "./useCart";
 export * from "./useSearchPagination";
+export * from "./useLocale";
+export * from "./useWishlist";
