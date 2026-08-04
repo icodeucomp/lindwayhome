@@ -15,6 +15,13 @@
 //     line price can no longer be reconstructed after the fact.
 //   · Member stays: it answers "is this person a member now" (revocable), while
 //     Order.isMember answers "was this order priced as a member" (frozen).
+//
+// A field audit then removed seven columns that produced nothing (D21):
+//   BrandingType.code · AudienceType.code · GarmentType.code  (slug already unique)
+//   SizeGuide.isActive        (publishedAt is the switch)
+//   SizeGuideRow.order        (size.order already orders them)
+//   Product.productionNotes   (superseded by the translated notes field)
+//   Member.joinedAt           (createdAt is the join date)
 // =============================================================================
 
 generator client {
@@ -54,9 +61,8 @@ model User {
 
 model BrandingType {
   id          String   @id @default(cuid())
-  code        String   @unique
   name        String
-  slug        String   @unique
+  slug        String   @unique // also the programmatic identifier — `code` was a duplicate of this
   description String?
   image       Json? // file node
   order       Int      @default(0)
@@ -71,7 +77,6 @@ model BrandingType {
 
 model AudienceType {
   id        String   @id @default(cuid())
-  code      String   @unique
   name      String
   slug      String   @unique
   order     Int      @default(0)
@@ -86,7 +91,6 @@ model AudienceType {
 
 model GarmentType {
   id        String   @id @default(cuid())
-  code      String   @unique
   name      String
   slug      String   @unique
   order     Int      @default(0)
@@ -124,8 +128,9 @@ model Size {
 model SizeGuide {
   id          String    @id @default(cuid())
   order       Int       @default(0)
-  publishedAt DateTime? // null = draft; public page lists published only (D1)
-  isActive    Boolean   @default(true)
+  // publishedAt IS the on/off switch — null means draft. No isActive alongside it,
+  // or "inactive but published" would have no defined meaning.
+  publishedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -142,8 +147,9 @@ model SizeGuideRow {
   sizeGuideId  String
   sizeId       String
   measurements Json // { length: 98, waist: 62, bottom_width: 140 } — keys are stable ids
-  order        Int    @default(0)
 
+  // No `order` column: rows are ordered by `size.order`. A second ordering source
+  // could contradict the first.
   sizeGuide SizeGuide @relation(fields: [sizeGuideId], references: [id], onDelete: Cascade)
   size      Size      @relation(fields: [sizeId], references: [id])
 
@@ -194,10 +200,11 @@ model Product {
   soldCount      Int       @default(0) // += on order verification
   bestSellerRank Int? // manual override (F-34)
 
-  isPreOrder      Boolean @default(false)
-  isFavorite      Boolean @default(false) // admin-featured, NOT the wishlist (D11)
-  isActive        Boolean @default(true)
-  productionNotes String?
+  isPreOrder Boolean @default(false)
+  isFavorite Boolean @default(false) // admin-featured, NOT the wishlist (D11)
+  isActive   Boolean @default(true)
+  // No productionNotes: v1 kept the "made-to-order, allow 21-25 days" line here,
+  // untranslatable. That text is now ProductTranslation.notes with a global default (D9).
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -350,9 +357,8 @@ model Member {
   id        String   @id @default(cuid())
   email     String   @unique // upserted on membership activation (§B6.4)
   fullname  String?
-  joinedAt  DateTime @default(now())
   isActive  Boolean  @default(true) // false = membership revoked, without touching order history
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) // this IS the join date — no separate joinedAt
   updatedAt DateTime @updatedAt
 
   orders    Order[]
@@ -367,7 +373,7 @@ model Discount {
   kind         DiscountKind // PROMOTION applies per line, MEMBER applies to the subtotal
   discountType DiscountType
   value        Decimal      @db.Decimal(12, 2) // percent if PERCENTAGE, rupiah if FIXED
-  priority     Int          @default(0) // highest wins; no stacking within a kind
+  priority     Int          @default(0) // highest wins; on a tie the larger value wins (D20)
   startsAt     DateTime?
   endsAt       DateTime?
   isActive     Boolean      @default(true)

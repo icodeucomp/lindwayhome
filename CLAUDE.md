@@ -346,9 +346,8 @@ All ids are `cuid()` (D7). All tables follow the existing `@@map("snake_case")` 
 ```prisma
 model BrandingType {
   id          String    @id @default(cuid())
-  code        String    @unique
   name        String
-  slug        String    @unique
+  slug        String    @unique  // also the programmatic identifier
   description String?
   image       Json?
   order       Int       @default(0)
@@ -363,7 +362,6 @@ model BrandingType {
 
 model AudienceType {
   id        String            @id @default(cuid())
-  code      String            @unique
   name      String
   slug      String            @unique
   order     Int               @default(0)
@@ -378,7 +376,6 @@ model AudienceType {
 
 model GarmentType {
   id        String    @id @default(cuid())
-  code      String    @unique
   name      String
   slug      String    @unique
   order     Int       @default(0)
@@ -393,6 +390,8 @@ model GarmentType {
 ```
 
 Admin-managed; adding a sixth branding is a row, not a deploy. `name` is not translated (D2). These three tables also drive the Collections mega-menu (D16), so `order` and `isActive` are what an admin uses to arrange the header.
+
+**No `code` column** (D21). The first draft carried both `code` (`MY_LINDWAY`) and `slug` (`my-lindway`) — two unique columns derived from the same name, and nothing ever looked up by `code`. `slug` is the identifier. `Size.code` is different and stays: it must match a `package_dimensions` config key exactly.
 
 ### B4.2 Size, size guide, and package dimensions
 
@@ -415,8 +414,7 @@ model Size {
 model SizeGuide {
   id           String                 @id @default(cuid())
   order        Int                    @default(0)
-  publishedAt  DateTime?              // null = draft
-  isActive     Boolean                @default(true)
+  publishedAt  DateTime?              // null = draft; this IS the on/off switch
   createdAt    DateTime               @default(now())
   updatedAt    DateTime               @updatedAt
 
@@ -433,7 +431,6 @@ model SizeGuideRow {
   sizeGuideId  String
   sizeId       String
   measurements Json      // { length: 98, waist: 62, bottom_width: 140 }
-  order        Int       @default(0)
 
   sizeGuide    SizeGuide @relation(fields: [sizeGuideId], references: [id], onDelete: Cascade)
   size         Size      @relation(fields: [sizeId], references: [id])
@@ -457,7 +454,8 @@ model SizeGuideTranslation {
 }
 ```
 
-- `publishedAt = null` means draft; the public Size Guide page lists only published guides (D1).
+- `publishedAt = null` means draft; the public Size Guide page lists only published guides (D1). **There is no `isActive` beside it** — "inactive but published" would have no defined meaning (D21).
+- **Rows have no `order` column.** They are ordered by `size.order`, so there is only ever one ordering source (D21).
 - **No grouping field.** The public page renders published guides as a flat list ordered by `order`. v1's hardcoded Women / Men / Baby split with Kebaya / Batik tabs is not reproduced — the translated `title` carries that meaning instead (e.g. "Women — Batik"), so admins can introduce new groupings without a schema change (D1).
 - **Title and description live only in the translation**, matching the Article and FAQ pattern. Admin lists join the EN row.
 - `measurements` keys are stable identifiers; their **display labels** are per-locale in `SizeGuideTranslation.parameterLabels`. Translating JSON keys directly would be unworkable.
@@ -490,7 +488,6 @@ model Product {
   isPreOrder      Boolean              @default(false)
   isFavorite      Boolean              @default(false)
   isActive        Boolean              @default(true)
-  productionNotes String?
 
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
@@ -559,7 +556,7 @@ model ProductTranslation {
 ```
 
 - **One branding (required), one garment, many audiences** (D5) — so a product can be unisex.
-- `Product` no longer carries `name`, `description`, `notes`, `category`, or `sizes`. Name and content moved to `ProductTranslation`; category became three relations; sizes became `ProductVariant`.
+- `Product` no longer carries `name`, `description`, `notes`, `category`, `sizes`, or `productionNotes`. Name and content moved to `ProductTranslation`; category became three relations; sizes became `ProductVariant`. `productionNotes` held the customer-facing "made-to-order, allow 21-25 days" line in v1 — untranslatable and duplicating what `notes` now covers with a global default (D9, D21).
 - `isFavorite` keeps its v1 meaning: an admin flag for featured products, now surfaced on that product's branding page (D11). It is **not** the wishlist.
 - The five translated content fields hold Tiptap JSON (D10). All are nullable; empty falls back per §B6.1.
 - Product search filters on `ProductTranslation.name`/`description` with `contains`. A plain btree index does not help `contains`, so none is declared — add a `pg_trgm` GIN index later if search gets slow.
@@ -698,9 +695,8 @@ model Member {
   id        String   @id @default(cuid())
   email     String   @unique  // upserted on membership activation (§B6.4)
   fullname  String?
-  joinedAt  DateTime @default(now())
   isActive  Boolean  @default(true)  // false = revoked, without touching order history
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now())  // this IS the join date — no separate joinedAt (D21)
   updatedAt DateTime @updatedAt
 
   orders    Order[]
@@ -763,7 +759,7 @@ Revoking membership by flipping `Order.isMember` across every past order would r
 
 **Prisma cannot express** "`kind = MEMBER` must have no product rows". The service layer enforces it, like the mandatory-EN-translation rule. It cannot happen through the admin UI — Promotions and Member Discounts are separate screens (§B2.3).
 
-> **`[OPEN]` Tie-breaker.** Highest `priority` wins is settled. Still undecided: what happens when two discounts of the same kind share a priority. Proposal is the larger value, so the outcome never depends on row order — a total that changes between requests is unacceptable for money. Blocks phase 3.
+**Resolution order within a kind** (D20): highest `priority` wins; on a tie the **larger value** wins. The tie-breaker exists so the outcome never depends on row order — a total that differs between two identical requests is unacceptable for money.
 
 ### B4.7 Config parameters after the split
 
@@ -1016,7 +1012,9 @@ Unchanged from v1 in behaviour, with the endpoint renamed alongside the model (`
 Do not guess these; ask.
 
 1. **`/our-world` content** — deferred pending client confirmation (D13). The route exists as a placeholder; do not design its data model until the answer arrives.
-2. **Discount tie-breaker** — highest `priority` wins is settled (D20), and so is layering across the three discount kinds. What is still undecided: which discount applies when two of the *same kind* share a priority. Proposal is the larger value, so the result never depends on row order — a total that changes between identical requests is unacceptable for money. Blocks phase 3.
+2. **`Order.instagram` / `Order.reference`** — two optional v1 attribution columns ("how did you hear about us"). Still collected, or dropped? Cosmetic either way; decide before the seed is written.
+3. **`ConfigParameter.validation`** — only `validation.options` is ever read (it fills SELECT dropdowns). The min/max/required rules stored there are never enforced anywhere. Keep the loose `Json`, or narrow it to an `options` column?
+4. **`User.username`** — `email` and `username` are both unique and login accepts either. Two identity columns for one person.
 
 ---
 
@@ -1070,7 +1068,8 @@ Agreed in discussion. Do not reopen without a new decision recorded here.
 | **D17** | `Guest` → `Order`, `Cart` → `OrderItem`, and the endpoints follow (`/api/guests/*` → `/api/orders/*`) | Neither name described its table. The real shopping cart is `localStorage` and never reaches the database, so a table called `Cart` holding order lines actively misleads. Renaming is safe because D8 protects behaviour, not identifiers — and doing it during the phase-1 rewrite costs nothing extra |
 | **D18** | `Promotion` and `MemberDiscount` collapse into one `Discount` table with a `kind` discriminator and two join tables. `PromotionScope` and `MemberScope` are deleted — an empty join table means "applies to everything" | The two had ten identical columns, so one admin form, one validation path, and one "best applicable discount" resolver serve both. Deriving scope from the join rows removes a column that could contradict the rows it described |
 | **D19** | `Member` is kept alongside `Order.isMember`, linked by `Order.memberId` | They answer different questions. Revoking membership by flipping `isMember` across past orders would rewrite history — orders genuinely charged the member price would start claiming otherwise while their stored totals said the opposite. Current state and historical record must never share a column |
-| **D20** | Product discount, promotion and member discount all layer (opsi 3). Two guards are mandatory: clamp at zero at every step, and a `max_total_discount_percent` ceiling in config. `OrderItem` snapshots `unitPrice`, `promotionDiscount`, `promotionName`, `lineTotal` | Layering is what the business wants, but 20% + 25% + 10% silently becomes ~46% and `FIXED` discounts can drive a line negative — which the buyer would only discover as a meaningless validation error after uploading a receipt. The snapshot exists because a line's price becomes unreconstructable once its discount expires |
+| **D20** | Product discount, promotion and member discount all layer (opsi 3). Within a kind, **highest `priority` wins; on a tie the larger value wins**. Two guards are mandatory: clamp at zero at every step, and a `max_total_discount_percent` ceiling in config. `OrderItem` snapshots `unitPrice`, `promotionDiscount`, `promotionName`, `lineTotal` | Layering is what the business wants, but 20% + 25% + 10% silently becomes ~46% and `FIXED` discounts can drive a line negative — which the buyer would only discover as a meaningless validation error after uploading a receipt. The tie-breaker removes the last way a total could depend on row order. The snapshot exists because a line's price becomes unreconstructable once its discount expires |
+| **D21** | Field audit removed seven columns that produced nothing: `code` on the three taxonomy tables, `SizeGuide.isActive`, `SizeGuideRow.order`, `Product.productionNotes`, `Member.joinedAt`. Ruling principle: **`isActive` is a manual switch, `publishedAt` / date windows are a schedule** — a model needs both only when it needs both behaviours | Each removal deleted a second source of truth: `code` duplicated `slug`, `isActive` beside `publishedAt` had no defined combination, a row `order` could contradict `size.order`, `productionNotes` duplicated the translated `notes`, and `joinedAt` duplicated `createdAt` |
 
 ---
 
