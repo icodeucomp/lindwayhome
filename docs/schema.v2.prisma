@@ -3,25 +3,27 @@
 //
 // Assembled from CLAUDE.md §B4. Nothing reads this file: prisma.config.ts points
 // at prisma/schema.prisma. Once approved it replaces that file, then
-// db:reset → migrate → generate → seed.
+// db:reset → migrate → generate → seed → apply prisma/triggers/*.sql.
 //
-// 28 models. Four decisions taken after the first draft:
-//   · Guest → Order, Cart → OrderItem. The old names described neither table:
-//     "Guest" held the transaction, "Cart" held its line items, and the real
-//     shopping cart never touches the database at all (it lives in localStorage).
-//   · Promotion + MemberDiscount collapse into one Discount table with a `kind`
-//     discriminator. They had ten identical columns.
-//   · OrderItem snapshots the price it was sold at, because with promotions the
-//     line price can no longer be reconstructed after the fact.
-//   · Member stays: it answers "is this person a member now" (revocable), while
-//     Order.isMember answers "was this order priced as a member" (frozen).
+// 25 models. Decisions taken during review:
+//   · Guest → Order, Cart → OrderItem (D17). The old names described neither
+//     table; the real shopping cart lives in localStorage and never reaches the
+//     database.
+//   · No Discount tables (D22). Discounting is Product.discount →
+//     discountedPrice, plus the two v1 config groups for a store-wide promo and
+//     the member rate. Targeted or scheduled campaigns are out of scope.
+//   · Member stays: "is this person a member now" (revocable), while
+//     Order.isMember is "was this order priced as a member" (frozen).
+//   · OrderItem snapshots unitPrice and lineTotal so an order stays explainable
+//     after the product's price changes.
+//   · Order gains a real status plus a tracking number (D23) — the storefront
+//     already promises buyers a tracking number.
+//   · Product.stock is maintained by a database trigger, not application code
+//     (D24), because it is the number that gates overselling.
 //
-// A field audit then removed seven columns that produced nothing (D21):
-//   BrandingType.code · AudienceType.code · GarmentType.code  (slug already unique)
-//   SizeGuide.isActive        (publishedAt is the switch)
-//   SizeGuideRow.order        (size.order already orders them)
-//   Product.productionNotes   (superseded by the translated notes field)
-//   Member.joinedAt           (createdAt is the join date)
+// A field audit removed columns that produced nothing (D21): `code` on the three
+// taxonomy tables, SizeGuide.isActive, SizeGuideRow.order,
+// Product.productionNotes, Member.joinedAt.
 // =============================================================================
 
 generator client {
@@ -49,6 +51,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   handledInquiries ContactInquiry[] // F-47
+  articles         Article[] // F-42
 
   @@map("users")
 }
@@ -187,14 +190,18 @@ model Product {
   garmentTypeId  String? // single
   sizeGuideId    String?
 
-  // The product's own everyday markdown. Campaign discounts are separate rows in
-  // `Discount` and apply on top of discountedPrice (opsi 3).
+  // The only discount mechanism (D22). `discountedPrice` is stored, not derived at
+  // read time, so listings can sort and filter on the price a buyer actually pays.
+  // A store-wide promo and the member rate stay in ConfigParameter, as in v1.
   price           Decimal @db.Decimal(12, 2)
   discount        Int     @default(0)
   discountedPrice Decimal @db.Decimal(12, 2)
 
   images Json[] // file nodes
-  stock  Int    @default(0) // derived: sum(variants.quantity), zero rejected
+
+  // Maintained by the product_variant_stock_sync trigger (D24). Application code
+  // must NOT write this column — it would be overwritten on the next variant change.
+  stock Int @default(0)
 
   releasedAt     DateTime? // drives New Arrivals (F-33)
   soldCount      Int       @default(0) // += on order verification
@@ -202,7 +209,7 @@ model Product {
 
   isPreOrder Boolean @default(false)
   isFavorite Boolean @default(false) // admin-featured, NOT the wishlist (D11)
-  isActive   Boolean @default(true)
+  isActive   Boolean @default(true) // also the soft-delete flag once a product has orders
   // No productionNotes: v1 kept the "made-to-order, allow 21-25 days" line here,
   // untranslatable. That text is now ProductTranslation.notes with a global default (D9).
 
@@ -215,14 +222,12 @@ model Product {
   audiences    ProductAudience[]
   variants     ProductVariant[]
   translations ProductTranslation[]
-  discounts    DiscountProduct[]
   orderItems   OrderItem[]
 
   @@index([brandingTypeId])
   @@index([garmentTypeId])
   @@index([releasedAt])
-  @@index([soldCount])
-  @@index([bestSellerRank])
+  @@index([bestSellerRank, soldCount]) // Best Sellers sorts by rank then soldCount
   @@index([isActive, isFavorite])
   @@map("products")
 }
@@ -295,11 +300,18 @@ model Order {
   isMember Boolean @default(false) // frozen: this order was priced as a member
 
   shippingCost   Decimal @db.Decimal(12, 2)
-  purchased      Decimal @db.Decimal(12, 2) // subtotal after per-line discounts
+  purchased      Decimal @db.Decimal(12, 2) // subtotal after discounts
   totalPurchased Decimal @db.Decimal(12, 2) // grand total, incl. tax and shipping
   totalItemsSold Int
 
-  isPurchased   Boolean       @default(false) // flipping true decrements stock + soldCount
+  // `status` is the operational lifecycle an admin drives. `isPurchased` stays
+  // beside it because it is what triggers the stock + soldCount transaction, and
+  // moving that would touch the frozen zone (D23).
+  status         OrderStatus @default(AWAITING_PAYMENT)
+  isPurchased    Boolean     @default(false)
+  trackingNumber String? // the storefront promises buyers one
+  cancelledAt    DateTime?
+
   paymentMethod PaymentMethod @default(BANK_TRANSFER)
   receiptImage  Json
   instagram     String?
@@ -312,6 +324,7 @@ model Order {
   items  OrderItem[]
 
   @@index([email]) // member lookup by email runs on every checkout
+  @@index([status])
   @@index([isPurchased])
   @@index([memberId])
   @@index([createdAt])
@@ -325,12 +338,10 @@ model OrderItem {
   quantity     Int
   selectedSize String // String, not a FK — feeds hashItems (productId:size:quantity)
 
-  // Price snapshot. Without it a line's price cannot be reconstructed once the
-  // discount that produced it expires or is deleted.
-  unitPrice         Decimal @db.Decimal(12, 2) // discountedPrice at order time
-  promotionDiscount Decimal @default(0) @db.Decimal(12, 2) // per-unit rupiah taken off
-  promotionName     String? // denormalised so the line survives discount deletion
-  lineTotal         Decimal @db.Decimal(12, 2) // (unitPrice - promotionDiscount) * quantity
+  // Price snapshot. The product's price can change after the order; without this
+  // the line could not be explained afterwards.
+  unitPrice Decimal @db.Decimal(12, 2) // discountedPrice at order time
+  lineTotal Decimal @db.Decimal(12, 2) // unitPrice * quantity
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -344,69 +355,23 @@ model OrderItem {
 }
 
 // =============================================================================
-// MEMBERS & DISCOUNTS
-// Promotion and MemberDiscount had ten identical columns, so they are one table
-// separated by `kind`. `scope` is gone: an empty join table means "applies to
-// everything", which cannot drift out of sync the way a scope enum could.
-//
-// Prisma cannot express "kind = MEMBER must have no product rows" — the service
-// layer enforces it, like the mandatory-EN-translation rule.
+// MEMBERS
+// The member rate itself is a ConfigParameter (`member_discount`, `member_type`),
+// as in v1. This table exists so membership can be revoked without rewriting the
+// order history that Order.isMember records (D19).
 // =============================================================================
 
 model Member {
   id        String   @id @default(cuid())
   email     String   @unique // upserted on membership activation (§B6.4)
   fullname  String?
-  isActive  Boolean  @default(true) // false = membership revoked, without touching order history
+  isActive  Boolean  @default(true) // false = revoked, without touching order history
   createdAt DateTime @default(now()) // this IS the join date — no separate joinedAt
   updatedAt DateTime @updatedAt
 
-  orders    Order[]
-  discounts DiscountMember[]
+  orders Order[]
 
   @@map("members")
-}
-
-model Discount {
-  id           String       @id @default(cuid())
-  name         String
-  kind         DiscountKind // PROMOTION applies per line, MEMBER applies to the subtotal
-  discountType DiscountType
-  value        Decimal      @db.Decimal(12, 2) // percent if PERCENTAGE, rupiah if FIXED
-  priority     Int          @default(0) // highest wins; on a tie the larger value wins (D20)
-  startsAt     DateTime?
-  endsAt       DateTime?
-  isActive     Boolean      @default(true)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-
-  products DiscountProduct[] // empty = every product  (kind = PROMOTION)
-  members  DiscountMember[] // empty = every member   (kind = MEMBER)
-
-  @@index([kind, isActive, startsAt, endsAt])
-  @@map("discounts")
-}
-
-model DiscountProduct {
-  discountId String
-  productId  String
-
-  discount Discount @relation(fields: [discountId], references: [id], onDelete: Cascade)
-  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@id([discountId, productId])
-  @@map("discount_products")
-}
-
-model DiscountMember {
-  discountId String
-  memberId   String
-
-  discount Discount @relation(fields: [discountId], references: [id], onDelete: Cascade)
-  member   Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
-
-  @@id([discountId, memberId])
-  @@map("discount_members")
 }
 
 // =============================================================================
@@ -444,6 +409,7 @@ model Article {
   id          String    @id @default(cuid())
   slug        String    @unique
   categoryId  String
+  authorId    String? // nullable so deleting an admin does not delete their articles
   image       Json // file node — same resolveFiles pipeline as product images
   imageAlt    String?
   featured    Boolean   @default(false)
@@ -452,6 +418,7 @@ model Article {
   updatedAt   DateTime  @updatedAt
 
   category     ArticleCategory      @relation(fields: [categoryId], references: [id])
+  author       User?                @relation(fields: [authorId], references: [id])
   translations ArticleTranslation[]
 
   @@index([categoryId])
@@ -510,10 +477,15 @@ model ContactInquiry {
   otherDetail String? // only when inquiryType = OTHER
   message     String
   status      InquiryStatus @default(NEW)
-  handledAt   DateTime?
-  handledById String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+
+  // What the admin actually did. Without it, HANDLED records that an inquiry was
+  // closed but not how, which is useless a month later.
+  handlingNote String?
+  handledAt    DateTime?
+  handledById  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   handledBy User? @relation(fields: [handledById], references: [id])
 
@@ -586,9 +558,12 @@ model Location {
 
 // =============================================================================
 // ENUMS
-// `Categories` is deleted — replaced by the three taxonomy tables.
-// `PromotionScope` and `MemberScope` are deleted — an empty join table now means
-// "applies to everything".
+// Deleted relative to v1 and to earlier drafts:
+//   Categories                      → the three taxonomy tables
+//   PromotionScope, MemberScope     → the Discount tables they belonged to
+//   DiscountKind                    → same
+// DiscountType stays: it is the shape of the `tax_type`, `promo_type` and
+// `member_type` config values, exactly as in v1.
 // =============================================================================
 
 enum Locale {
@@ -611,9 +586,12 @@ enum DiscountType {
   FIXED
 }
 
-enum DiscountKind {
-  PROMOTION
-  MEMBER
+enum OrderStatus {
+  AWAITING_PAYMENT
+  PAID
+  SHIPPED
+  COMPLETED
+  CANCELLED
 }
 
 enum InquiryType {

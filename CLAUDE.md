@@ -200,6 +200,8 @@ Ordered by severity. Items marked **→ fixed in v2** are addressed by the revis
 10. **No `SUPER_ADMIN`-gated route exists** despite the hierarchy.
 11. **Missing shipping config rows fail silently** into hardcoded defaults, so a partially-seeded database produces plausible but wrong prices.
 12. **Bank account details are hardcoded** in `payment-step.tsx` instead of living in config. **→ fixed in v2 (§B4.7).**
+13. **`DELETE /api/products/[id]` hard-deletes** — once a product has been ordered the `Cart`/`OrderItem` foreign key blocks it, so the endpoint returns a 500 with a raw database error instead of a usable message. **→ becomes a soft delete in v2 phase 2.**
+14. **`Order` has no lifecycle beyond `isPurchased`** — no way to express cancelled or shipped, and nowhere to store a tracking number, although `how-to-shop.tsx` already promises buyers one. **→ fixed in v2 (D23).**
 
 ---
 
@@ -212,7 +214,7 @@ Five shifts, in order of blast radius:
 1. **Bilingual (EN/ID)** — every public route moves under `/[lang]/`, and translatable content moves into per-entity translation tables.
 2. **Taxonomy replaces the category enum** — three independent admin-managed axes (branding, audience, garment) instead of one enum.
 3. **Sizes become relational** — a `Size` master plus `ProductVariant` per product×size, with reusable size guides.
-4. **Discounts become a real entity** — one `Discount` table covering both promotions and member discounts, with product and member targeting and validity windows. This forces the price pipeline to become per-line, and brings a line-level price snapshot with it (D18, D20).
+4. **Orders gain a real lifecycle** — `Order` replaces `Guest`, `OrderItem` replaces `Cart`, an `OrderStatus` enum replaces a lone boolean, and each line snapshots the price it sold at (D17, D23). Discounting itself is unchanged from v1 (D22).
 5. **New content subsystems** — Journal, FAQ, Contact inquiries, plus richer product content via Tiptap.
 
 The checkout token, shipping/zone calculation, order lifecycle, upload pipeline, guest checkout, membership, logging, auth, and handler conventions are **preserved**. See §B6.3 for the two unavoidable exceptions.
@@ -339,7 +341,14 @@ product override (active locale)
 
 All ids are `cuid()` (D7). All tables follow the existing `@@map("snake_case")` convention. Sections B4.1 → B4.9 read top-to-bottom as the complete target `schema.prisma`.
 
-**One invariant Prisma cannot express:** every translatable entity must always have an `EN` translation row; `ID` is optional (D3). Enforce this in the service layer on create — the whole fallback chain assumes EN exists.
+**Four invariants Prisma cannot express.** Each is a class of silent bug, so each is enforced in the service layer on write *and* checked by `npm run db:check` (F-56) — the repo has no test framework, so that script is the only automated guard.
+
+| Invariant | What breaks without it |
+| --- | --- |
+| Every translatable entity has an `EN` translation row (`ID` optional, D3) | A product with no translation rows is creatable and renders **nameless** everywhere, because `Product` has no `name` column |
+| `Size.code` matches a `package_dimensions` config key exactly | Checkout returns 404 for that size — discovered by the buyer, not the admin |
+| `ProductVariant.sizeId` is one of the sizes in the product's `sizeGuide` | Orphan variants that never appear in the size table |
+| `products.stock` equals `SUM(product_variants.quantity)` | Overselling. This one is additionally enforced by a database trigger (D24), so the check is a backstop rather than the only line of defence |
 
 ### B4.1 Taxonomy
 
@@ -498,7 +507,6 @@ model Product {
   audiences       ProductAudience[]
   variants        ProductVariant[]
   translations    ProductTranslation[]
-  discounts       DiscountProduct[]
   orderItems      OrderItem[]
 
   @@index([brandingTypeId])
@@ -686,9 +694,19 @@ model ContactInquiry {
 
 ### B4.6 Members and discounts
 
-Multiple concurrent promotions and targeted member discounts cannot be expressed as key-value config, so they become tables (D12).
+**There is no discount entity** (D22). Discounting is exactly what v1 already did:
 
-`Promotion` and `MemberDiscount` had ten identical columns, so they are **one table** separated by `kind` (D18). `scope` is gone with them: an empty join table now means "applies to everything", which cannot drift out of sync the way a `scope` enum could.
+| Layer | Where | Scope |
+| --- | --- | --- |
+| Per-product markdown | `Product.discount` → `discountedPrice` (stored column) | one product |
+| Store-wide promo | config `promotion_discount`, `promo_type` | every product |
+| Member rate | config `member_discount`, `member_type` | every member |
+
+An earlier draft modelled promotions and member discounts as tables so they could target a subset of products or members and carry a validity window. That was dropped: targeted and scheduled campaigns are not something Lindway runs, and the tables brought three problems that vanish with them — the effective price had to be resolved at read time in two separate places (so the price shown could differ from the price charged), the checkout token could not keep per-line snapshots consistent with the signed total, and layered `FIXED` discounts could drive a line negative.
+
+With `discountedPrice` back to being a stored column, listings can sort and filter on the price a buyer actually pays, and the pricing pipeline is v1's again.
+
+`Member` remains, for one reason only:
 
 ```prisma
 model Member {
@@ -700,51 +718,8 @@ model Member {
   updatedAt DateTime @updatedAt
 
   orders    Order[]
-  discounts DiscountMember[]
 
   @@map("members")
-}
-
-model Discount {
-  id           String       @id @default(cuid())
-  name         String
-  kind         DiscountKind // PROMOTION applies per line, MEMBER applies to the subtotal
-  discountType DiscountType
-  value        Decimal      @db.Decimal(12, 2)  // percent if PERCENTAGE, rupiah if FIXED
-  priority     Int          @default(0)         // highest wins; no stacking within a kind
-  startsAt     DateTime?
-  endsAt       DateTime?
-  isActive     Boolean      @default(true)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-
-  products DiscountProduct[]  // empty = every product  (kind = PROMOTION)
-  members  DiscountMember[]   // empty = every member   (kind = MEMBER)
-
-  @@index([kind, isActive, startsAt, endsAt])
-  @@map("discounts")
-}
-
-model DiscountProduct {
-  discountId String
-  productId  String
-
-  discount Discount @relation(fields: [discountId], references: [id], onDelete: Cascade)
-  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@id([discountId, productId])
-  @@map("discount_products")
-}
-
-model DiscountMember {
-  discountId String
-  memberId   String
-
-  discount Discount @relation(fields: [discountId], references: [id], onDelete: Cascade)
-  member   Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
-
-  @@id([discountId, memberId])
-  @@map("discount_members")
 }
 ```
 
@@ -757,9 +732,7 @@ model DiscountMember {
 
 Revoking membership by flipping `Order.isMember` across every past order would rewrite history: orders genuinely charged the member price would start claiming otherwise, while `Order.totalPurchased` still holds the discounted figure. `Member` exists so current state and historical record never share a column. `Order.memberId` links the two, so an admin can open a member and see their orders.
 
-**Prisma cannot express** "`kind = MEMBER` must have no product rows". The service layer enforces it, like the mandatory-EN-translation rule. It cannot happen through the admin UI — Promotions and Member Discounts are separate screens (§B2.3).
-
-**Resolution order within a kind** (D20): highest `priority` wins; on a tie the **larger value** wins. The tie-breaker exists so the outcome never depends on row order — a total that differs between two identical requests is unacceptable for money.
+The member rate itself is a config value, so `Member` carries no discount fields — it is a registry and a revocation switch, nothing more.
 
 ### B4.7 Config parameters after the split
 
@@ -773,12 +746,13 @@ The rule that decides where a setting lives:
 | `shipping` | `volume_divider`, `price_per_kg`, `price_per_km`, `base_price`, `min_shipping`, `origin_lat`, `origin_long`, `earth_radius_km`, `shipping_zones` | unchanged |
 | `package_dimensions` | `XS`…`XXXL` | **renamed** from `product_dimensions` (D6); now a *default*, overridable per variant |
 | `tax` | `tax_rate`, `tax_type` | unchanged |
-| `pricing` | `max_total_discount_percent` | **new** — the last brake on layered discounts (D20) |
+| `promotions` | `promotion_discount`, `promo_type` | unchanged from v1 — one store-wide promo (D22) |
+| `members` | `member_discount`, `member_type` | unchanged from v1 — one member rate (D22) |
 | `product_defaults` | `default_notes`, `default_fabric_information`, `default_shipping_delivery`, `default_return_policy` | **new**, each `{ en, id }` Tiptap JSON |
 | `store_profile` | `bank_accounts`, contact/social links | **new** — moves the hardcoded bank details out of `payment-step.tsx` (A9.12) |
 | `media` | `qris_image` | replaces the old `images` group |
 
-Removed from config, now rows in the `Discount` table: the `promotions` and `members` groups both become `Discount` records distinguished by `kind` (D18).
+Nothing moves out of config. An earlier draft turned `promotions` and `members` into a `Discount` table; that was reversed (D22).
 
 **Deleted outright:** the `videos` group and its `videos_curated_collection` key, together with the `/curated-collections` page, `video-carousel.tsx`, and the carousel section on the v1 home page (D16). Nothing replaces them. The `VIDEO`/`VIDEOS` `ParameterType` values and the video upload endpoint stay — they are generic and cost nothing to keep.
 
@@ -837,10 +811,8 @@ model OrderItem {
 
   // Price snapshot (D20). Without it a line's price cannot be reconstructed once
   // the discount that produced it expires or is deleted.
-  unitPrice         Decimal @db.Decimal(12, 2)              // discountedPrice at order time
-  promotionDiscount Decimal @default(0) @db.Decimal(12, 2)  // per-unit rupiah taken off
-  promotionName     String?                                 // denormalised, survives discount deletion
-  lineTotal         Decimal @db.Decimal(12, 2)              // (unitPrice - promotionDiscount) * quantity
+  unitPrice Decimal @db.Decimal(12, 2)  // discountedPrice at order time
+  lineTotal Decimal @db.Decimal(12, 2)  // unitPrice * quantity
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -857,7 +829,7 @@ model OrderItem {
 Three notes:
 
 - `selectedSize` stays a **String**, not a FK to `Size`. It feeds `hashItems` inside the checkout token, so changing it would alter the signature shape of the one invariant that must not move (D8). Variants are resolved by `(productId, size.code)`.
-- `promotionName` is a denormalised string rather than a FK on purpose: an FK would break or null the historical line when an admin deletes the discount. For an audit record, denormalisation is the correct choice.
+- The price snapshot exists because `Product.discountedPrice` is mutable — an admin re-pricing a product would otherwise silently rewrite what past orders appear to have charged.
 - `Order` gains four indexes it never had. The email one matters most — member lookup by email runs on every single checkout.
 
 `User`, `ConfigParameterGroup`, `ConfigParameter`, and `Location` keep their v1 shape (§A6), with one addition:
@@ -876,23 +848,22 @@ enum Locale        { EN  ID }
 enum Role          { SUPER_ADMIN  ADMIN }
 enum PaymentMethod { BANK_TRANSFER  QRIS }
 enum DiscountType  { PERCENTAGE  FIXED }
-enum DiscountKind  { PROMOTION  MEMBER }
+enum OrderStatus   { AWAITING_PAYMENT  PAID  SHIPPED  COMPLETED  CANCELLED }
 enum InquiryType   { PRODUCT_INQUIRY  ORDER_SUPPORT  CUSTOM_ORDER  WHOLESALE_B2B  PARTNERSHIP  OTHER }
 enum InquiryStatus { NEW  IN_PROGRESS  HANDLED  ARCHIVED }
 enum ParameterType { TEXT  NUMBER  DECIMAL  BOOLEAN  SELECT  MULTI_SELECT  IMAGE  IMAGES
                      VIDEO  VIDEOS  JSON  TEXTAREA  COLOR  DATE  DATETIME }
 ```
 
-Three enums are gone relative to v1 plus the first draft:
+`Categories` is deleted — replaced by the three taxonomy tables. `PromotionScope`, `MemberScope` and `DiscountKind` appeared in an earlier draft and went with the `Discount` tables (D22).
 
-- `Categories` — replaced by the three taxonomy tables.
-- `PromotionScope` and `MemberScope` — replaced by "an empty join table means applies to everything" (D18), so scope can no longer contradict the rows it describes.
+`DiscountType` keeps exactly its v1 job: it is the shape of the `tax_type`, `promo_type` and `member_type` config values, not a column on any model.
 
-`DiscountType` gains a second job: it was only ever a config *value* in v1 (`tax_type`, `promo_type`, `member_type`), and is now also a real column on `Discount`.
+`OrderStatus` is new (D23) — v1 expressed the whole order lifecycle as one boolean.
 
 ### B4.10 Table count
 
-**28 models**, up from 7. Eight are translation or join tables — the cost of bilingual content plus many-to-many taxonomy.
+**25 models**, up from 7. Six are translation or join tables — the cost of bilingual content plus many-to-many taxonomy.
 
 | Group | Models |
 | --- | --- |
@@ -901,11 +872,11 @@ Three enums are gone relative to v1 plus the first draft:
 | Sizing | `Size`, `SizeGuide`, `SizeGuideRow`, `SizeGuideTranslation` |
 | Catalog | `Product`, `ProductAudience`, `ProductVariant`, `ProductTranslation` |
 | Orders | `Order`, `OrderItem` *(renamed from Guest / Cart)* |
-| Members & discounts | `Member`, `Discount`, `DiscountProduct`, `DiscountMember` |
+| Members | `Member` |
 | Content | `ArticleCategory`, `ArticleCategoryTranslation`, `Article`, `ArticleTranslation`, `Faq`, `FaqTranslation`, `ContactInquiry` |
 | Settings | `ConfigParameterGroup`, `ConfigParameter`, `Location` *(unchanged)* |
 
-The full file is assembled and validated at [`prisma/schema.v2.prisma`](prisma/schema.v2.prisma) — a review copy. `prisma/schema.prisma` still holds v1 until phase 1 runs.
+The full file is assembled and validated at [`docs/schema.v2.prisma`](docs/schema.v2.prisma) — a review copy, kept outside `prisma/` because the Prisma editor extension merges every `.prisma` file in that folder and would report the v1 and v2 models as duplicates. `prisma/schema.prisma` still holds v1 until phase 1 runs.
 
 ## B5. Target functional requirements `[TARGET]`
 
@@ -938,12 +909,12 @@ Numbering continues from v1. F-1…F-29 remain unless superseded.
 - **F-47 Contact inbox** — a dedicated admin section (`/admin/dashboard/inquiries`) for managing incoming inquiries, not just an email relay. It lists inquiries with pagination and the shared list-query convention, filters by `status` and `inquiryType` plus the usual date filters, searches name/email/message, opens a detail view with the full message, and transitions `status` (`NEW → IN_PROGRESS → HANDLED`, or `ARCHIVED`). Moving to `HANDLED` stamps `handledAt` and `handledById` from the authenticated admin. Unread count (`status = NEW`) shows as a sidebar badge.
 
 ### B5.5 Pricing
-- **F-48 Promotion management** — several concurrent `Discount` records with `kind = PROMOTION`, each targeting all products or a chosen set, with a validity window.
-- **F-49 Member registry** — `Member` rows created on membership activation, listable and searchable by admin, revocable via `isActive` without touching order history.
-- **F-50 Targeted member discounts** — `Discount` records with `kind = MEMBER`, applying to all members or a chosen set, with a validity window.
+- **F-48 Member registry** — `Member` rows created on membership activation, listable and searchable by admin, revocable via `isActive` without touching order history (D19).
+- **F-49 Single pricing helper** — one `resolveUnitPrice` used by listings, product detail, cart and checkout. Two implementations would let the price shown drift from the price charged.
+- **F-50 Order lifecycle** — admin drives `OrderStatus` and records a tracking number; cancelling stamps `cancelledAt` (D23).
 - **F-51 Server-computed subtotal** — the checkout GET derives the subtotal from database prices instead of trusting the client (fixes A9.1).
-- **F-55 Discount guards** — clamp every step at zero and honour `max_total_discount_percent`, so layered discounts can never produce a negative or runaway total (D20, §B6.3).
-- **F-56 Line-level price snapshot** — every `OrderItem` records `unitPrice`, `promotionDiscount`, `promotionName` and `lineTotal` at order time, so a line's price stays explainable after the discount that produced it expires (D20).
+- **F-55 Line-level price snapshot** — every `OrderItem` records `unitPrice` and `lineTotal` at order time, so an order stays explainable after the product is re-priced.
+- **F-56 Invariant check script** — `npm run db:check` reports violations of the four rules Prisma cannot express (§B4 preamble). With no test framework in the repo, this is the only automated guard.
 
 ### B5.6 Security fixes carried by v2
 - **F-52** `POST /api/auth/register` requires `SUPER_ADMIN` and ignores a client-supplied `role` escalation.
@@ -980,28 +951,22 @@ The token invariant is unchanged and strengthened: **prices reach `Order` only f
 
 ```
 for each cart line:
-    unit  = product.discountedPrice                ← the product's own markdown, a stored column
-    promo = best Discount kind=PROMOTION matching this product, in window, highest priority
-    line  = max(0, unit − promo) × quantity        ← clamp (D20)
-subtotal = Σ line                                  ← computed server-side from the DB (F-51)
-member   = best Discount kind=MEMBER matching this email, in window, highest priority
-subtotal = max(0, subtotal − member)               ← clamp (D20)
-taxed    = subtotal + tax
-total    = taxed + shippingCost
+    unit = product.discountedPrice     ← stored column, the product's own markdown
+    line = unit × quantity
+subtotal = Σ line                      ← computed server-side from the DB (F-51)
+         − member_discount             ← config rate, if the buyer is an active Member
+         + tax                         ← config rate
+         + shippingCost
 sign token { shippingCost, totalPurchased, purchased, totalItemsSold, itemsHash, expiresAt }
 ```
 
-**Discounts layer, they do not merge.** A product marked down 20% that also matches a 25% promotion and a 10% member discount ends up ~46% below list — nobody chose 46%, it emerges. Two guards, both required (D20):
+This is v1's arithmetic (§A5.1 step 7). Only **one** thing changes, and it is the fix for gap A9.1:
 
-- **Clamp at zero at every step.** `FIXED` discounts do not scale with price, so a 80.000 promotion on a 100.000 item followed by a 50.000 member discount produces a negative subtotal. Unclamped, that negative is signed into the token and then rejected by `CreateOrderSchema.positive()` — the buyer discovers it after uploading a receipt, with a validation error that explains nothing.
-- **A ceiling in config.** `max_total_discount_percent` in the `pricing` group, so there is one last brake that does not depend on whoever typed the numbers remembering the other two.
+> `GET /api/orders/checkout` stops accepting `purchased` and `totalItemsSold` from the client and derives them from database prices. Everything else — `hashItems`, the 15-minute window, HMAC signing, the POST verification order, the stock transaction — stays byte-identical.
 
-Two departures from "freeze the checkout subsystem", both forced by the decisions above and both intentional:
+Because `discountedPrice` is a stored column rather than something resolved per request, there is no second place where a price could be computed differently, and no way for a line snapshot to disagree with the signed total. Both of those were real risks in the `Discount`-table draft; dropping it removed them (D22).
 
-1. `GET /api/orders/checkout` stops accepting `purchased` and `totalItemsSold` from the client and derives them.
-2. `calculateTotalPrice` becomes per-line rather than a single global percentage.
-
-Everything else — `hashItems`, the 15-minute window, HMAC signing, the POST verification order, the stock transaction — stays byte-identical. `logCalculation` gains per-line entries so a pricing dispute can still be traced end to end.
+`logCalculation` keeps its v1 coverage.
 
 ### B6.4 Membership
 
@@ -1029,9 +994,9 @@ Each phase ends with `npx tsc --noEmit` clean, `npm run build` clean, and the af
 | Phase | Scope | Rationale |
 | --- | --- | --- |
 | **0 — Foundation** ✅ **DONE** | `[lang]` routing + dictionaries · design tokens (`#BA8164`, `#39322C`, `#FAF6F5`, `#F7F3F0`, `#D2D2CA`) · Raleway + Inter via `next/font/google` · new header/footer shell · `tiptap-editor.tsx` shared component · delete `/curated-collections` and `video-carousel.tsx` (D16) | Touches every file. Doing it later means redoing every other phase |
-| **1 — Data model** | Drop and rebuild the schema: taxonomy, Size/SizeGuide/Variant, Product + translations, pricing entities, content models · new seed (without `videos_curated_collection`) · admin CRUD for taxonomy, sizes, size guides · wire the Collections mega-menu to the taxonomy tables | Everything downstream depends on these tables |
-| **2 — Catalog** | Product form (size guide → variants → package dimensions), listings per axis, product detail, New Arrivals, Best Sellers, wishlist | Consumes phase 1 |
-| **3 — Pricing** | `Discount` admin (both kinds) + member registry, per-line price pipeline, server-computed subtotal (F-51), discount guards (F-55), line snapshot (F-56) | Isolated; the most delicate, so it runs alone |
+| **1 — Data model** | Drop and rebuild the schema: taxonomy, Size/SizeGuide/Variant, Product + translations, Order/OrderItem, Member, content models · apply `product-stock.sql` · new seed · `resolveTranslation` + `resolveUnitPrice` helpers · `db:check` · admin CRUD for taxonomy, sizes, size guides · wire the Collections mega-menu to the taxonomy tables | Everything downstream depends on these tables |
+| **2 — Catalog** | Product form (size guide → variants → package dimensions), listings per axis, product detail, New Arrivals, Best Sellers, wishlist, product **soft delete** (A9.13) | Consumes phase 1 |
+| **3 — Orders & pricing** | Member registry, `OrderStatus` + tracking number in the admin order screen, server-computed subtotal (F-51), line snapshot (F-55) | Touches the checkout path, so it runs alone |
 | **4 — Content** | Journal, FAQ, Contact form + inbox, public size guide page | Independent of 2 and 3; can run in parallel if needed |
 | **5 — Hardening** | F-52…F-54 security fixes, `DELETE /api/orders/[id]` (A9.6), Denpasar origin coordinates, seed corrections | Deliberately last so it is not lost in the churn |
 
@@ -1066,9 +1031,12 @@ Agreed in discussion. Do not reopen without a new decision recorded here.
 | **D15** | Contact Inbox is a standalone top-level admin menu with full inquiry management (filter, search, detail, status transitions), not an email relay and not a Content sub-item | It is a daily work queue, not authored content; status tracking is what makes an inquiry not get dropped |
 | **D16** | The Collections header menu is a three-column mega-menu rendered from `BrandingType`, `AudienceType`, and `GarmentType`. Curated Collections is deleted — page, component, home-page section, and the `videos_curated_collection` config key | Driving the nav from the taxonomy tables means a new branding or garment appears in the menu without a deploy, and it gives garment/audience listings a header entry point |
 | **D17** | `Guest` → `Order`, `Cart` → `OrderItem`, and the endpoints follow (`/api/guests/*` → `/api/orders/*`) | Neither name described its table. The real shopping cart is `localStorage` and never reaches the database, so a table called `Cart` holding order lines actively misleads. Renaming is safe because D8 protects behaviour, not identifiers — and doing it during the phase-1 rewrite costs nothing extra |
-| **D18** | `Promotion` and `MemberDiscount` collapse into one `Discount` table with a `kind` discriminator and two join tables. `PromotionScope` and `MemberScope` are deleted — an empty join table means "applies to everything" | The two had ten identical columns, so one admin form, one validation path, and one "best applicable discount" resolver serve both. Deriving scope from the join rows removes a column that could contradict the rows it described |
+| ~~**D18**~~ | ~~`Promotion` and `MemberDiscount` collapse into one `Discount` table~~ | **Superseded by D22** — the tables themselves were dropped |
 | **D19** | `Member` is kept alongside `Order.isMember`, linked by `Order.memberId` | They answer different questions. Revoking membership by flipping `isMember` across past orders would rewrite history — orders genuinely charged the member price would start claiming otherwise while their stored totals said the opposite. Current state and historical record must never share a column |
-| **D20** | Product discount, promotion and member discount all layer (opsi 3). Within a kind, **highest `priority` wins; on a tie the larger value wins**. Two guards are mandatory: clamp at zero at every step, and a `max_total_discount_percent` ceiling in config. `OrderItem` snapshots `unitPrice`, `promotionDiscount`, `promotionName`, `lineTotal` | Layering is what the business wants, but 20% + 25% + 10% silently becomes ~46% and `FIXED` discounts can drive a line negative — which the buyer would only discover as a meaningless validation error after uploading a receipt. The tie-breaker removes the last way a total could depend on row order. The snapshot exists because a line's price becomes unreconstructable once its discount expires |
+| ~~**D20**~~ | ~~Discounts layer, with clamps and a ceiling~~ | **Superseded by D22.** The layering it guarded against no longer exists. The `OrderItem` price snapshot survives, simplified to `unitPrice` + `lineTotal` |
+| **D22** | **No `Discount` entity.** Discounting is `Product.discount` → `discountedPrice`, plus the v1 config groups `promotions` (store-wide) and `members` (member rate). Targeted and scheduled campaigns are out of scope | The tables bought targeting and validity windows that Lindway does not run, and cost three real risks: the effective price had to be resolved at read time in two places, so the price shown could differ from the price charged; the token carried only aggregates, so per-line snapshots could contradict the signed total; and layered `FIXED` discounts could drive a line negative, surfacing as a meaningless validation error after the buyer had already uploaded a receipt. Keeping `discountedPrice` a stored column also keeps price sorting and filtering in SQL |
+| **D23** | `Order` gains `status` (`OrderStatus`), `trackingNumber` and `cancelledAt`. `isPurchased` stays beside `status`. `ContactInquiry` gains `handlingNote`; `Article` gains `authorId` | v1 expressed the whole order lifecycle as one boolean — no way to say cancelled or shipped, and nowhere to put the tracking number the storefront already promises buyers. `isPurchased` is kept because it is what triggers the stock and `soldCount` transaction, and moving that would touch the frozen zone. `handlingNote` records *how* an inquiry was resolved, which `HANDLED` alone does not |
+| **D24** | `Product.stock` is maintained by a Postgres trigger (`prisma/triggers/product-stock.sql`), not by application code | It is the number that gates overselling. A trigger makes drift structurally impossible rather than merely unlikely — any write path that forgot to recompute would otherwise let the store sell stock it does not have, silently. Consequence: application code must never write `stock` |
 | **D21** | Field audit removed seven columns that produced nothing: `code` on the three taxonomy tables, `SizeGuide.isActive`, `SizeGuideRow.order`, `Product.productionNotes`, `Member.joinedAt`. Ruling principle: **`isActive` is a manual switch, `publishedAt` / date windows are a schedule** — a model needs both only when it needs both behaviours | Each removal deleted a second source of truth: `code` duplicated `slug`, `isActive` beside `publishedAt` had no defined combination, a row `order` could contradict `size.order`, `productionNotes` duplicated the translated `notes`, and `joinedAt` duplicated `createdAt` |
 
 ---
@@ -1088,6 +1056,13 @@ npm run db:migrate     # prisma migrate dev
 npm run db:seed        # tsx prisma/seed.ts
 npm run db:studio      # prisma studio
 npm run db:reset       # migrate reset --force (DESTRUCTIVE — confirm first)
+npm run db:check       # [TARGET] report violations of the §B4 invariants
+```
+
+**`prisma/migrations/` is gitignored**, so migration history does not survive a fresh clone and a hand-edited migration would be lost. Anything the schema cannot express therefore lives in a tracked file and is applied explicitly after migrating:
+
+```bash
+psql "$DATABASE_URL" -f prisma/triggers/product-stock.sql   # idempotent, re-run after every db:reset
 ```
 
 **There is no test framework installed** — no runner, no test files. Verification is `npx tsc --noEmit` + `npm run lint` + exercising the flow by hand.
