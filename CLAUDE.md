@@ -961,6 +961,55 @@ Phase 1 also carries the D17 rename (`Guest`→`Order`, `Cart`→`OrderItem`, `/
 
 Phases 0 and 1 must not be split — both touch the whole tree, and a half-migrated schema means doing the work twice.
 
+## C1. Phase 1 work order
+
+Phase 1 has to flip the schema, three type files, six API routes and one admin screen **in one go**. There is no test framework, so a route that gets missed is only discovered when someone exercises that flow by hand — possibly weeks later. This is the checklist; work it in order.
+
+`prisma/schema.prisma`, `src/types/zod.ts`, `src/types/api.ts` and `src/utils/api.ts` are deliberately still v1 at the start of this phase. They are not leftovers: they define the contract that the running system speaks, and 16 files depend on them, including the whole checkout subsystem. They cannot move before the schema does.
+
+**1 — Database (destructive, confirm first)**
+
+1. `docs/schema.v2.prisma` → `prisma/schema.prisma`
+2. `npm run db:reset` · `npm run db:migrate` · `npm run db:generate`
+3. `psql "$DATABASE_URL" -f prisma/triggers/product-stock.sql`
+4. Rewrite `prisma/seed.ts`: users, `Size` master, config groups (`shipping`, `package_dimensions`, `tax`, `promotions`, `members`, `product_defaults`, `store_profile`, `media`), size guides from `prisma/seed-data/size-guides.ts`
+
+**2 — Contract**
+
+| File | Change |
+| --- | --- |
+| `types/zod.ts` | Drop `CategoriesEnum`. `ProductSchema` loses `name`/`description`/`notes`/`sizes`/`category`/`productionNotes`, gains `branding`/`garment`/`audiences`/`slug`/`releasedAt`/variants/translations. `GuestSchema` → `OrderSchema` + `status`/`trackingNumber`. `ShippingCalculateSchema` stops accepting `purchased` and `totalItemsSold` (F-51). New: `SizeSchema`, `SizeGuideSchema`, `ArticleSchema`, `FaqSchema`, `ContactInquirySchema` |
+| `types/api.ts` | Drop the `Categories` enum. `Product` carries translations + variants. `Guest`/`CreateGuest`/`EditGuest` → `Order`/`CreateOrder`/`EditOrder`. `DashboardData` becomes per-branding instead of three hardcoded fields |
+| `utils/api.ts` | `guestsApi` → `ordersApi`, `guestCheckoutApi` → `orderCheckoutApi`, paths `/guests/*` → `/orders/*` |
+
+**3 — Server**
+
+| File | Change |
+| --- | --- |
+| `api/products/route.ts`, `[id]/route.ts` | Filter by `branding`/`garment`/`audiences`; search joins `ProductTranslation` on the active locale **plus EN** (§B3.3); write variants + translations; never write `stock` (D24) |
+| `api/dashboard/route.ts` | Delete `$queryRawUnsafe`; Prisma `groupBy` over variants by branding (closes A9.5) |
+| `api/guests/*` → `api/orders/*` | Rename. Stock check and decrement read `ProductVariant`. `soldCount` increments in the same transaction. `OrderItem` gets `unitPrice`/`lineTotal`. Checkout GET derives the subtotal server-side |
+| `services/shipping.ts` | `getProductDimensionsBySize(size)` → `getPackageDimensions(productId, sizeCode)` (§B6.2) |
+
+Untouched: `api/auth/*`, `api/locations/*`, `api/config/*`, `api/files/*`.
+
+**4 — Client**
+
+| File | Change |
+| --- | --- |
+| `hooks/useCart.ts` | Group by `branding` instead of `category`; the cart item shape follows `ProductTranslation` |
+| `components/ui/carts/*` | `CreateGuest` → `CreateOrder` in `order-summary`, `checkout-form`, `payment-step`, `complete-step` |
+| `admin/guests-dashboard.tsx` + `slicing/guests-lists.tsx` | Become the Order screen: `status`, `trackingNumber`, `OrderItem` snapshots |
+
+**5 — New in this phase**
+
+- `resolveTranslation` (§B3.2) and `resolveUnitPrice` (F-49) — one implementation each, before anything computes a price or a label twice
+- `npm run db:check` (F-56) — the four invariants from §B4
+- Compile-time assertion that `src/static/taxonomy.ts` keys match the Prisma enums
+- Admin CRUD for `Size` and `SizeGuide`
+
+**Green checkpoint.** The tree will not compile between steps 1 and 4 — that is expected. Phase 1 is not done until `npx tsc --noEmit` and `npm run build` are clean **and** a checkout has been driven end to end by hand: add to cart → calculate → pay → admin verifies → stock and `soldCount` both moved.
+
 The Collections mega-menu was built in phase 0 against a placeholder list, on the assumption that phase 1 would swap it for a database query. That swap will never happen — D25 made the taxonomy static, so `src/static/taxonomy.ts` **is** the final source, and the menu is already complete.
 
 ---

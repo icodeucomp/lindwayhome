@@ -333,7 +333,6 @@ export interface ConfigParameterData {
   tax_rate: number;
   tax_type: DiscountType;
   qris_image: Files;
-  videos_curated_collection: Files[];
 }
 
 export interface DashboardData {
