@@ -49,7 +49,7 @@ export const Products = () => {
           <div className="w-full space-y-1 text-center sm:space-y-2 text-gray">
             <h4 className="text-xl font-semibold sm:text-2xl">My Lindway</h4>
             <p className="text-base font-light sm:text-lg">Embracing Artistry, Celebrating Culture</p>
-            <LocaleLink href="/my-lindway" className="block p-1 mx-auto text-xs font-medium border-b sm:p-2 sm:text-sm text-gray w-max">
+            <LocaleLink href="/collections/my-lindway" className="block p-1 mx-auto text-xs font-medium border-b sm:p-2 sm:text-sm text-gray w-max">
               Discover Collection
             </LocaleLink>
           </div>
@@ -58,7 +58,7 @@ export const Products = () => {
           <div className="w-full space-y-1 text-center sm:space-y-2 text-gray">
             <h4 className="text-xl font-semibold sm:text-2xl">Simply Lindway</h4>
             <p className="text-base font-light sm:text-lg">Pure Cotton Comfort</p>
-            <LocaleLink href="/simply-lindway" className="block p-1 mx-auto text-xs font-medium border-b sm:p-2 sm:text-sm text-gray w-max">
+            <LocaleLink href="/collections/simply-lindway" className="block p-1 mx-auto text-xs font-medium border-b sm:p-2 sm:text-sm text-gray w-max">
               Discover Collection
             </LocaleLink>
           </div>
@@ -69,7 +69,7 @@ export const Products = () => {
           <div className="w-full space-y-1 text-center sm:space-y-2 text-gray">
             <h4 className="text-xl font-semibold sm:text-2xl">Lure by Lindway</h4>
             <p className="text-base font-light sm:text-lg">Traditional Soul, Modern Edge</p>
-            <LocaleLink href="/lure-by-lindway" className="block p-1 mx-auto text-xs font-medium border-b sm:p-2 sm:text-sm text-gray w-max">
+            <LocaleLink href="/collections/lure-by-lindway" className="block p-1 mx-auto text-xs font-medium border-b sm:p-2 sm:text-sm text-gray w-max">
               Discover Collection
             </LocaleLink>
           </div>

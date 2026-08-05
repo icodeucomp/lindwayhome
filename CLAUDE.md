@@ -258,7 +258,7 @@ Product and article URLs use `slug`, not `id`. **Slug is single, not per-locale*
 
 **Header** — New Arrivals · Collections · Our World · Journal · About (Our Story, Our Production, Our Artisan, Sustainability, Our Fabrics, Journal — the duplicate Journal entry is intentional, D13) · Wishlist counter · Bag counter · EN/ID switch.
 
-**Collections is a three-column mega-menu** driven entirely by the taxonomy tables (D16) — no hardcoded lists:
+**Collections is a three-column mega-menu** rendered from [`src/static/taxonomy.ts`](src/static/taxonomy.ts) (D16, D25):
 
 ```
 Collections ▾
@@ -271,13 +271,12 @@ Collections ▾
   → /collections/[slug]  → /shop/for/[slug]    → /shop/[slug]
 ```
 
-Each column renders `isActive` rows ordered by `order`, so adding a branding or garment type appears in the nav without a deploy. This is also how garment and audience listings become reachable from the header, not just the footer.
+Each column renders the `isActive` entries ordered by `order`. Since the taxonomy is enums (D25), a new branding or garment reaches the menu through a deploy, not a database row — `isActive` is what an admin-free change can toggle in the meantime. This is also how garment and audience listings become reachable from the header, not just the footer.
 
 **Footer** — four columns: Collections (5 brandings) · Shop (New Arrivals, Best Sellers, Dresses, Tops, Skirts, Kids, Men) · Customer Care (Size Guide, How to Shop, Shipping & Delivery, Return & Exchanges, Care Instructions, Contact Us, FAQ) · About (Our Story, Our Production, Our Artisan, Sustainability, Our Fabrics, Journal).
 
 Both content pages moved home relative to v1: `/contact-us` now lives under Customer Care, and `/our-fabrics` under About.
 
-> **`[OPEN]`** Garment and audience listings are reachable only from the footer. For a fashion store that is usually the primary shopping path. Confirm whether the header needs a Shop entry.
 
 ### B2.3 Admin navigation
 
@@ -286,11 +285,13 @@ The sidebar grows past a flat list and is grouped:
 ```
 Overview   Dashboard
            Contact Inbox        ← standalone top-level item, badge = count of status NEW
-Catalog    Products · Branding Types · Audience Types · Garment Types · Sizes · Size Guides
-Sales      Orders · Members · Promotions · Member Discounts
+Catalog    Products · Sizes · Size Guides
+Sales      Orders · Members
 Content    Articles · Article Categories · FAQ
 Settings   Parameters · Locations
 ```
+
+There is no Taxonomy section: branding, audience and garment are enums edited in code (D25). There are no Promotions or Member Discounts sections either — discounting is `Product.discount` plus two config values (D22), so it lives on the product form and the Parameters page.
 
 Contact Inbox is a menu of its own rather than a Content sub-item (D15) — it is a work queue an admin returns to daily, not content to author.
 
@@ -352,55 +353,21 @@ All ids are `cuid()` (D7). All tables follow the existing `@@map("snake_case")` 
 
 ### B4.1 Taxonomy
 
+**Three enums, not three tables** (D25).
+
 ```prisma
-model BrandingType {
-  id          String    @id @default(cuid())
-  name        String
-  slug        String    @unique  // also the programmatic identifier
-  description String?
-  image       Json?
-  order       Int       @default(0)
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  products    Product[]
-
-  @@map("branding_types")
-}
-
-model AudienceType {
-  id        String            @id @default(cuid())
-  name      String
-  slug      String            @unique
-  order     Int               @default(0)
-  isActive  Boolean           @default(true)
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-
-  products  ProductAudience[]
-
-  @@map("audience_types")
-}
-
-model GarmentType {
-  id        String    @id @default(cuid())
-  name      String
-  slug      String    @unique
-  order     Int       @default(0)
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  products  Product[]
-
-  @@map("garment_types")
-}
+enum BrandingType { MY_LINDWAY  SIMPLY_LINDWAY  LURE_BY_LINDWAY  STUDIO_BY_LINDWAY  LINDWAY_AWP }
+enum AudienceType { WOMEN  MEN  KIDS }
+enum GarmentType  { DRESSES  TOPS  SKIRTS }
 ```
 
-Admin-managed; adding a sixth branding is a row, not a deploy. `name` is not translated (D2). These three tables also drive the Collections mega-menu (D16), so `order` and `isActive` are what an admin uses to arrange the header.
+The database stores only the key. Everything a page needs to render it — label, URL slug, hero copy, hero image, menu order, and an `isActive` flag — lives in [`src/static/taxonomy.ts`](src/static/taxonomy.ts), which is the single source for all three axes. Labels are not translated (D2).
 
-**No `code` column** (D21). The first draft carried both `code` (`MY_LINDWAY`) and `slug` (`my-lindway`) — two unique columns derived from the same name, and nothing ever looked up by `code`. `slug` is the identifier. `Size.code` is different and stays: it must match a `package_dimensions` config key exactly.
+**What this costs.** Adding a branding, audience or garment means editing the Prisma enum, running a migration, editing `taxonomy.ts`, and deploying. There is no admin screen, and no `[OPEN]` about it — the trade was made deliberately in exchange for three tables, one join table, and three CRUD screens.
+
+`isActive: false` hides an entry from the navigation and its listing without removing the enum value, so products already tagged with it are never orphaned. `STUDIO_BY_LINDWAY` and `LINDWAY_AWP` ship inactive until their copy and artwork arrive.
+
+**One coupling to watch.** `taxonomy.ts` declares its key types locally rather than importing them from the generated Prisma client, so the file compiles before the phase-1 migration exists. Phase 1 must add a compile-time assertion that the two agree — silent drift would mean a product tagged with a key that no page can render.
 
 ### B4.2 Size, size guide, and package dimensions
 
@@ -479,8 +446,9 @@ model Product {
   sku             String               @unique  // also the image folder name
   slug            String               @unique  // public URL, single locale (D4)
 
-  brandingTypeId  String                        // required (D5)
-  garmentTypeId   String?                       // single
+  branding        BrandingType                  // required (D5)
+  garment         GarmentType?                  // single
+  audiences       AudienceType[]                // many, so a product can be unisex
   sizeGuideId     String?
 
   price           Decimal              @db.Decimal(12, 2)
@@ -501,16 +469,14 @@ model Product {
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 
-  brandingType    BrandingType         @relation(fields: [brandingTypeId], references: [id])
-  garmentType     GarmentType?         @relation(fields: [garmentTypeId], references: [id])
   sizeGuide       SizeGuide?           @relation(fields: [sizeGuideId], references: [id])
-  audiences       ProductAudience[]
   variants        ProductVariant[]
   translations    ProductTranslation[]
   orderItems      OrderItem[]
 
-  @@index([brandingTypeId])
-  @@index([garmentTypeId])
+  @@index([branding])
+  @@index([garment])
+  @@index([audiences], type: Gin)      // array containment: "products for Women"
   @@index([releasedAt])
   @@index([soldCount])
   @@index([bestSellerRank])
@@ -518,16 +484,6 @@ model Product {
   @@map("products")
 }
 
-model ProductAudience {
-  productId      String
-  audienceTypeId String
-
-  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
-  audienceType   AudienceType @relation(fields: [audienceTypeId], references: [id], onDelete: Cascade)
-
-  @@id([productId, audienceTypeId])
-  @@map("product_audiences")
-}
 
 model ProductVariant {
   id                String   @id @default(cuid())
@@ -863,14 +819,14 @@ enum ParameterType { TEXT  NUMBER  DECIMAL  BOOLEAN  SELECT  MULTI_SELECT  IMAGE
 
 ### B4.10 Table count
 
-**25 models**, up from 7. Six are translation or join tables — the cost of bilingual content plus many-to-many taxonomy.
+**21 models**, up from 7. Five are translation tables — the cost of bilingual content.
 
 | Group | Models |
 | --- | --- |
 | Access | `User` |
-| Taxonomy | `BrandingType`, `AudienceType`, `GarmentType` |
+| Taxonomy | *(none — three enums, D25)* |
 | Sizing | `Size`, `SizeGuide`, `SizeGuideRow`, `SizeGuideTranslation` |
-| Catalog | `Product`, `ProductAudience`, `ProductVariant`, `ProductTranslation` |
+| Catalog | `Product`, `ProductVariant`, `ProductTranslation` |
 | Orders | `Order`, `OrderItem` *(renamed from Guest / Cart)* |
 | Members | `Member` |
 | Content | `ArticleCategory`, `ArticleCategoryTranslation`, `Article`, `ArticleTranslation`, `Faq`, `FaqTranslation`, `ContactInquiry` |
@@ -884,7 +840,7 @@ Numbering continues from v1. F-1…F-29 remain unless superseded.
 
 ### B5.1 Catalog & discovery
 - **F-30 Localized routing** — `/[lang]/…`, dictionary-driven static copy, language switch preserving the current path.
-- **F-31 Taxonomy CRUD** — admin manages branding, audience, and garment types.
+- **F-31 Taxonomy filtering** — branding, audience and garment come from enums and `taxonomy.ts`; there is no admin CRUD for them (D25).
 - **F-32 Multi-axis product filtering** — listings filter by branding, audience, garment, and combinations.
 - **F-33 New Arrivals** — `releasedAt` descending, distinct from `createdAt`.
 - **F-34 Best Sellers** — `bestSellerRank` ascending, then `soldCount` descending.
@@ -994,7 +950,7 @@ Each phase ends with `npx tsc --noEmit` clean, `npm run build` clean, and the af
 | Phase | Scope | Rationale |
 | --- | --- | --- |
 | **0 — Foundation** ✅ **DONE** | `[lang]` routing + dictionaries · design tokens (`#BA8164`, `#39322C`, `#FAF6F5`, `#F7F3F0`, `#D2D2CA`) · Raleway + Inter via `next/font/google` · new header/footer shell · `tiptap-editor.tsx` shared component · delete `/curated-collections` and `video-carousel.tsx` (D16) | Touches every file. Doing it later means redoing every other phase |
-| **1 — Data model** | Drop and rebuild the schema: taxonomy, Size/SizeGuide/Variant, Product + translations, Order/OrderItem, Member, content models · apply `product-stock.sql` · new seed · `resolveTranslation` + `resolveUnitPrice` helpers · `db:check` · admin CRUD for taxonomy, sizes, size guides · wire the Collections mega-menu to the taxonomy tables | Everything downstream depends on these tables |
+| **1 — Data model** | Drop and rebuild the schema: taxonomy enums, Size/SizeGuide/Variant, Product + translations, Order/OrderItem, Member, content models · apply `product-stock.sql` · new seed · `resolveTranslation` + `resolveUnitPrice` helpers · `db:check` · assert `taxonomy.ts` keys match the Prisma enums · admin CRUD for sizes and size guides | Everything downstream depends on these tables |
 | **2 — Catalog** | Product form (size guide → variants → package dimensions), listings per axis, product detail, New Arrivals, Best Sellers, wishlist, product **soft delete** (A9.13) | Consumes phase 1 |
 | **3 — Orders & pricing** | Member registry, `OrderStatus` + tracking number in the admin order screen, server-computed subtotal (F-51), line snapshot (F-55) | Touches the checkout path, so it runs alone |
 | **4 — Content** | Journal, FAQ, Contact form + inbox, public size guide page | Independent of 2 and 3; can run in parallel if needed |
@@ -1004,7 +960,7 @@ Phase 1 also carries the D17 rename (`Guest`→`Order`, `Cart`→`OrderItem`, `/
 
 Phases 0 and 1 must not be split — both touch the whole tree, and a half-migrated schema means doing the work twice.
 
-One ordering caveat: the header shell is built in phase 0, but the Collections mega-menu reads taxonomy tables that only exist after phase 1. Build the menu against a hardcoded placeholder list in phase 0 and swap it for the real query in phase 1 — do not defer the whole header, since every page depends on it.
+The Collections mega-menu was built in phase 0 against a placeholder list, on the assumption that phase 1 would swap it for a database query. That swap will never happen — D25 made the taxonomy static, so `src/static/taxonomy.ts` **is** the final source, and the menu is already complete.
 
 ---
 
@@ -1029,15 +985,16 @@ Agreed in discussion. Do not reopen without a new decision recorded here.
 | **D13** | Journal appears both as a top-level menu and under About (intentional). `/our-world` is a placeholder. New Arrivals uses `releasedAt`; Best Sellers uses automatic `soldCount` plus a manual `bestSellerRank` | Confirmed with the client |
 | **D14** | Raleway + Inter via `next/font/google`; the full palette is replaced. Alethia Next OTF files stay in `public/fonts` but are unused | v2 is an intentional visual overhaul; keeping the old font files is cheaper than restoring them |
 | **D15** | Contact Inbox is a standalone top-level admin menu with full inquiry management (filter, search, detail, status transitions), not an email relay and not a Content sub-item | It is a daily work queue, not authored content; status tracking is what makes an inquiry not get dropped |
-| **D16** | The Collections header menu is a three-column mega-menu rendered from `BrandingType`, `AudienceType`, and `GarmentType`. Curated Collections is deleted — page, component, home-page section, and the `videos_curated_collection` config key | Driving the nav from the taxonomy tables means a new branding or garment appears in the menu without a deploy, and it gives garment/audience listings a header entry point |
+| **D16** | The Collections header menu is a three-column mega-menu over branding, audience and garment. Curated Collections is deleted — page, component, home-page section, and the `videos_curated_collection` config key | It gives garment and audience listings a header entry point instead of footer-only. *(The original rationale — "a new branding appears without a deploy" — no longer holds: D25 made the taxonomy static.)* |
 | **D17** | `Guest` → `Order`, `Cart` → `OrderItem`, and the endpoints follow (`/api/guests/*` → `/api/orders/*`) | Neither name described its table. The real shopping cart is `localStorage` and never reaches the database, so a table called `Cart` holding order lines actively misleads. Renaming is safe because D8 protects behaviour, not identifiers — and doing it during the phase-1 rewrite costs nothing extra |
 | ~~**D18**~~ | ~~`Promotion` and `MemberDiscount` collapse into one `Discount` table~~ | **Superseded by D22** — the tables themselves were dropped |
 | **D19** | `Member` is kept alongside `Order.isMember`, linked by `Order.memberId` | They answer different questions. Revoking membership by flipping `isMember` across past orders would rewrite history — orders genuinely charged the member price would start claiming otherwise while their stored totals said the opposite. Current state and historical record must never share a column |
 | ~~**D20**~~ | ~~Discounts layer, with clamps and a ceiling~~ | **Superseded by D22.** The layering it guarded against no longer exists. The `OrderItem` price snapshot survives, simplified to `unitPrice` + `lineTotal` |
 | **D22** | **No `Discount` entity.** Discounting is `Product.discount` → `discountedPrice`, plus the v1 config groups `promotions` (store-wide) and `members` (member rate). Targeted and scheduled campaigns are out of scope | The tables bought targeting and validity windows that Lindway does not run, and cost three real risks: the effective price had to be resolved at read time in two places, so the price shown could differ from the price charged; the token carried only aggregates, so per-line snapshots could contradict the signed total; and layered `FIXED` discounts could drive a line negative, surfacing as a meaningless validation error after the buyer had already uploaded a receipt. Keeping `discountedPrice` a stored column also keeps price sorting and filtering in SQL |
 | **D23** | `Order` gains `status` (`OrderStatus`), `trackingNumber` and `cancelledAt`. `isPurchased` stays beside `status`. `ContactInquiry` gains `handlingNote`; `Article` gains `authorId` | v1 expressed the whole order lifecycle as one boolean — no way to say cancelled or shipped, and nowhere to put the tracking number the storefront already promises buyers. `isPurchased` is kept because it is what triggers the stock and `soldCount` transaction, and moving that would touch the frozen zone. `handlingNote` records *how* an inquiry was resolved, which `HANDLED` alone does not |
+| **D25** | Branding, audience and garment are **Prisma enums**, not tables. Display data (label, slug, description, hero image, order, `isActive`) lives in `src/static/taxonomy.ts`. `ProductAudience` is replaced by an `AudienceType[]` array on `Product` | Removes three tables, one join table, and three admin CRUD screens. The cost is real and accepted: adding a value needs a migration plus a deploy, and per-branding hero copy is no longer editable by an admin. Justified because the axes are stable — the two brandings still to come are already in the enum, and Lindway does not add garment types often |
 | **D24** | `Product.stock` is maintained by a Postgres trigger (`prisma/triggers/product-stock.sql`), not by application code | It is the number that gates overselling. A trigger makes drift structurally impossible rather than merely unlikely — any write path that forgot to recompute would otherwise let the store sell stock it does not have, silently. Consequence: application code must never write `stock` |
-| **D21** | Field audit removed seven columns that produced nothing: `code` on the three taxonomy tables, `SizeGuide.isActive`, `SizeGuideRow.order`, `Product.productionNotes`, `Member.joinedAt`. Ruling principle: **`isActive` is a manual switch, `publishedAt` / date windows are a schedule** — a model needs both only when it needs both behaviours | Each removal deleted a second source of truth: `code` duplicated `slug`, `isActive` beside `publishedAt` had no defined combination, a row `order` could contradict `size.order`, `productionNotes` duplicated the translated `notes`, and `joinedAt` duplicated `createdAt` |
+| **D21** | Field audit removed seven columns that produced nothing: `code` on the three taxonomy tables *(since superseded — the tables themselves are gone, D25)*, `SizeGuide.isActive`, `SizeGuideRow.order`, `Product.productionNotes`, `Member.joinedAt`. Ruling principle: **`isActive` is a manual switch, `publishedAt` / date windows are a schedule** — a model needs both only when it needs both behaviours | Each removal deleted a second source of truth: `code` duplicated `slug`, `isActive` beside `publishedAt` had no defined combination, a row `order` could contradict `size.order`, `productionNotes` duplicated the translated `notes`, and `joinedAt` duplicated `createdAt` |
 
 ---
 

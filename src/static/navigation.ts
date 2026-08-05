@@ -1,37 +1,23 @@
 /**
  * v2 navigation (CLAUDE.md §B2.2).
  *
- * The three taxonomy arrays below are PLACEHOLDERS. Phase 1 replaces them with live
- * `BrandingType` / `AudienceType` / `GarmentType` queries so the Collections mega-menu
- * is admin-driven and a new branding appears without a deploy (D16). Until then they
- * keep the header shell honest — every entry points at a route that exists.
+ * The three Collections columns are derived from `taxonomy.ts`, not queried. Branding,
+ * audience and garment are Prisma enums (D25), so the menu changes with a deploy, not
+ * with a database row — `isActive` in taxonomy.ts is what hides an entry meanwhile.
  */
+
+import { activeAudience, activeBranding, activeGarment } from "./taxonomy";
 
 export interface NavItem {
   name: string;
   href: string;
 }
 
-/** Placeholder — replace with BrandingType rows in phase 1. */
-export const brandingNav: NavItem[] = [
-  { name: "My Lindway", href: "/my-lindway" },
-  { name: "Simply Lindway", href: "/simply-lindway" },
-  { name: "Lure by Lindway", href: "/lure-by-lindway" },
-];
+export const brandingNav: NavItem[] = activeBranding().map((entry) => ({ name: entry.label, href: `/collections/${entry.slug}` }));
 
-/** Placeholder — replace with AudienceType rows in phase 1. */
-export const audienceNav: NavItem[] = [
-  { name: "Women", href: "/shop/for/women" },
-  { name: "Men", href: "/shop/for/men" },
-  { name: "Kids", href: "/shop/for/kids" },
-];
+export const audienceNav: NavItem[] = activeAudience().map((entry) => ({ name: entry.label, href: `/shop/for/${entry.slug}` }));
 
-/** Placeholder — replace with GarmentType rows in phase 1. */
-export const garmentNav: NavItem[] = [
-  { name: "Dresses", href: "/shop/dresses" },
-  { name: "Tops", href: "/shop/tops" },
-  { name: "Skirts", href: "/shop/skirts" },
-];
+export const garmentNav: NavItem[] = activeGarment().map((entry) => ({ name: entry.label, href: `/shop/${entry.slug}` }));
 
 export const aboutNav: NavItem[] = [
   { name: "Our Story", href: "/about/our-story" },

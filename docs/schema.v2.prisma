@@ -5,7 +5,10 @@
 // at prisma/schema.prisma. Once approved it replaces that file, then
 // db:reset → migrate → generate → seed → apply prisma/triggers/*.sql.
 //
-// 25 models. Decisions taken during review:
+// 21 models. Decisions taken during review:
+//   · Branding, audience and garment are ENUMS, not tables (D25). Their display
+//     data lives in src/static/taxonomy.ts. Adding a value costs a migration and
+//     a deploy — accepted in exchange for three tables and three admin screens.
 //   · Guest → Order, Cart → OrderItem (D17). The old names described neither
 //     table; the real shopping cart lives in localStorage and never reaches the
 //     database.
@@ -54,56 +57,6 @@ model User {
   articles         Article[] // F-42
 
   @@map("users")
-}
-
-// =============================================================================
-// TAXONOMY  (§B4.1)
-// Admin-managed. Also drives the Collections mega-menu (D16), so `order` and
-// `isActive` are how an admin arranges the header. `name` is NOT translated (D2).
-// =============================================================================
-
-model BrandingType {
-  id          String   @id @default(cuid())
-  name        String
-  slug        String   @unique // also the programmatic identifier — `code` was a duplicate of this
-  description String?
-  image       Json? // file node
-  order       Int      @default(0)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  products Product[]
-
-  @@map("branding_types")
-}
-
-model AudienceType {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  order     Int      @default(0)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  products ProductAudience[]
-
-  @@map("audience_types")
-}
-
-model GarmentType {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  order     Int      @default(0)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  products Product[]
-
-  @@map("garment_types")
 }
 
 // =============================================================================
@@ -186,9 +139,12 @@ model Product {
   sku  String @unique // also the image folder name
   slug String @unique // public URL, single locale (D4)
 
-  brandingTypeId String // required (D5)
-  garmentTypeId  String? // single
-  sizeGuideId    String?
+  // Taxonomy is three enums, not three tables (D25). Display data — label, slug,
+  // description, hero image, menu order — lives in src/static/taxonomy.ts.
+  branding    BrandingType // required (D5)
+  garment     GarmentType? // single
+  audiences   AudienceType[] // many, so a product can be unisex
+  sizeGuideId String?
 
   // The only discount mechanism (D22). `discountedPrice` is stored, not derived at
   // read time, so listings can sort and filter on the price a buyer actually pays.
@@ -216,31 +172,18 @@ model Product {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  brandingType BrandingType         @relation(fields: [brandingTypeId], references: [id])
-  garmentType  GarmentType?         @relation(fields: [garmentTypeId], references: [id])
   sizeGuide    SizeGuide?           @relation(fields: [sizeGuideId], references: [id])
-  audiences    ProductAudience[]
   variants     ProductVariant[]
   translations ProductTranslation[]
   orderItems   OrderItem[]
 
-  @@index([brandingTypeId])
-  @@index([garmentTypeId])
+  @@index([branding])
+  @@index([garment])
   @@index([releasedAt])
   @@index([bestSellerRank, soldCount]) // Best Sellers sorts by rank then soldCount
   @@index([isActive, isFavorite])
+  @@index([audiences], type: Gin) // array containment: "products for Women"
   @@map("products")
-}
-
-model ProductAudience {
-  productId      String
-  audienceTypeId String
-
-  product      Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
-  audienceType AudienceType @relation(fields: [audienceTypeId], references: [id], onDelete: Cascade)
-
-  @@id([productId, audienceTypeId])
-  @@map("product_audiences")
 }
 
 model ProductVariant {
@@ -569,6 +512,30 @@ model Location {
 enum Locale {
   EN
   ID
+}
+
+// Taxonomy (D25). Display data lives in src/static/taxonomy.ts — label, slug,
+// description, hero image and menu order. Adding a value here means a migration
+// plus a deploy, which is the trade accepted for dropping three tables and three
+// admin CRUD screens.
+enum BrandingType {
+  MY_LINDWAY
+  SIMPLY_LINDWAY
+  LURE_BY_LINDWAY
+  STUDIO_BY_LINDWAY
+  LINDWAY_AWP
+}
+
+enum AudienceType {
+  WOMEN
+  MEN
+  KIDS
+}
+
+enum GarmentType {
+  DRESSES
+  TOPS
+  SKIRTS
 }
 
 enum Role {
