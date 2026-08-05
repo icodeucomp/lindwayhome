@@ -8,7 +8,7 @@ import { FaCheck, FaEye, FaShoppingCart, FaUsers } from "react-icons/fa";
 
 import { Badge, EmptyState, ErrorState, LoadingState, Panel, Spinner, TableShell, Td, Th } from "./ui";
 
-import { paymentMethodColors, paymentMethodLabels } from "@/static/categories";
+import { paymentMethodColors, paymentMethodLabels } from "@/static/payment";
 
 import { formatIDR, guestsApi } from "@/utils";
 

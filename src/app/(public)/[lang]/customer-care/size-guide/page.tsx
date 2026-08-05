@@ -1,13 +1,5 @@
-import { Footer, EverySnap } from "@/components/ui";
-import { Hero, Size } from "@/components/ui/size-guide";
+import { PagePlaceholder } from "@/components/ui";
 
 export default function SizeGuidePage() {
-  return (
-    <main>
-      <Hero />
-      <Size />
-      <EverySnap />
-      <Footer />
-    </main>
-  );
+  return <PagePlaceholder title="Size Guide" phase="phase 4 (Content)" />;
 }

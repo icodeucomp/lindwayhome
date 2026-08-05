@@ -1,4 +1,4 @@
-import { categoryColors, categoryLabels } from "@/static/categories";
+import { brandingByKey, type BrandingType } from "@/static/taxonomy";
 import { CartItems } from "./cart-items";
 import { ProductCartItems } from "@/types";
 
@@ -33,7 +33,7 @@ export const CartCategory = ({ category, products, isSelected, isPartiallySelect
             />
           </div>
           <div className="flex items-center col-span-4 space-x-2">
-            <span className={`px-3 py-1 rounded-lg text-xs font-medium ${categoryColors[category as keyof typeof categoryColors]}`}>{categoryLabels[category as keyof typeof categoryLabels]}</span>
+            <span className="px-3 py-1 text-xs font-medium rounded-lg bg-primary/10 text-primary">{brandingByKey(category as BrandingType)?.label ?? category}</span>
             <span className="text-sm text-gray">
               ({products.length} item{products.length > 1 ? "s" : ""})
             </span>
@@ -53,7 +53,7 @@ export const CartCategory = ({ category, products, isSelected, isPartiallySelect
               }}
               onChange={onToggleCategory}
             />
-            <span className={`px-3 py-1 rounded-lg text-xs font-medium ${categoryColors[category as keyof typeof categoryColors]}`}>{categoryLabels[category as keyof typeof categoryLabels]}</span>
+            <span className="px-3 py-1 text-xs font-medium rounded-lg bg-primary/10 text-primary">{brandingByKey(category as BrandingType)?.label ?? category}</span>
           </div>
           <span className="text-sm text-gray">
             {products.length} item{products.length > 1 ? "s" : ""}

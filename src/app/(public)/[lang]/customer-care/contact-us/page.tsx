@@ -1,12 +1,5 @@
-import { Footer, EverySnap } from "@/components/ui";
-import { ContactUs } from "@/components/ui";
+import { PagePlaceholder } from "@/components/ui";
 
 export default function ContactUsPage() {
-  return (
-    <main>
-      <ContactUs />
-      <EverySnap />
-      <Footer />
-    </main>
-  );
+  return <PagePlaceholder title="Contact Us" phase="phase 4 (Content)" />;
 }

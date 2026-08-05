@@ -1,79 +1,58 @@
-"use client";
-
 import { Container, Img, LocaleLink, Motion } from "@/components";
 
-import { ApiResponse, Product } from "@/types";
+import { activeBranding } from "@/static/taxonomy";
 
-import { productsApi } from "@/utils";
-
-import { CardProduct } from "../card-product";
-
+/**
+ * The product grid that used to sit above these blocks was removed with
+ * `card-product.tsx` — it read `Product.name`, `category` and `productionNotes`,
+ * none of which exist in the v2 model. Phase 2 rebuilds it against
+ * ProductTranslation + the taxonomy enums.
+ *
+ * The branding blocks below survive because they are already correct for v2: their
+ * label, subheadline, image and slug now come from `taxonomy.ts` (D25) rather than
+ * being hardcoded three times.
+ */
 export const Products = () => {
-  const { data: products, isLoading } = productsApi.useGetProducts<ApiResponse<Product[]>>({ key: ["products"], params: { limit: 3, order: "desc", isActive: true } });
+  const branding = activeBranding();
 
   return (
     <Container className="space-y-16 py-14 md:py-16">
-      <div className="space-y-4 sm:space-y-8 text-gray">
+      <div className="space-y-4 sm:space-y-8 text-body">
         <Motion tag="h2" initialY={50} animateY={0} duration={0.2} className="text-center heading">
           Discover the World of Lindway
         </Motion>
         <Motion tag="p" initialY={50} animateY={0} duration={0.2} className="max-w-5xl mx-auto text-sm text-center sm:text-base">
-          Lindway is the parent house of three distinctive brands—each with a unique story, yet united by a shared commitment to craftsmanship, cultural heritage, and design excellence.
+          Lindway is the parent house of distinctive brands—each with a unique story, yet united by a shared commitment to craftsmanship, cultural heritage, and design excellence.
         </Motion>
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="loader"></div>
-          </div>
-        ) : (
-          <Motion tag="div" initialY={50} animateY={0} duration={0.3} delay={0.3} className="product-container">
-            {products?.data.map((item, index) => (
-              <CardProduct
-                key={index}
-                id={item.id}
-                discountedPrice={item.discountedPrice}
-                images={item.images}
-                name={item.name}
-                notes={item.notes}
-                price={item.price}
-                productionNotes={item.productionNotes}
-                isPreOrder={item.isPreOrder}
-                category={item.category}
-              />
-            ))}
-          </Motion>
-        )}
       </div>
+
       <div className="space-y-8">
-        <Motion tag="div" initialY={50} animateY={0} duration={0.2} className="flex flex-col items-center gap-2 sm:gap-4 sm:flex-row">
-          <Img src="/images/home-product-my-lindway.webp" alt="my lindway image" className="w-full max-w-2xl min-h-72 sm:min-h-80" position="top" cover />
-          <div className="w-full space-y-1 text-center sm:space-y-2 text-gray">
-            <h4 className="text-xl font-semibold sm:text-2xl">My Lindway</h4>
-            <p className="text-base font-light sm:text-lg">Embracing Artistry, Celebrating Culture</p>
-            <LocaleLink href="/collections/my-lindway" className="block p-1 mx-auto text-xs font-medium border-b sm:p-2 sm:text-sm text-gray w-max">
-              Discover Collection
-            </LocaleLink>
-          </div>
-        </Motion>
-        <Motion tag="div" initialY={50} animateY={0} duration={0.2} delay={0.1} className="flex flex-col-reverse items-center gap-2 sm:gap-4 sm:flex-row">
-          <div className="w-full space-y-1 text-center sm:space-y-2 text-gray">
-            <h4 className="text-xl font-semibold sm:text-2xl">Simply Lindway</h4>
-            <p className="text-base font-light sm:text-lg">Pure Cotton Comfort</p>
-            <LocaleLink href="/collections/simply-lindway" className="block p-1 mx-auto text-xs font-medium border-b sm:p-2 sm:text-sm text-gray w-max">
-              Discover Collection
-            </LocaleLink>
-          </div>
-          <Img src="/images/home-product-simply-lindway.webp" alt="simply lindway image" className="w-full max-w-2xl min-h-72 sm:min-h-80" position="top" cover />
-        </Motion>
-        <Motion tag="div" initialY={50} animateY={0} duration={0.2} delay={0.2} className="flex flex-col items-center gap-2 sm:gap-4 sm:flex-row">
-          <Img src="/images/home-product-lure-by-lindway.webp" alt="lure by lindway image" className="w-full max-w-2xl min-h-72 sm:min-h-80" position="top" cover />
-          <div className="w-full space-y-1 text-center sm:space-y-2 text-gray">
-            <h4 className="text-xl font-semibold sm:text-2xl">Lure by Lindway</h4>
-            <p className="text-base font-light sm:text-lg">Traditional Soul, Modern Edge</p>
-            <LocaleLink href="/collections/lure-by-lindway" className="block p-1 mx-auto text-xs font-medium border-b sm:p-2 sm:text-sm text-gray w-max">
-              Discover Collection
-            </LocaleLink>
-          </div>
-        </Motion>
+        {branding.map((entry, index) => {
+          const imageFirst = index % 2 === 0;
+          const image = <Img src={entry.image} alt={`${entry.label} image`} className="w-full max-w-2xl min-h-72 sm:min-h-80" position="top" cover />;
+
+          return (
+            <Motion
+              key={entry.key}
+              tag="div"
+              initialY={50}
+              animateY={0}
+              duration={0.2}
+              delay={index * 0.1}
+              className={`flex items-center gap-2 sm:gap-4 ${imageFirst ? "flex-col sm:flex-row" : "flex-col-reverse sm:flex-row"}`}
+            >
+              {imageFirst && image}
+              <div className="w-full space-y-1 text-center sm:space-y-2 text-body">
+                <h4 className="text-xl font-semibold sm:text-2xl font-heading">{entry.label}</h4>
+                <p className="text-base font-light sm:text-lg">{entry.description}</p>
+                <LocaleLink href={`/collections/${entry.slug}`} className="block p-1 mx-auto text-xs font-medium border-b sm:p-2 sm:text-sm border-primary text-primary w-max">
+                  Discover Collection
+                </LocaleLink>
+              </div>
+              {!imageFirst && image}
+            </Motion>
+          );
+        })}
       </div>
     </Container>
   );
