@@ -4,12 +4,11 @@ import { FaCheckCircle } from "react-icons/fa";
 
 import { formatUnderscoreToSpace, formatIDR } from "@/utils";
 
-import { CreateGuest } from "@/types";
+import { CheckoutFormData } from "@/types";
 
-type FormData = Omit<CreateGuest, "purchased" | "totalItemsSold">;
 
 interface CompleteStepProps {
-  formData: FormData;
+  formData: CheckoutFormData;
   totalItem: number;
   onClose: () => void;
   totalPurchased: number;

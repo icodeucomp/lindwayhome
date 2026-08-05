@@ -23,13 +23,13 @@ export const CartProduct = () => {
     cart,
     selectedItems,
     toggleItemSelection,
-    toggleCategorySelection,
+    toggleBrandingSelection,
     selectAllItems,
     deselectAllItems,
     getSelectedTotal,
     getSelectedCount,
-    isCategorySelected,
-    isCategoryPartiallySelected,
+    isBrandingSelected,
+    isBrandingPartiallySelected,
     removeSelectedItems,
     updateQuantity,
     removeFromCart,
@@ -42,11 +42,11 @@ export const CartProduct = () => {
     return Object.entries(
       cart.reduce(
         (acc, product) => {
-          const category = product.category;
-          if (!acc[category]) {
-            acc[category] = [];
+          const branding = product.branding;
+          if (!acc[branding]) {
+            acc[branding] = [];
           }
-          acc[category].push(product);
+          acc[branding].push(product);
           return acc;
         },
         {} as Record<string, typeof cart>,
@@ -129,15 +129,15 @@ export const CartProduct = () => {
       />
 
       <div className="space-y-4 sm:space-y-6">
-        {cartItems.map(([category, products]) => (
+        {cartItems.map(([branding, products]) => (
           <CartCategory
-            key={category}
-            category={category}
+            key={branding}
+            branding={branding}
             products={products}
-            isSelected={isCategorySelected(category)}
-            isPartiallySelected={isCategoryPartiallySelected(category)}
+            isSelected={isBrandingSelected(branding)}
+            isPartiallySelected={isBrandingPartiallySelected(branding)}
             selectedItems={selectedItems}
-            onToggleCategory={() => toggleCategorySelection(category)}
+            onToggleCategory={() => toggleBrandingSelection(branding)}
             onToggleItem={toggleItemSelection}
             onUpdateQuantity={updateQuantity}
             onRemoveItem={handleRemoveItem}

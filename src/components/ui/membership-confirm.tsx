@@ -4,7 +4,7 @@ import { useState } from "react";
 
 
 
-import { guestsApi } from "@/utils";
+import { ordersApi } from "@/utils";
 
 import { Button, LocaleLink } from "@/components";
 
@@ -12,18 +12,18 @@ import { useLocaleHref } from "@/hooks";
 
 type Status = "idle" | "loading" | "success" | "error";
 
-export const MembershipConfirm = ({ guestId }: { guestId: string }) => {
+export const MembershipConfirm = ({ orderId }: { orderId: string }) => {
   const [status, setStatus] = useState<Status>("idle");
   const localeHref = useLocaleHref();
 
-  const { mutate: updateGuest } = guestsApi.useUpdateMembershipGuests({
+  const { mutate: activateMembership } = ordersApi.useActivateMembership({
     onSuccess: () => setStatus("success"),
     onError: () => setStatus("error"),
   });
 
   const handleConfirm = () => {
     setStatus("loading");
-    updateGuest(guestId);
+    activateMembership(orderId);
   };
 
   const handleDecline = () => {

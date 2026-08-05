@@ -8,13 +8,13 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { FaSearch } from "react-icons/fa";
 
-import { ConfirmDialog, FilterSelect, GuestsLists, SearchInput, Toolbar } from "./slicing";
+import { ConfirmDialog, FilterSelect, OrdersLists, SearchInput, Toolbar } from "./slicing";
 
 import { Button, Pagination } from "@/components";
 
-import { guestsApi } from "@/utils";
+import { ordersApi } from "@/utils";
 
-import { ApiResponse, Guest } from "@/types";
+import { ApiResponse, Order, OrderStatus } from "@/types";
 
 const TRANSACTION_OPTIONS = [
   { value: "", label: "All Transactions" },
@@ -22,7 +22,7 @@ const TRANSACTION_OPTIONS = [
   { value: "false", label: "Pending" },
 ];
 
-export const GuestsDashboard = () => {
+export const OrdersDashboard = () => {
   const queryClient = useQueryClient();
 
   const { isAuthenticated } = useAuthStore();
@@ -31,35 +31,35 @@ export const GuestsDashboard = () => {
     categoryParamName: "isPurchased",
   });
 
-  const [guestToConfirm, setGuestToConfirm] = React.useState<Guest | null>(null);
+  const [orderToConfirm, setOrderToConfirm] = React.useState<Order | null>(null);
 
   const {
-    data: guests,
+    data: orders,
     isLoading,
     isError,
-  } = guestsApi.useGetGuests<ApiResponse<Guest[]>>({
-    key: ["guests", searchQuery, currentPage, selectedCategory],
+  } = ordersApi.useGetOrders<ApiResponse<Order[]>>({
+    key: ["orders", searchQuery, currentPage, selectedCategory],
     enabled: isAuthenticated,
     params: { search: searchQuery, limit: 9, page: currentPage, isPurchased: selectedCategory },
   });
 
-  const updateGuests = guestsApi.useUpdateGuests({
+  const updateOrder = ordersApi.useUpdateOrder({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["guests"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["dashboards"] });
-      setGuestToConfirm(null);
+      setOrderToConfirm(null);
     },
   });
 
   const confirmPurchase = () => {
-    if (!guestToConfirm) return;
-    updateGuests.mutate({
-      id: guestToConfirm.id,
-      guests: { isPurchased: true, paymentMethod: guestToConfirm.paymentMethod, isMember: guestToConfirm.isMember },
+    if (!orderToConfirm) return;
+    updateOrder.mutate({
+      id: orderToConfirm.id,
+      order: { isPurchased: true, status: OrderStatus.PAID },
     });
   };
 
-  const totalGuests = guests?.pagination.total ?? 0;
+  const totalOrders = orders?.pagination.total ?? 0;
   const hasFilters = !!searchQuery || !!selectedCategory;
 
   return (
@@ -77,26 +77,26 @@ export const GuestsDashboard = () => {
         </div>
       </Toolbar>
 
-      {!isLoading && !isError && totalGuests > 0 && (
+      {!isLoading && !isError && totalOrders > 0 && (
         <p className="mb-4 text-sm text-gray/70">
-          Showing <span className="font-semibold text-darker-gray">{guests?.data.length}</span> of <span className="font-semibold text-darker-gray">{totalGuests}</span> guests
+          Showing <span className="font-semibold text-darker-gray">{orders?.data.length}</span> of <span className="font-semibold text-darker-gray">{totalOrders}</span> orders
           {hasFilters && " matching your filters"}
         </p>
       )}
 
-      <GuestsLists guests={guests?.data || []} isError={isError} isLoading={isLoading} hasFilters={hasFilters} pendingGuestId={updateGuests.isPending ? guestToConfirm?.id ?? null : null} onRequestPurchase={setGuestToConfirm} />
+      <OrdersLists orders={orders?.data || []} isError={isError} isLoading={isLoading} hasFilters={hasFilters} pendingOrderId={updateOrder.isPending ? orderToConfirm?.id ?? null : null} onRequestPurchase={setOrderToConfirm} />
 
-      <Pagination page={currentPage} setPage={handlePageChange} totalPage={guests?.pagination.totalPages || 0} isNumber />
+      <Pagination page={currentPage} setPage={handlePageChange} totalPage={orders?.pagination.totalPages || 0} isNumber />
 
       <ConfirmDialog
-        isVisible={guestToConfirm !== null}
+        isVisible={orderToConfirm !== null}
         tone="primary"
         title="Mark as purchased?"
-        description={`This will mark ${guestToConfirm?.fullname}'s order as purchased. This status cannot be reverted.`}
+        description={`This will mark ${orderToConfirm?.fullname}'s order as purchased. This status cannot be reverted.`}
         confirmLabel="Mark as Purchased"
-        isPending={updateGuests.isPending}
+        isPending={updateOrder.isPending}
         onConfirm={confirmPurchase}
-        onClose={() => setGuestToConfirm(null)}
+        onClose={() => setOrderToConfirm(null)}
       />
     </>
   );

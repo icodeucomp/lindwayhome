@@ -3,7 +3,7 @@ import { CartItems } from "./cart-items";
 import { ProductCartItems } from "@/types";
 
 interface CartCategoryProps {
-  category: string;
+  branding: string;
   products: ProductCartItems[];
   isSelected: boolean;
   isPartiallySelected: boolean;
@@ -14,7 +14,7 @@ interface CartCategoryProps {
   onRemoveItem: (id: string, size: string) => void;
 }
 
-export const CartCategory = ({ category, products, isSelected, isPartiallySelected, selectedItems, onToggleCategory, onToggleItem, onUpdateQuantity, onRemoveItem }: CartCategoryProps) => {
+export const CartCategory = ({ branding, products, isSelected, isPartiallySelected, selectedItems, onToggleCategory, onToggleItem, onUpdateQuantity, onRemoveItem }: CartCategoryProps) => {
   return (
     <div className="overflow-hidden text-sm rounded-lg bg-light text-gray">
       <div className="p-4 border-b border-gray/30">
@@ -33,7 +33,7 @@ export const CartCategory = ({ category, products, isSelected, isPartiallySelect
             />
           </div>
           <div className="flex items-center col-span-4 space-x-2">
-            <span className="px-3 py-1 text-xs font-medium rounded-lg bg-primary/10 text-primary">{brandingByKey(category as BrandingType)?.label ?? category}</span>
+            <span className="px-3 py-1 text-xs font-medium rounded-lg bg-primary/10 text-primary">{brandingByKey(branding as BrandingType)?.label ?? branding}</span>
             <span className="text-sm text-gray">
               ({products.length} item{products.length > 1 ? "s" : ""})
             </span>
@@ -53,7 +53,7 @@ export const CartCategory = ({ category, products, isSelected, isPartiallySelect
               }}
               onChange={onToggleCategory}
             />
-            <span className="px-3 py-1 text-xs font-medium rounded-lg bg-primary/10 text-primary">{brandingByKey(category as BrandingType)?.label ?? category}</span>
+            <span className="px-3 py-1 text-xs font-medium rounded-lg bg-primary/10 text-primary">{brandingByKey(branding as BrandingType)?.label ?? branding}</span>
           </div>
           <span className="text-sm text-gray">
             {products.length} item{products.length > 1 ? "s" : ""}

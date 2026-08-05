@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { CartItem, ProductCartItems, Product } from "@/types";
+import { CartItem, ProductCartItems, CartProduct } from "@/types";
 
 interface StorageData<T = unknown> {
   data: T;
@@ -50,7 +50,7 @@ const getLocalStorage = <T>(key: string): T | null => {
 interface CartStore {
   cart: ProductCartItems[];
   selectedItems: Set<string>;
-  addToCart: (productId: string, product: Product, quantity: number, selectedSize: string) => void;
+  addToCart: (productId: string, product: CartProduct, quantity: number, selectedSize: string) => void;
   updateQuantity: (id: string, size: string, quantity: number) => void;
   removeFromCart: (id: string, size: string) => void;
   clearCart: () => void;
@@ -61,15 +61,15 @@ interface CartStore {
 
   // Selection methods
   toggleItemSelection: (id: string, size: string) => void;
-  toggleCategorySelection: (category: string) => void;
+  toggleBrandingSelection: (branding: string) => void;
   selectAllItems: () => void;
   deselectAllItems: () => void;
   getSelectedItems: () => ProductCartItems[];
   addSelectedItems: () => CartItem[];
   getSelectedTotal: () => number;
   getSelectedCount: () => number;
-  isCategorySelected: (category: string) => boolean;
-  isCategoryPartiallySelected: (category: string) => boolean;
+  isBrandingSelected: (branding: string) => boolean;
+  isBrandingPartiallySelected: (branding: string) => boolean;
   removeSelectedItems: () => void;
 }
 
@@ -119,8 +119,8 @@ const createCartStore = () => {
     return cart.find((item) => item.id === id && item.selectedSize === size);
   };
 
-  const getItemsByCategory = (cart: ProductCartItems[], category: string): ProductCartItems[] => {
-    return cart.filter((item) => item.category === category);
+  const getItemsByBranding = (cart: ProductCartItems[], branding: string): ProductCartItems[] => {
+    return cart.filter((item) => item.branding === branding);
   };
 
   const store: CartStore = {
@@ -132,7 +132,7 @@ const createCartStore = () => {
       return getState().selectedItems;
     },
 
-    addToCart: (productId: string, product: Product, quantity: number, selectedSize: string) => {
+    addToCart: (productId: string, product: CartProduct, quantity: number, selectedSize: string) => {
       const currentCart = getState().cart;
       const existingItem = findCartItem(currentCart, product.id, selectedSize);
 
@@ -147,7 +147,7 @@ const createCartStore = () => {
           quantity,
           selectedSize,
           isSelected: false,
-          category: product.category || "MY_LINDWAY",
+          branding: product.branding,
         };
 
         setState({
@@ -207,7 +207,7 @@ const createCartStore = () => {
         const cartWithSelection = savedCart.map((item) => ({
           ...item,
           isSelected: false,
-          category: item.category,
+          branding: item.branding,
         }));
 
         const selectedSet = savedSelection && Array.isArray(savedSelection) ? new Set(savedSelection) : new Set<string>();
@@ -236,23 +236,23 @@ const createCartStore = () => {
       });
     },
 
-    toggleCategorySelection: (category: string) => {
+    toggleBrandingSelection: (branding: string) => {
       const currentCart = getState().cart;
       const currentSelected = getState().selectedItems;
-      const categoryItems = getItemsByCategory(currentCart, category);
+      const brandingItems = getItemsByBranding(currentCart, branding);
       const newSelected = new Set(currentSelected);
 
-      // Check if all items in category are selected
-      const allCategorySelected = categoryItems.every((item) => newSelected.has(getItemKey(item.id, item.selectedSize)));
+      // Check if all items in branding are selected
+      const allBrandingSelected = brandingItems.every((item) => newSelected.has(getItemKey(item.id, item.selectedSize)));
 
-      if (allCategorySelected) {
-        // Deselect all items in category
-        categoryItems.forEach((item) => {
+      if (allBrandingSelected) {
+        // Deselect all items in branding
+        brandingItems.forEach((item) => {
           newSelected.delete(getItemKey(item.id, item.selectedSize));
         });
       } else {
-        // Select all items in category
-        categoryItems.forEach((item) => {
+        // Select all items in branding
+        brandingItems.forEach((item) => {
           newSelected.add(getItemKey(item.id, item.selectedSize));
         });
       }
@@ -301,26 +301,26 @@ const createCartStore = () => {
       return store.getSelectedItems().reduce((count, item) => count + item.quantity, 0);
     },
 
-    isCategorySelected: (category: string) => {
+    isBrandingSelected: (branding: string) => {
       const currentCart = getState().cart;
       const currentSelected = getState().selectedItems;
-      const categoryItems = getItemsByCategory(currentCart, category);
+      const brandingItems = getItemsByBranding(currentCart, branding);
 
-      if (categoryItems.length === 0) return false;
+      if (brandingItems.length === 0) return false;
 
-      return categoryItems.every((item) => currentSelected.has(getItemKey(item.id, item.selectedSize)));
+      return brandingItems.every((item) => currentSelected.has(getItemKey(item.id, item.selectedSize)));
     },
 
-    isCategoryPartiallySelected: (category: string) => {
+    isBrandingPartiallySelected: (branding: string) => {
       const currentCart = getState().cart;
       const currentSelected = getState().selectedItems;
-      const categoryItems = getItemsByCategory(currentCart, category);
+      const brandingItems = getItemsByBranding(currentCart, branding);
 
-      if (categoryItems.length === 0) return false;
+      if (brandingItems.length === 0) return false;
 
-      const selectedInCategory = categoryItems.filter((item) => currentSelected.has(getItemKey(item.id, item.selectedSize)));
+      const selectedInBranding = brandingItems.filter((item) => currentSelected.has(getItemKey(item.id, item.selectedSize)));
 
-      return selectedInCategory.length > 0 && selectedInCategory.length < categoryItems.length;
+      return selectedInBranding.length > 0 && selectedInBranding.length < brandingItems.length;
     },
 
     removeSelectedItems: () => {

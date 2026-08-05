@@ -23,7 +23,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: "/admin/dashboard", label: "Dashboard", description: "Overview of your store", icon: <FaThLarge className="size-4" /> },
   { href: "/admin/dashboard/products", label: "Products", description: "Manage catalog and stock", icon: <FaBoxOpen className="size-4" /> },
-  { href: "/admin/dashboard/guests", label: "Guests", description: "Transactions and carts", icon: <FaUsers className="size-4" /> },
+  { href: "/admin/dashboard/orders", label: "Orders", description: "Transactions and fulfilment", icon: <FaUsers className="size-4" /> },
   { href: "/admin/dashboard/parameters", label: "Parameters", description: "Store configuration", icon: <FaSlidersH className="size-4" /> },
   { href: "/admin/dashboard/locations", label: "Locations", description: "Shipping destinations", icon: <FaMapMarkerAlt className="size-4" /> },
 ];

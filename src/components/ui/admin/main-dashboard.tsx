@@ -1,5 +1,7 @@
 "use client";
 
+import { brandingByKey } from "@/static/taxonomy";
+
 import * as React from "react";
 
 import { useRouter } from "next/navigation";
@@ -188,10 +190,7 @@ const QuickActions = ({ router }: { router: ReturnType<typeof useRouter> }) => (
       <Button onClick={() => router.push("/admin/dashboard/products")} className="btn-blue">
         Manage Products
       </Button>
-      <Button onClick={() => router.push("/admin/dashboard/products/create")} className="btn-green">
-        Add New Product
-      </Button>
-      <Button onClick={() => router.push("/admin/dashboard/guests")} className="btn-outline">
+      <Button onClick={() => router.push("/admin/dashboard/orders")} className="btn-outline">
         View Guests
       </Button>
     </div>
@@ -251,10 +250,16 @@ const useDashboard = () => {
         bgColor: "bg-green-500",
       },
       {
-        title: "Total Guests",
-        value: dashboards?.data.totalGuests ?? "...",
+        title: "Total Orders",
+        value: dashboards?.data.totalOrders ?? "...",
         icon: <UsersIcon className="size-8 text-light" />,
         bgColor: "bg-pink-500",
+      },
+      {
+        title: "Members",
+        value: dashboards?.data.totalMembers ?? "...",
+        icon: <UsersIcon className="size-8 text-light" />,
+        bgColor: "bg-rose-500",
       },
       {
         title: "Total Revenue",
@@ -274,24 +279,14 @@ const useDashboard = () => {
         icon: <TrendingUpIcon className="size-8 text-light" />,
         bgColor: "bg-yellow-500",
       },
-      {
-        title: "My Lindway Stock",
-        value: dashboards?.data.totalMyLindwayStock ?? "...",
+      // One card per branding that actually has products, rather than three fixed
+      // fields that needed a code change whenever a brand line was added (D25).
+      ...(dashboards?.data.stockByBranding ?? []).map((row) => ({
+        title: `${brandingByKey(row.branding)?.label ?? row.branding} Stock`,
+        value: row.stock,
         icon: <StockIcon className="size-8 text-light" />,
         bgColor: "bg-cyan-500",
-      },
-      {
-        title: "Simply Lindway Stock",
-        value: dashboards?.data.totalSimplyLindwayStock ?? "...",
-        icon: <StockIcon className="size-8 text-light" />,
-        bgColor: "bg-sky-500",
-      },
-      {
-        title: "Lure by Lindway Stock",
-        value: dashboards?.data.totalLureByLindwayStock ?? "...",
-        icon: <StockIcon className="size-8 text-light" />,
-        bgColor: "bg-teal-500",
-      },
+      })),
     ],
     [dashboards],
   );

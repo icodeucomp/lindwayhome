@@ -1,6 +1,5 @@
 export * from "./ui";
 
-export * from "./input-form";
-export * from "./guests-lists";
+export * from "./orders-lists";
 export * from "./locations-lists";
 export * from "./config-field";

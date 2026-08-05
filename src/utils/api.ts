@@ -9,9 +9,9 @@ import {
   EditProduct,
   Files,
   ProductsQueryParams,
-  CreateGuest,
-  EditGuest,
-  Guest,
+  CreateOrder,
+  EditOrder,
+  Order,
   EditConfigParameter,
   CreateLocation,
   UpdateLocation,
@@ -73,7 +73,11 @@ export const productsApi = {
       queryKey: key,
       queryFn: async () => {
         const searchParams = new URLSearchParams();
-        if (params.category) searchParams.append("category", params.category);
+        if (params.locale) searchParams.append("locale", params.locale);
+        if (params.branding) searchParams.append("branding", params.branding);
+        if (params.garment) searchParams.append("garment", params.garment);
+        if (params.audience) searchParams.append("audience", params.audience);
+        if (params.sort) searchParams.append("sort", params.sort);
         if (params.search) searchParams.append("search", params.search);
         if (params.order) searchParams.append("order", params.order);
         if (params.isActive !== undefined) searchParams.append("isActive", params.isActive.toString());
@@ -183,8 +187,8 @@ export const productsApi = {
 };
 
 // Guests Api
-export const guestsApi = {
-  useGetGuests: <T>({ key, params = {}, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+export const ordersApi = {
+  useGetOrders: <T>({ key, params = {}, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
     return useQuery<T, Error>({
       queryKey: key,
       queryFn: async () => {
@@ -196,7 +200,7 @@ export const guestsApi = {
         if (params.page) searchParams.append("page", params.page.toString());
         if (params.month) searchParams.append("month", params.month.toString());
         if (params.year) searchParams.append("year", params.year.toString());
-        const { data } = await api.get(`/guests?${searchParams.toString()}`);
+        const { data } = await api.get(`/orders?${searchParams.toString()}`);
         return data;
       },
       gcTime,
@@ -205,11 +209,11 @@ export const guestsApi = {
       retry: RETRY_TIMES,
     });
   },
-  useGetGuest: <T>({ key, id, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+  useGetOrder: <T>({ key, id, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
     return useQuery<T, Error>({
       queryKey: key,
       queryFn: async () => {
-        const { data } = await api.get(`/guests/${id}`);
+        const { data } = await api.get(`/orders/${id}`);
         return data;
       },
       gcTime,
@@ -218,11 +222,11 @@ export const guestsApi = {
       retry: RETRY_TIMES,
     });
   },
-  useUpdateGuests: ({ ...mutationOptions }: UseMutationOptions<Guest, Error, { id: string; guests: EditGuest }>) => {
+  useUpdateOrder: ({ ...mutationOptions }: UseMutationOptions<Order, Error, { id: string; order: EditOrder }>) => {
     return useMutation({
-      mutationFn: async ({ id, guests }: { id: string; guests: EditGuest }) => {
+      mutationFn: async ({ id, order }: { id: string; order: EditOrder }) => {
         try {
-          const { data } = await api.put(`/guests/${id}`, guests);
+          const { data } = await api.put(`/orders/${id}`, order);
           toast.success(data.message || "Success updating transaction");
           return data.data;
         } catch (error) {
@@ -245,11 +249,11 @@ export const guestsApi = {
       ...mutationOptions,
     });
   },
-  useUpdateMembershipGuests: ({ ...mutationOptions }: UseMutationOptions<Guest, Error, string>) => {
+  useActivateMembership: ({ ...mutationOptions }: UseMutationOptions<Order, Error, string>) => {
     return useMutation({
       mutationFn: async (id: string) => {
         try {
-          const { data } = await api.patch(`/guests/membership/${id}`);
+          const { data } = await api.patch(`/orders/membership/${id}`);
           toast.success(data.message || "Membership activated successfully");
           return data.data;
         } catch (error) {
@@ -272,11 +276,11 @@ export const guestsApi = {
       ...mutationOptions,
     });
   },
-  useDeleteGuests: ({ ...mutationOptions }: UseMutationOptions<Guest, Error, string>) => {
+  useDeleteOrder: ({ ...mutationOptions }: UseMutationOptions<Order, Error, string>) => {
     return useMutation({
       mutationFn: async (id: string) => {
         try {
-          const { data } = await api.delete(`/guests/${id}`);
+          const { data } = await api.delete(`/orders/${id}`);
           toast.success(data.message || "Success deleting transaction");
           return data.data;
         } catch (error) {
@@ -296,8 +300,8 @@ export const guestsApi = {
   },
 };
 
-export const guestCheckoutApi = {
-  useGetGuestCheckouts: <T>({ key, params = {}, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+export const orderCheckoutApi = {
+  useGetOrderCheckout: <T>({ key, params = {}, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
     return useQuery<T, Error>({
       queryKey: key,
       queryFn: async () => {
@@ -308,9 +312,7 @@ export const guestCheckoutApi = {
         if (params.village) searchParams.append("village", params.village);
         if (params.email) searchParams.append("email", params.email);
         if (params.items) searchParams.append("items", JSON.stringify(params.items));
-        if (params.purchased) searchParams.append("purchased", params.purchased.toString());
-        if (params.totalItemsSold) searchParams.append("totalItemsSold", params.totalItemsSold.toString());
-        const { data } = await api.get(`/guests/checkout?${searchParams.toString()}`);
+        const { data } = await api.get(`/orders/checkout?${searchParams.toString()}`);
         return data;
       },
       gcTime,
@@ -319,11 +321,11 @@ export const guestCheckoutApi = {
       retry: RETRY_TIMES,
     });
   },
-  useCreateGuestCheckouts: ({ ...mutationOptions }: UseMutationOptions<Guest, Error, CreateGuest>) => {
+  useCreateOrder: ({ ...mutationOptions }: UseMutationOptions<Order, Error, CreateOrder>) => {
     return useMutation({
-      mutationFn: async (guests: CreateGuest) => {
+      mutationFn: async (order: CreateOrder) => {
         try {
-          const { data } = await api.post("/guests/checkout", guests);
+          const { data } = await api.post("/orders/checkout", order);
           toast.success(data.message || "Thank you for your purchase!");
           return data.data;
         } catch (error) {

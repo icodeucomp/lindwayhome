@@ -10,20 +10,20 @@ import { Badge, EmptyState, ErrorState, LoadingState, Panel, Spinner, TableShell
 
 import { paymentMethodColors, paymentMethodLabels } from "@/static/payment";
 
-import { formatIDR, guestsApi } from "@/utils";
+import { formatIDR, ordersApi } from "@/utils";
 
-import { ApiResponse, Guest } from "@/types";
+import { ApiResponse, Order } from "@/types";
 
-interface GuestsListsProps {
-  guests: Guest[];
+interface OrdersListsProps {
+  orders: Order[];
   isError: boolean;
   isLoading: boolean;
   hasFilters: boolean;
-  pendingGuestId: string | null;
-  onRequestPurchase: (guest: Guest) => void;
+  pendingOrderId: string | null;
+  onRequestPurchase: (guest: Order) => void;
 }
 
-const PurchaseStatus = ({ guest, isPending, onRequestPurchase }: { guest: Guest; isPending: boolean; onRequestPurchase: (guest: Guest) => void }) => {
+const PurchaseStatus = ({ guest, isPending, onRequestPurchase }: { guest: Order; isPending: boolean; onRequestPurchase: (guest: Order) => void }) => {
   if (guest.isPurchased) {
     return (
       <Badge className="text-green-700 bg-green-100">
@@ -52,14 +52,14 @@ const DetailRow = ({ label, children }: { label: string; children: React.ReactNo
   </div>
 );
 
-export const GuestsLists = ({ guests, isLoading, isError, hasFilters, pendingGuestId, onRequestPurchase }: GuestsListsProps) => {
+export const OrdersLists = ({ orders, isLoading, isError, hasFilters, pendingOrderId, onRequestPurchase }: OrdersListsProps) => {
   const [selectedGuestId, setSelectedGuestId] = React.useState<string | null>(null);
 
   const {
     data: guest,
     isLoading: loadGuest,
     isError: errorGuest,
-  } = guestsApi.useGetGuest<ApiResponse<Guest>>({
+  } = ordersApi.useGetOrder<ApiResponse<Order>>({
     key: ["guest", selectedGuestId],
     id: selectedGuestId || "",
     enabled: selectedGuestId !== null,
@@ -68,7 +68,7 @@ export const GuestsLists = ({ guests, isLoading, isError, hasFilters, pendingGue
   if (isLoading) {
     return (
       <Panel className="mb-6">
-        <LoadingState message="Loading guests..." />
+        <LoadingState message="Loading orders..." />
       </Panel>
     );
   }
@@ -81,12 +81,12 @@ export const GuestsLists = ({ guests, isLoading, isError, hasFilters, pendingGue
     );
   }
 
-  if (guests.length === 0) {
+  if (orders.length === 0) {
     return (
       <Panel className="mb-6">
         <EmptyState
           icon={<FaUsers className="size-6" />}
-          title={hasFilters ? "No guests match your filters" : "No guests yet"}
+          title={hasFilters ? "No orders match your filters" : "No orders yet"}
           description={hasFilters ? "Try a different keyword or switch the transaction filter." : "Guests will appear here as soon as they start filling their carts."}
         />
       </Panel>
@@ -111,7 +111,7 @@ export const GuestsLists = ({ guests, isLoading, isError, hasFilters, pendingGue
             </tr>
           </thead>
           <tbody className="divide-y divide-gray/10">
-            {guests.map((item) => (
+            {orders.map((item) => (
               <tr key={item.id} className="duration-300 hover:bg-gray/5">
                 <Td className="font-medium whitespace-nowrap text-darker-gray">
                   <div className="flex items-center gap-2">
@@ -125,7 +125,7 @@ export const GuestsLists = ({ guests, isLoading, isError, hasFilters, pendingGue
                   <Badge className={paymentMethodColors[item.paymentMethod]}>{paymentMethodLabels[item.paymentMethod]}</Badge>
                 </Td>
                 <Td>
-                  <PurchaseStatus guest={item} isPending={pendingGuestId === item.id} onRequestPurchase={onRequestPurchase} />
+                  <PurchaseStatus guest={item} isPending={pendingOrderId === item.id} onRequestPurchase={onRequestPurchase} />
                 </Td>
                 <Td className="text-right">
                   <Button onClick={() => setSelectedGuestId(item.id)} className="inline-flex items-center gap-2 btn-outline">
@@ -141,7 +141,7 @@ export const GuestsLists = ({ guests, isLoading, isError, hasFilters, pendingGue
 
       {/* Cards — small screens */}
       <div className="grid gap-4 mb-6 sm:grid-cols-2 lg:hidden">
-        {guests.map((item) => (
+        {orders.map((item) => (
           <Panel key={item.id} className="p-4 space-y-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -153,7 +153,7 @@ export const GuestsLists = ({ guests, isLoading, isError, hasFilters, pendingGue
 
             <div className="flex flex-wrap items-center gap-2">
               <Badge className={paymentMethodColors[item.paymentMethod]}>{paymentMethodLabels[item.paymentMethod]}</Badge>
-              <PurchaseStatus guest={item} isPending={pendingGuestId === item.id} onRequestPurchase={onRequestPurchase} />
+              <PurchaseStatus guest={item} isPending={pendingOrderId === item.id} onRequestPurchase={onRequestPurchase} />
             </div>
 
             <p className="text-sm text-gray/70">{item.whatsappNumber}</p>
@@ -167,7 +167,7 @@ export const GuestsLists = ({ guests, isLoading, isError, hasFilters, pendingGue
       </div>
 
       <Modal isVisible={selectedGuestId !== null} onClose={() => setSelectedGuestId(null)}>
-        <h3 className="pr-10 text-2xl font-bold text-darker-gray">Guest Details</h3>
+        <h3 className="pr-10 text-2xl font-bold text-darker-gray">Order Details</h3>
 
         {loadGuest ? (
           <LoadingState message="Loading guest details..." />
@@ -211,10 +211,10 @@ export const GuestsLists = ({ guests, isLoading, isError, hasFilters, pendingGue
                 </p>
               </div>
 
-              {detail?.cartItems && detail.cartItems.length > 0 ? (
+              {detail?.items && detail.items.length > 0 ? (
                 <div className="space-y-2">
-                  {detail.cartItems.map((item, index) => (
-                    <div key={index} className="grid grid-cols-3 gap-3 p-3 text-sm border rounded-lg border-gray/15">
+                  {detail.items.map((item) => (
+                    <div key={item.id} className="grid grid-cols-3 gap-3 p-3 text-sm border rounded-lg border-gray/15">
                       <div className="col-span-3 sm:col-span-1">
                         <p className="text-xs font-semibold tracking-wide uppercase text-gray/60">Product ID</p>
                         <p className="font-mono text-xs truncate text-gray">{item.productId}</p>

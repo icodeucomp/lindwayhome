@@ -9,7 +9,7 @@ export const sendOrderConfirmation = async (params: RequestDataForEmail) => {
 
   return await sendEmail({
     to: params.email,
-    subject: `Order Confirmation - ${params.guestId}`,
+    subject: `Order Confirmation - ${params.orderId}`,
     html,
   });
 };

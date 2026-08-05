@@ -9,23 +9,18 @@ import toast from "react-hot-toast";
 import { CheckoutForm, CompleteStep, PaymentStep } from "./slicing";
 
 import { Modal } from "@/components";
-import { guestCheckoutApi } from "@/utils";
-import { CreateGuest, PaymentMethods } from "@/types";
+import { orderCheckoutApi } from "@/utils";
+import { CheckoutFormData, PaymentMethods } from "@/types";
 
 type CheckoutStep = "summary" | "payment" | "complete";
 
-interface FormData extends Omit<CreateGuest, "totalItemsSold" | "purchased"> {
-  checkoutToken: string;
-}
-
-const initFormData: FormData = {
+const initFormData: CheckoutFormData = {
   email: "",
   fullname: "",
   receiptImage: undefined,
   paymentMethod: PaymentMethods.BANK_TRANSFER,
   address: "",
   isMember: false,
-  isPurchased: false,
   items: [],
   postalCode: 0,
   totalPurchased: 0,
@@ -43,13 +38,13 @@ interface OrderSummaryProps {
 }
 
 export const OrderSummary = ({ isVisible, onClose, price, totalItem }: OrderSummaryProps) => {
-  const { addSelectedItems, removeSelectedItems, getSelectedCount, getSelectedTotal } = useCartStore();
+  const { addSelectedItems, removeSelectedItems } = useCartStore();
 
   const [currentStep, setCurrentStep] = React.useState<CheckoutStep>("summary");
-  const [formData, setFormData] = React.useState<FormData>(initFormData);
+  const [formData, setFormData] = React.useState<CheckoutFormData>(initFormData);
   const [formErrors, setFormErrors] = React.useState<Record<string, string>>({});
 
-  const createGuestsCheckout = guestCheckoutApi.useCreateGuestCheckouts({
+  const createOrder = orderCheckoutApi.useCreateOrder({
     onSuccess: () => {
       setCurrentStep("complete");
     },
@@ -63,7 +58,7 @@ export const OrderSummary = ({ isVisible, onClose, price, totalItem }: OrderSumm
     onClose();
   };
 
-  const handleFormSubmit = (data: FormData & { checkoutToken: string }, errors: Record<string, string>) => {
+  const handleFormSubmit = (data: CheckoutFormData, errors: Record<string, string>) => {
     if (Object.keys(errors).length > 0) {
       toast.error("Please correct the errors in the form");
       return;
@@ -74,7 +69,7 @@ export const OrderSummary = ({ isVisible, onClose, price, totalItem }: OrderSumm
     setCurrentStep("payment");
   };
 
-  const handlePaymentSubmit = async (paymentData: FormData) => {
+  const handlePaymentSubmit = async (paymentData: CheckoutFormData) => {
     try {
       if (!paymentData.checkoutToken) {
         toast.error("Checkout session expired. Please go back and recalculate.");
@@ -90,7 +85,7 @@ export const OrderSummary = ({ isVisible, onClose, price, totalItem }: OrderSumm
         items: addSelectedItems(),
       };
 
-      createGuestsCheckout.mutate(submitData);
+      createOrder.mutate(submitData);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to submit order. Please try again.";
       toast.error(errorMessage);
@@ -117,13 +112,11 @@ export const OrderSummary = ({ isVisible, onClose, price, totalItem }: OrderSumm
             totalItem={totalItem}
             onSubmit={handleFormSubmit}
             onCancel={onClose}
-            purchased={getSelectedTotal()}
             cartItems={addSelectedItems()}
-            totalItemsSold={getSelectedCount()}
           />
         )}
         {currentStep === "payment" && (
-          <PaymentStep formData={formData} setFormData={setFormData} onBack={() => setCurrentStep("summary")} onSubmit={handlePaymentSubmit} isLoading={createGuestsCheckout.isPending} />
+          <PaymentStep formData={formData} setFormData={setFormData} onBack={() => setCurrentStep("summary")} onSubmit={handlePaymentSubmit} isLoading={createOrder.isPending} />
         )}
         {currentStep === "complete" && <CompleteStep formData={formData} totalItem={totalItem} totalPurchased={formData.totalPurchased} onClose={handleClose} />}
       </>

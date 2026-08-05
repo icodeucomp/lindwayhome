@@ -10,15 +10,14 @@ import { Button, Img, ProgressBar } from "@/components";
 
 import { formatIDR, filesApi, configParametersApi } from "@/utils";
 
-import { CreateGuest, PaymentMethods, ConfigParameterData, ApiResponse } from "@/types";
+import { CheckoutFormData, PaymentMethods, ConfigParameterData, ApiResponse } from "@/types";
 
-type FormData = Omit<CreateGuest, "purchased" | "totalItemsSold">;
 
 interface PaymentStepProps {
-  formData: FormData & { checkoutToken: string };
-  setFormData: React.Dispatch<React.SetStateAction<FormData & { checkoutToken: string }>>;
+  formData: CheckoutFormData;
+  setFormData: React.Dispatch<React.SetStateAction<CheckoutFormData>>;
   onBack: () => void;
-  onSubmit: (data: FormData & { checkoutToken: string }) => void;
+  onSubmit: (data: CheckoutFormData) => void;
   isLoading: boolean;
 }
 

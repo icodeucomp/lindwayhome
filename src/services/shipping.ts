@@ -73,30 +73,43 @@ export class ShippingService {
   }
 
   /**
-   * Get product dimensions by size from config_parameter (group: product_dimensions)
+   * Resolve the parcel dimensions for one product in one size (§B6.2, D6):
+   *
+   *   ProductVariant.packageDimensions          per product × size
+   *     → config package_dimensions[size.code]  store-wide default
+   *       → null, and the caller returns 404
+   *
+   * Body measurements are a different thing entirely and live on `SizeGuideRow` —
+   * they describe the pattern, this describes the box it ships in.
    */
-  static async getProductDimensionsBySize(size: string): Promise<ShippingItem | null> {
-    // Try direct key lookup first (e.g. key = "M")
-    const direct = await prisma.configParameter.findFirst({
-      where: {
-        key: size.toUpperCase(),
-        group: { name: "product_dimensions" },
-        isActive: true,
-      },
+  static async getPackageDimensions(productId: string, sizeCode: string): Promise<ShippingItem | null> {
+    const code = sizeCode.toUpperCase();
+
+    const variant = await prisma.productVariant.findFirst({
+      where: { productId, size: { code } },
+      select: { packageDimensions: true },
+    });
+
+    const fromVariant = variant?.packageDimensions as Record<string, number> | null | undefined;
+    if (fromVariant && fromVariant.weight_g != null) return ShippingService.toShippingItem(fromVariant);
+
+    const fallback = await prisma.configParameter.findFirst({
+      where: { key: code, group: { name: "package_dimensions" }, isActive: true },
       select: { value: true },
     });
 
-    if (direct?.value) {
-      const d = direct.value as Record<string, number>;
-      return {
-        weight_g: Number(d.weight_g) || 0,
-        length_cm: Number(d.length_cm) || 0,
-        width_cm: Number(d.width_cm) || 0,
-        height_cm: Number(d.height_cm) || 0,
-        quantity: 1,
-      };
-    }
+    if (fallback?.value) return ShippingService.toShippingItem(fallback.value as Record<string, number>);
 
     return null;
+  }
+
+  private static toShippingItem(source: Record<string, number>): ShippingItem {
+    return {
+      weight_g: Number(source.weight_g) || 0,
+      length_cm: Number(source.length_cm) || 0,
+      width_cm: Number(source.width_cm) || 0,
+      height_cm: Number(source.height_cm) || 0,
+      quantity: 1,
+    };
   }
 }

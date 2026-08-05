@@ -6,11 +6,22 @@ import { ConfigService, ShippingService } from "@/services";
 
 import { getClientIp, logCalculation, logError, logger, logRequest, logResponse, prisma, resolveFiles, sendOrderConfirmation } from "@/lib";
 
-import { API_BASE_URL, calculateDistance, calculateShippingCost, calculateTotalPrice, signCheckoutToken, verifyCheckoutToken, hashItems, ShippingItem } from "@/utils";
+import { API_BASE_URL, calculateDistance, calculateShippingCost, calculateTotalPrice, hashItems, resolveUnitPrice, signCheckoutToken, verifyCheckoutToken, ShippingItem } from "@/utils";
 
-import { CartSchema, CreateGuestSchema, DiscountType, ShippingCalculateSchema } from "@/types";
+import { CartSchema, CreateOrderSchema, DiscountType, ShippingCalculateSchema } from "@/types";
 
-// GET - Calculate Shipping & Price
+/**
+ * Looks up the buyer's live membership. v1 asked "does any past order by this email
+ * carry isMember?"; v2 asks the `Member` registry, so revoking a membership takes
+ * effect without rewriting order history (D19).
+ */
+const findActiveMember = async (email: string | null) => {
+  if (!email) return null;
+  const member = await prisma.member.findUnique({ where: { email }, select: { id: true, isActive: true } });
+  return member?.isActive ? member : null;
+};
+
+// GET - Calculate shipping & price, and issue the checkout token
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
 
@@ -20,10 +31,8 @@ export async function GET(request: NextRequest) {
   const village = searchParams.get("village");
   const email = searchParams.get("email");
   const itemsParam = searchParams.get("items");
-  const purchasedParam = searchParams.get("purchased");
-  const totalItemsSoldParam = searchParams.get("totalItemsSold");
 
-  const pathAPI = `GET /guests/checkout/${email}`;
+  const pathAPI = `GET /orders/checkout/${email}`;
 
   const startTime = Date.now();
 
@@ -34,13 +43,14 @@ export async function GET(request: NextRequest) {
       sub_district,
       village,
       email,
-      purchasedParam,
-      totalItemsSoldParam,
       itemsCount: itemsParam ? JSON.parse(itemsParam).length : 0,
     });
 
     // ── 1. Validate required params ──────────────────────────────────────────
-    if (!province || !district || !sub_district || !village || !itemsParam || !purchasedParam || !totalItemsSoldParam) {
+    // `purchased` and `totalItemsSold` are deliberately NOT read from the query
+    // string any more. v1 signed whatever subtotal the client claimed, so a buyer
+    // could name their own total (A9.1). Both are derived below.
+    if (!province || !district || !sub_district || !village || !itemsParam) {
       logger.error(`${pathAPI} error`, { error: "Missing required parameters" });
       return NextResponse.json({ success: false, message: "Missing required parameters" }, { status: 400 });
     }
@@ -50,20 +60,18 @@ export async function GET(request: NextRequest) {
       district,
       sub_district,
       village,
-      purchased: parseFloat(purchasedParam),
-      totalItemsSold: parseInt(totalItemsSoldParam),
       items: JSON.parse(itemsParam),
     });
 
     // ── 2. Parallel DB fetches ───────────────────────────────────────────────
-    const [isValidateEmail, configParameters, config, zones] = await Promise.all([
-      prisma.guest.findFirst({ where: { email: email || undefined, isMember: true }, select: { isMember: true } }),
+    const [member, configParameters, config, zones] = await Promise.all([
+      findActiveMember(email),
       ConfigService.getConfigValue(["tax_rate", "tax_type", "promotion_discount", "promo_type", "member_discount", "member_type"]),
       ShippingService.getShippingConfig(),
       ShippingService.getShippingZones(),
     ]);
 
-    logCalculation("Email validation", { email, isMember: isValidateEmail?.isMember ?? false });
+    logCalculation("Email validation", { email, isMember: Boolean(member) });
 
     if (!config) {
       logger.error(`${pathAPI} error`, { error: "Shipping configuration not found" });
@@ -81,39 +89,47 @@ export async function GET(request: NextRequest) {
     // ── 4. Calculate distance ────────────────────────────────────────────────
     const distance_km = calculateDistance(config.origin_lat, config.origin_long, destinationCoords.lat, destinationCoords.long, config.earth_radius_km);
 
-    // ── 5. Resolve item dimensions ───────────────────────────────────────────
+    // ── 5. Server-side subtotal + parcel dimensions (F-51) ───────────────────
     const itemsWithDimensions: ShippingItem[] = [];
+    let purchased = 0;
+    let totalItemsSold = 0;
 
     for (const item of validatedData.items) {
-      const dimensions = await ShippingService.getProductDimensionsBySize(item.selectedSize);
+      const product = await prisma.product.findUnique({
+        where: { id: item.productId },
+        select: { id: true, isActive: true, price: true, discountedPrice: true, translations: { where: { locale: "EN" }, select: { name: true } } },
+      });
+
+      if (!product || !product.isActive) {
+        logger.error(`${pathAPI} error`, { error: `Product "${item.productId}" is not available` });
+        return NextResponse.json({ success: false, message: `A product in your cart is no longer available.` }, { status: 404 });
+      }
+
+      const unitPrice = resolveUnitPrice(product);
+      purchased += unitPrice * item.quantity;
+      totalItemsSold += item.quantity;
+
+      const dimensions = await ShippingService.getPackageDimensions(item.productId, item.selectedSize);
 
       if (!dimensions) {
         logger.error(`${pathAPI} error`, { error: `Dimensions for size "${item.selectedSize}" not found` });
-        return NextResponse.json(
-          {
-            success: false,
-            message: `Dimensions for size "${item.selectedSize}" not found in configuration.`,
-          },
-          { status: 404 },
-        );
+        return NextResponse.json({ success: false, message: `Dimensions for size "${item.selectedSize}" not found in configuration.` }, { status: 404 });
       }
 
-      itemsWithDimensions.push({
-        weight_g: dimensions.weight_g,
-        length_cm: dimensions.length_cm,
-        width_cm: dimensions.width_cm,
-        height_cm: dimensions.height_cm,
-        quantity: item.quantity,
-      });
+      logCalculation("Line priced", { productId: item.productId, name: product.translations[0]?.name, size: item.selectedSize, quantity: item.quantity, unitPrice });
+
+      itemsWithDimensions.push({ ...dimensions, quantity: item.quantity });
     }
+
+    logCalculation("Subtotal derived from database prices", { purchased, totalItemsSold });
 
     // ── 6. Calculate shipping ────────────────────────────────────────────────
     const calculation = calculateShippingCost(itemsWithDimensions, distance_km, config, zones);
 
     // ── 7. Calculate total price ─────────────────────────────────────────────
     const totalPurchased = calculateTotalPrice({
-      basePrice: validatedData.purchased,
-      member: isValidateEmail?.isMember ? (configParameters.member_discount as number) : 0,
+      basePrice: purchased,
+      member: member ? (configParameters.member_discount as number) : 0,
       memberType: configParameters.member_type as DiscountType,
       promo: configParameters.promotion_discount as number,
       promoType: configParameters.promo_type as DiscountType,
@@ -128,8 +144,8 @@ export async function GET(request: NextRequest) {
     const checkoutToken = signCheckoutToken({
       shippingCost: calculation.shipping_final,
       totalPurchased,
-      purchased: validatedData.purchased,
-      totalItemsSold: validatedData.totalItemsSold,
+      purchased,
+      totalItemsSold,
       itemsHash,
       expiresAt: Date.now() + 15 * 60 * 1000,
     });
@@ -156,10 +172,10 @@ export async function GET(request: NextRequest) {
             multiplier: calculation.multiplier,
             price_override: calculation.price_override,
           },
-          purchased: validatedData.purchased,
-          totalItemsSold: validatedData.totalItemsSold,
+          purchased,
+          totalItemsSold,
           totalPurchased,
-          isMember: isValidateEmail?.isMember ?? false,
+          isMember: Boolean(member),
           checkoutToken,
         },
       },
@@ -176,9 +192,9 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create Guest Order
+// POST - Create the order
 export async function POST(request: NextRequest) {
-  const pathAPI = `POST /guests/checkout`;
+  const pathAPI = `POST /orders/checkout`;
   const startTime = Date.now();
 
   try {
@@ -241,98 +257,110 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: error }, { status: 500 });
     }
 
-    // ── 3. Merge trusted prices into guest data and move receipt images from temp storage ──────────────────────────────
-    const createData = CreateGuestSchema.parse({
+    // ── 3. Merge trusted prices, link the member, move the receipt out of temp ──
+    const member = await findActiveMember(body.email ?? null);
+
+    const createData = CreateOrderSchema.parse({
       ...body,
       shippingCost: trustedPrices.shippingCost,
       totalPurchased: trustedPrices.totalPurchased,
       purchased: trustedPrices.purchased,
       totalItemsSold: trustedPrices.totalItemsSold,
+      isMember: Boolean(member),
     });
 
     // ── 4. Database transaction ──────────────────────────────────────────────
     const result = await prisma.$transaction(async (tx) => {
+      const lines: { productId: string; quantity: number; selectedSize: string; unitPrice: number; lineTotal: number; name: string }[] = [];
+
       for (const item of items) {
         const product = await tx.product.findUnique({
           where: { id: item.productId },
-          select: { id: true, name: true, isActive: true, sizes: true },
+          select: {
+            id: true,
+            isActive: true,
+            price: true,
+            discountedPrice: true,
+            translations: { where: { locale: "EN" }, select: { name: true } },
+            variants: { where: { size: { code: item.selectedSize.toUpperCase() } }, select: { quantity: true } },
+          },
         });
 
-        if (!product) {
-          throw new Error(`Product with ID "${item.productId}" not found.`);
-        }
-        if (!product.isActive) {
-          throw new Error(`Product "${product.name}" is not available for purchase.`);
-        }
-        if (!product.sizes || !Array.isArray(product.sizes)) {
-          throw new Error(`Size information is not available for product "${product.name}".`);
+        if (!product) throw new Error(`Product with ID "${item.productId}" not found.`);
+
+        const name = product.translations[0]?.name ?? product.id;
+
+        if (!product.isActive) throw new Error(`Product "${name}" is not available for purchase.`);
+
+        const variant = product.variants[0];
+        if (!variant) throw new Error(`Selected size "${item.selectedSize}" is not available for product "${name}".`);
+
+        if (variant.quantity < item.quantity) {
+          throw new Error(`Insufficient stock for "${name}" size "${item.selectedSize}". Available: ${variant.quantity}, Requested: ${item.quantity}`);
         }
 
-        const sizes = product.sizes as Array<{ size: string; quantity: number }>;
-        const sizeData = sizes.find((s) => s.size === item.selectedSize);
-
-        if (!sizeData) {
-          throw new Error(`Selected size "${item.selectedSize}" is not available for product "${product.name}".`);
-        }
-        if (sizeData.quantity < item.quantity) {
-          throw new Error(`Insufficient stock for "${product.name}" size "${item.selectedSize}". ` + `Available: ${sizeData.quantity}, Requested: ${item.quantity}`);
-        }
+        // Snapshot the price this line actually sold at. `discountedPrice` is
+        // mutable, so without this an admin re-pricing the product later would
+        // silently rewrite what past orders appear to have charged.
+        const unitPrice = resolveUnitPrice(product);
+        lines.push({ productId: item.productId, quantity: item.quantity, selectedSize: item.selectedSize, unitPrice, lineTotal: unitPrice * item.quantity, name });
       }
 
       const resolvedImages = await resolveFiles({}, createData.receiptImage, "receipts");
 
-      const guest = await tx.guest.create({ data: { ...createData, receiptImage: resolvedImages } });
+      const order = await tx.order.create({
+        data: {
+          ...createData,
+          memberId: member?.id,
+          receiptImage: resolvedImages,
+          items: {
+            create: lines.map((line) => ({
+              productId: line.productId,
+              quantity: line.quantity,
+              selectedSize: line.selectedSize,
+              unitPrice: line.unitPrice,
+              lineTotal: line.lineTotal,
+            })),
+          },
+        },
+      });
 
-      const cartItems = await Promise.all(
-        items.map((item) =>
-          tx.cart.create({
-            data: {
-              quantity: item.quantity,
-              selectedSize: item.selectedSize,
-              productId: item.productId,
-              guestId: guest.id,
-            },
-            include: {
-              product: {
-                select: { id: true, name: true, price: true, sizes: true },
-              },
-            },
-          }),
-        ),
-      );
-
-      return { guest, cartItems };
+      return { order, lines };
     });
 
     // ── 5. Send confirmation email (non-fatal) ───────────────────────────────
     try {
       await sendOrderConfirmation({
-        guestId: result.guest.id,
-        email: result.guest.email,
-        address: result.guest.address,
-        whatsappNumber: result.guest.whatsappNumber,
-        postalCode: result.guest.postalCode,
-        totalPurchased: result.guest.totalPurchased.toNumber(),
-        shippingCost: result.guest.shippingCost?.toNumber() ?? 0,
-        totalItemsSold: result.guest.totalItemsSold,
-        isMember: result.guest.isMember,
-        fullname: result.guest.fullname,
-        paymentMethod: result.guest.paymentMethod,
-        items: result.cartItems.map((item) => ({ ...item, product: { ...item.product, price: item.product.price.toNumber() } })),
+        orderId: result.order.id,
+        email: result.order.email,
+        address: result.order.address,
+        whatsappNumber: result.order.whatsappNumber,
+        postalCode: result.order.postalCode,
+        totalPurchased: result.order.totalPurchased.toNumber(),
+        shippingCost: result.order.shippingCost?.toNumber() ?? 0,
+        totalItemsSold: result.order.totalItemsSold,
+        isMember: result.order.isMember,
+        paymentMethod: result.order.paymentMethod,
+        fullname: result.order.fullname,
+        items: result.lines.map((line) => ({
+          product: { id: line.productId, name: line.name, price: line.unitPrice },
+          selectedSize: line.selectedSize,
+          quantity: line.quantity,
+        })),
         baseUrl: API_BASE_URL!,
-        createdAt: result.guest.createdAt,
+        createdAt: result.order.createdAt,
       });
     } catch (error) {
-      logError("Send Order Confirmation failed with guest ID: " + result.guest.id, Date.now() - startTime, error);
+      logError("Send Order Confirmation failed with order ID: " + result.order.id, Date.now() - startTime, error);
       return NextResponse.json({ success: false, message: error }, { status: 500 });
     }
 
     // ── 6. Success response ──────────────────────────────────────────────────
-    const totalItems = result.cartItems.reduce((sum, item) => sum + item.quantity, 0);
+    const totalItems = result.lines.reduce((sum, line) => sum + line.quantity, 0);
 
-    logResponse(pathAPI, Date.now() - startTime, { message: `Guest order created with ${totalItems} item(s)`, data: body });
+    logResponse(pathAPI, Date.now() - startTime, { message: `Order created with ${totalItems} item(s)`, data: body });
 
-    return NextResponse.json({ success: true, message: `Guest order created successfully with ${totalItems} item${totalItems > 1 ? "s" : ""}.` }, { status: 201 });
+    return NextResponse.json({ success: true, message: `Order created successfully with ${totalItems} item${totalItems > 1 ? "s" : ""}.`, data: { id: result.order.id } }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       logError(`${pathAPI} zod error`, Date.now() - startTime, error);

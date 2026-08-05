@@ -1,7 +1,7 @@
 import { RequestDataForEmail } from "@/types";
 
 export const generateOrderConfirmationHTML = (data: RequestDataForEmail): string => {
-  const { guestId, fullname, address, whatsappNumber, postalCode, totalPurchased, totalItemsSold, isMember, paymentMethod, items, baseUrl, createdAt } = data;
+  const { orderId, fullname, address, whatsappNumber, postalCode, totalPurchased, totalItemsSold, isMember, paymentMethod, items, baseUrl, createdAt } = data;
 
   const formattedDate = new Date(createdAt).toLocaleDateString("id-ID", {
     year: "numeric",
@@ -40,7 +40,7 @@ export const generateOrderConfirmationHTML = (data: RequestDataForEmail): string
       </p>
     `
     : `
-      <a href="${baseUrl}/order/payment/success/${guestId}" style="display: inline-block; background: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-bottom: 10px;">
+      <a href="${baseUrl}/en/order/payment/success/${orderId}" style="display: inline-block; background: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-bottom: 10px;">
         🌟 Join Our Membership
       </a>
       <p style="font-size: 14px; color: #666; margin: 10px 0;">
@@ -73,7 +73,7 @@ export const generateOrderConfirmationHTML = (data: RequestDataForEmail): string
         <div style="background: white; padding: 15px; margin: 15px 0; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
           <h3 style="margin-top: 0; color: #2563eb;">Order Information</h3>
           <p style="margin: 8px 0;">
-            <strong>Order ID:</strong> ${guestId}
+            <strong>Order ID:</strong> ${orderId}
           </p>
           <p style="margin: 8px 0;">
             <strong>Date:</strong> ${formattedDate}

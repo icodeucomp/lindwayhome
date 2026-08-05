@@ -4,5 +4,5 @@ export default async function PaymentSuccessPage({ params }: { params: Promise<{
   const { id } = await params;
   if (!id) return null;
 
-  return <MembershipConfirm guestId={id} />;
+  return <MembershipConfirm orderId={id} />;
 }

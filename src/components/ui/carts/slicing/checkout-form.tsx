@@ -8,11 +8,10 @@ import { FaCreditCard } from "react-icons/fa";
 
 import Select from "react-select";
 
-import { formatIDR, guestCheckoutApi, locationsApi, sanitizeInput, validateField } from "@/utils";
+import { formatIDR, orderCheckoutApi, locationsApi, sanitizeInput, validateField } from "@/utils";
 
-import { CreateGuest, DiscountType, ConfigParameterData, CartItem, ApiResponse, SelectOption } from "@/types";
+import { CheckoutFormData, DiscountType, ConfigParameterData, CartItem, ApiResponse, SelectOption } from "@/types";
 
-type FormData = Omit<CreateGuest, "purchased" | "totalItemsSold">;
 
 interface LocationData {
   province: string;
@@ -31,22 +30,19 @@ interface ShippingCalculation {
 interface CheckoutApiResponse {
   parameter: ConfigParameterData;
   shipping: ShippingCalculation;
-  purchased: number;
   totalPurchased: number;
   isMember: boolean;
   checkoutToken: string;
 }
 
 interface CheckoutFormProps {
-  formData: FormData;
+  formData: CheckoutFormData;
   formErrors: Record<string, string>;
   price: number;
   totalItem: number;
   cartItems: CartItem[];
-  onSubmit: (data: FormData & { checkoutToken: string }, errors: Record<string, string>) => void;
+  onSubmit: (data: CheckoutFormData, errors: Record<string, string>) => void;
   onCancel: () => void;
-  purchased: number;
-  totalItemsSold: number;
 }
 
 const initialLocationData: LocationData = {
@@ -56,8 +52,8 @@ const initialLocationData: LocationData = {
   village: "",
 };
 
-export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems, onSubmit, onCancel, purchased, totalItemsSold }: CheckoutFormProps) => {
-  const [currentFormData, setCurrentFormData] = React.useState<FormData>(formData);
+export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems, onSubmit, onCancel }: CheckoutFormProps) => {
+  const [currentFormData, setCurrentFormData] = React.useState<CheckoutFormData>(formData);
   const [currentLocationData, setCurrentLocationData] = React.useState<LocationData>(initialLocationData);
   const [currentFormErrors, setCurrentFormErrors] = React.useState(formErrors);
 
@@ -69,7 +65,7 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
     data: checkoutData,
     isLoading: isCheckoutLoading,
     isError: isCheckoutError,
-  } = guestCheckoutApi.useGetGuestCheckouts<ApiResponse<CheckoutApiResponse>>({
+  } = orderCheckoutApi.useGetOrderCheckout<ApiResponse<CheckoutApiResponse>>({
     key: ["checkout", province, district, sub_district, village, cartItems, currentFormData.email],
     enabled: isAddressComplete,
     params: {
@@ -79,8 +75,6 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
       village,
       items: cartItems,
       email: currentFormData.email,
-      purchased,
-      totalItemsSold,
     },
   });
 
