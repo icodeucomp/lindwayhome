@@ -6,7 +6,7 @@ import { ConfigService, ShippingService } from "@/services";
 
 import { getClientIp, logCalculation, logError, logger, logRequest, logResponse, prisma, resolveFiles, sendOrderConfirmation } from "@/lib";
 
-import { API_BASE_URL, calculateDistance, calculateShippingCost, calculateTotalPrice, hashItems, resolveUnitPrice, signCheckoutToken, verifyCheckoutToken, ShippingItem } from "@/utils";
+import { API_BASE_URL, calculateDistance, calculateShippingCost, calculateTotalPrice, hashItems, resolveUnitPrice, signCheckoutToken, toRupiah, verifyCheckoutToken, ShippingItem } from "@/utils";
 
 import { CartSchema, CreateOrderSchema, DiscountType, ShippingCalculateSchema } from "@/types";
 
@@ -125,9 +125,11 @@ export async function GET(request: NextRequest) {
 
     // ── 6. Calculate shipping ────────────────────────────────────────────────
     const calculation = calculateShippingCost(itemsWithDimensions, distance_km, config, zones);
+    const shippingCost = toRupiah(calculation.shipping_final);
 
     // ── 7. Calculate total price ─────────────────────────────────────────────
-    const totalPurchased = calculateTotalPrice({
+    const totalPurchased = toRupiah(
+      calculateTotalPrice({
       basePrice: purchased,
       member: member ? (configParameters.member_discount as number) : 0,
       memberType: configParameters.member_type as DiscountType,
@@ -135,14 +137,15 @@ export async function GET(request: NextRequest) {
       promoType: configParameters.promo_type as DiscountType,
       tax: configParameters.tax_rate as number,
       taxType: configParameters.tax_type as DiscountType,
-      shipping: calculation.shipping_final,
-    });
+        shipping: shippingCost,
+      }),
+    );
 
     // ── 8. Sign checkout token (locks prices server-side for 15 min) ─────────
     const itemsHash = hashItems(validatedData.items.map((i) => ({ productId: i.productId, selectedSize: i.selectedSize, quantity: i.quantity })));
 
     const checkoutToken = signCheckoutToken({
-      shippingCost: calculation.shipping_final,
+      shippingCost,
       totalPurchased,
       purchased,
       totalItemsSold,
@@ -164,7 +167,7 @@ export async function GET(request: NextRequest) {
         data: {
           parameter: { ...configParameters },
           shipping: {
-            cost: calculation.shipping_final,
+            cost: shippingCost,
             zone: calculation.zone,
             zone_label: calculation.zone_label,
             distance_km: parseFloat(calculation.distance_km.toFixed(2)),

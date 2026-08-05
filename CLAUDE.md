@@ -186,22 +186,30 @@ All responses are `{ success, message?, data?, pagination? }`. "Admin" means the
 
 ## A9. Known gaps in v1 `[SHIPPED]`
 
-Ordered by severity. Items marked **→ fixed in v2** are addressed by the revision; the rest remain open.
+### Closed by phase 1
 
-1. **Client-supplied subtotal is signed unchecked** — `GET /api/guests/checkout` takes `purchased` from the query string and signs it into the token without comparing it to database prices. A buyer can pay an arbitrary total. `itemsHash` does not cover price. **→ fixed in v2 (§B6.3).**
-2. **`POST /api/auth/register` is unauthenticated and accepts `role`** — anyone reaching the API can create a `SUPER_ADMIN`. **→ fixed in v2 (§B5.6).**
-3. **Secrets in the client bundle** — `NEXT_PUBLIC_JWT_SECRET` and `NEXT_PUBLIC_CHECKOUT_TOKEN` are server-side signing secrets, but the `NEXT_PUBLIC_` prefix inlines them into the browser bundle. Both fall back to hardcoded defaults (`"lindway"`, `"default_secret_for_checkout_token"`). **→ fixed in v2 (§B5.6).**
-4. **Upload and delete endpoints are unauthenticated** — no `checkAuth`; delete is constrained only by an upload-directory containment check. **→ fixed in v2 (§B5.6).**
-5. **`GET /api/dashboard` interpolates `year`/`month` into `$queryRawUnsafe`** — admin-gated but still raw interpolation. **→ removed in v2 (§B4.4).**
-6. **`guestsApi.useDeleteGuests` calls `DELETE /api/guests/[id]`, which does not exist** — returns 405.
-7. **Overselling window** — stock checked at creation, decremented only at verification (§A5.3).
-8. **Admin dashboard guard is client-side only.**
-9. **Uploads served outside Next's static pipeline by default** — a misconfigured deployment yields broken image URLs rather than an error.
-10. **No `SUPER_ADMIN`-gated route exists** despite the hierarchy.
-11. **Missing shipping config rows fail silently** into hardcoded defaults, so a partially-seeded database produces plausible but wrong prices.
-12. **Bank account details are hardcoded** in `payment-step.tsx` instead of living in config. **→ fixed in v2 (§B4.7).**
-13. **`DELETE /api/products/[id]` hard-deletes** — once a product has been ordered the `Cart`/`OrderItem` foreign key blocks it, so the endpoint returns a 500 with a raw database error instead of a usable message. **→ becomes a soft delete in v2 phase 2.**
-14. **`Order` has no lifecycle beyond `isPurchased`** — no way to express cancelled or shipped, and nowhere to store a tracking number, although `how-to-shop.tsx` already promises buyers one. **→ fixed in v2 (D23).**
+| Gap | How |
+| --- | --- |
+| **Client-supplied subtotal was signed unchecked** — a buyer could name their own total | Checkout GET derives `purchased` and `totalItemsSold` from database prices and no longer reads them from the query string. `smoke:checkout` asserts an injected `purchased=1` is ignored |
+| **`$queryRawUnsafe` in `/api/dashboard`** interpolated `year`/`month` | Replaced by a Prisma `groupBy` over variants |
+| **`DELETE /api/orders/[id]` did not exist** while the client called it (405) | Added; refuses to delete a verified order, since that would strand stock and `soldCount` |
+| **`DELETE /api/products/[id]` hard-deleted** and returned a raw foreign-key 500 once a product had orders | Soft delete: deactivates instead, with a message that says so |
+| **`Order` had no lifecycle beyond `isPurchased`**, and nowhere for the tracking number the storefront promises | `OrderStatus`, `trackingNumber`, `cancelledAt` (D23) |
+| **Bank details hardcoded** in `payment-step.tsx` | `store_profile` config group |
+| **Shipping origin was Jakarta** while the brand ships from Denpasar, silently mispricing every order | Corrected in the seed. The hardcoded fallbacks in `ShippingService` still need the same fix — see below |
+
+Two further defects were found by `smoke:checkout` during the phase, both invisible to the type checker: `resolveTranslation` overwrote the product id, and Zod's `.partial()` does not strip `.default()`, so partial updates silently reset fields. Details in §C1.
+
+### Still open
+
+1. **`POST /api/auth/register` is unauthenticated and accepts `role`** — anyone reaching the API can create a `SUPER_ADMIN`. **→ phase 5 (F-52).**
+2. **Secrets in the client bundle** — `NEXT_PUBLIC_JWT_SECRET` and `NEXT_PUBLIC_CHECKOUT_TOKEN` are server-side signing secrets, but the prefix inlines them into the browser bundle, and both fall back to hardcoded defaults. **→ phase 5 (F-54).**
+3. **Upload and delete endpoints are unauthenticated** — no `checkAuth`; delete is constrained only by a directory containment check. **→ phase 5 (F-53).**
+4. **Overselling window** — stock is checked at order creation but decremented only at verification (§A5.3). Two orders against the last unit both succeed; the second fails when the admin verifies it.
+5. **Admin dashboard guard is client-side only.**
+6. **Uploads served outside Next's static pipeline by default** — a misconfigured deployment yields broken image URLs rather than an error.
+7. **No `SUPER_ADMIN`-gated route exists** despite the hierarchy.
+8. **Missing shipping config rows fail silently** into hardcoded defaults in `ShippingService`, so a partially-seeded database produces plausible but wrong prices. The Jakarta coordinates still live there as the fallback. **→ phase 5.**
 
 ---
 
@@ -1009,18 +1017,22 @@ Untouched: `api/auth/*`, `api/locations/*`, `api/config/*`, `api/files/*`.
 - Compile-time assertion that `src/static/taxonomy.ts` keys match the Prisma enums
 - Admin CRUD for `Size` and `SizeGuide`
 
-**Green checkpoint.** The tree will not compile between steps 1 and 4 — that is expected. Phase 1 is not done until `npx tsc --noEmit` and `npm run build` are clean **and** a checkout has been driven end to end by hand: add to cart → calculate → pay → admin verifies → stock and `soldCount` both moved.
+**Green checkpoint** ✅ **MET.** `npx tsc --noEmit` clean, `npm run build` clean, lint back to its 3-error baseline, and a checkout driven end to end: calculate → order → admin verifies → stock and `soldCount` both moved.
 
-**Current state after step 1: 44 type errors, all inside these seven files.** Nothing else in the tree is broken, which is the useful signal — the blast radius matched the plan.
+`npm run smoke:checkout` (`scripts/smoke-checkout.mjs`) is that run, kept because it is the only automated coverage of the pricing path this repo has. Point it at a running dev server. It asserts:
 
-```
-src/app/api/products/route.ts          src/app/api/guests/route.ts
-src/app/api/products/[id]/route.ts     src/app/api/guests/[id]/route.ts
-src/app/api/dashboard/route.ts         src/app/api/guests/checkout/route.ts
-                                       src/app/api/guests/membership/[id]/route.ts
-```
+- the subtotal is derived from database prices, and an injected `purchased=1` is ignored (A9.1);
+- the total stored on `Order` equals the total signed into the token;
+- `OrderItem` carries a `unitPrice`/`lineTotal` snapshot;
+- verification decrements the variant, `products.stock` follows via the trigger, and `soldCount` rises;
+- `status` moves `AWAITING_PAYMENT → PAID`.
 
-`types/zod.ts` and `types/api.ts` compile fine on their own — they are plain declarations with no Prisma dependency — but they still describe v1, so they must be rewritten alongside the routes rather than after them.
+**It earned its keep immediately by catching two bugs that typechecked cleanly:**
+
+1. `resolveTranslation` spread the translation row's own `id` over the product's, so every product came back carrying its EN translation's id. Checkout then rejected every cart with "product no longer available". Identity fields (`id`, `locale`, `*Id`) are now stripped before merging.
+2. **Zod's `.partial()` does not remove `.default()`** — a latent v1 defect, inherited. `UpdateOrderSchema.parse({ isPurchased: true })` returned `{ isPurchased, isMember: false, status: "AWAITING_PAYMENT", paymentMethod: "BANK_TRANSFER" }`, so verifying a QRIS order silently reset it to bank transfer and cleared the member flag. `UpdateProductSchema.parse({ price })` likewise wiped `audiences` and `isFavorite`. Defaults are gone from the base schemas; Prisma's `@default` already covers create.
+
+A third fix came out of the same run: money is rounded with `toRupiah` before signing. The shipping formula produced `18101.6500411588`, which the token signed in full while `Decimal(12,2)` stored `18101.65` — the signed and stored totals disagreed.
 
 The Collections mega-menu was built in phase 0 against a placeholder list, on the assumption that phase 1 would swap it for a database query. That swap will never happen — D25 made the taxonomy static, so `src/static/taxonomy.ts` **is** the final source, and the menu is already complete.
 
@@ -1076,6 +1088,7 @@ npm run db:seed        # tsx prisma/seed.ts
 npm run db:studio      # prisma studio
 npm run db:reset       # migrate reset --force (DESTRUCTIVE — confirm first)
 npm run db:trigger     # apply prisma/triggers/product-stock.sql
+npm run smoke:checkout # drive a real checkout against a running dev server
 npm run db:check       # [TARGET] report violations of the §B4 invariants
 ```
 

@@ -70,8 +70,34 @@ const KIDS_SIZES = [
 const ALL_SIZES = [...ADULT_SIZES, ...KIDS_SIZES];
 
 // =============================================================================
+// Locations
+//
+// Without at least one row the checkout cannot resolve destination coordinates and
+// returns 404 before it ever reaches the pricing code — so the whole order flow is
+// untestable. This is a starter set spanning the shipping zones (Denpasar is the
+// origin, so Bali exercises Z1/Z2 and Java exercises Z4); the real dataset is
+// imported through the admin Locations screen.
+// =============================================================================
+
+const LOCATIONS = [
+  { code: "51.71.01.1001", province: "Bali", district: "Kota Denpasar", sub_district: "Denpasar Timur", village: "Sumerta", approx_lat: -8.6538, approx_long: 115.2352 },
+  { code: "51.71.02.1002", province: "Bali", district: "Kota Denpasar", sub_district: "Denpasar Selatan", village: "Renon", approx_lat: -8.6786, approx_long: 115.2358 },
+  { code: "51.03.05.2003", province: "Bali", district: "Badung", sub_district: "Kuta", village: "Legian", approx_lat: -8.7059, approx_long: 115.1715 },
+  { code: "51.08.01.2004", province: "Bali", district: "Gianyar", sub_district: "Ubud", village: "Ubud", approx_lat: -8.5069, approx_long: 115.2625 },
+  { code: "51.06.02.2005", province: "Bali", district: "Buleleng", sub_district: "Buleleng", village: "Singaraja", approx_lat: -8.1121, approx_long: 115.0882 },
+  { code: "31.71.01.1006", province: "DKI Jakarta", district: "Jakarta Pusat", sub_district: "Menteng", village: "Menteng", approx_lat: -6.1959, approx_long: 106.8317 },
+  { code: "35.78.01.1007", province: "Jawa Timur", district: "Kota Surabaya", sub_district: "Gubeng", village: "Gubeng", approx_lat: -7.2678, approx_long: 112.7519 },
+  { code: "34.71.01.1008", province: "DI Yogyakarta", district: "Kota Yogyakarta", sub_district: "Gondokusuman", village: "Terban", approx_lat: -7.7793, approx_long: 110.3742 },
+];
+
+// =============================================================================
 // Seeders
 // =============================================================================
+
+async function seedLocations() {
+  console.log("📍 locations…");
+  await prisma.location.createMany({ data: LOCATIONS, skipDuplicates: true });
+}
 
 async function seedUsers() {
   console.log("👥 users…");
@@ -469,24 +495,26 @@ async function main() {
   console.log("🌱 seeding…\n");
 
   await seedUsers();
+  await seedLocations();
   await seedSizes();
   await seedConfig();
   await seedSizeGuides();
   await seedProducts();
 
-  const [users, sizeCount, guideCount, productCount, variantCount, configCount] = await Promise.all([
+  const [users, sizeCount, guideCount, productCount, variantCount, configCount, locationCount] = await Promise.all([
     prisma.user.count(),
     prisma.size.count(),
     prisma.sizeGuide.count(),
     prisma.product.count(),
     prisma.productVariant.count(),
     prisma.configParameter.count(),
+    prisma.location.count(),
   ]);
 
   const stockSynced = await prisma.product.findMany({ select: { sku: true, stock: true } });
 
   console.log("\n✅ done");
-  console.log(`   users ${users} · sizes ${sizeCount} · size guides ${guideCount} · config ${configCount}`);
+  console.log(`   users ${users} · sizes ${sizeCount} · size guides ${guideCount} · config ${configCount} · locations ${locationCount}`);
   console.log(`   products ${productCount} · variants ${variantCount}`);
   console.log(`   stock from trigger: ${stockSynced.map((product) => `${product.sku}=${product.stock}`).join(" ")}`);
   if (stockSynced.every((product) => product.stock === 0)) {

@@ -56,8 +56,8 @@ export const SizeSchema = z.object({
   // size. Enforced in the service layer and by db:check (§B4).
   code: z.string().min(1, "Size code is required"),
   label: z.string().min(1, "Size label is required"),
-  order: z.number().int().nonnegative().default(0),
-  isActive: z.boolean().default(true),
+  order: z.number().int().nonnegative().optional(),
+  isActive: z.boolean().optional(),
 });
 
 export const CreateSizeSchema = SizeSchema.omit({ id: true });
@@ -77,7 +77,7 @@ export const SizeGuideTranslationSchema = z.object({
 
 export const SizeGuideSchema = z.object({
   id: z.string().optional(),
-  order: z.number().int().nonnegative().default(0),
+  order: z.number().int().nonnegative().optional(),
   publishedAt: z.coerce.date().nullish(), // null = draft; this IS the on/off switch (D1)
   rows: z.array(SizeGuideRowSchema).min(1, "A size guide needs at least one row"),
   translations: z.array(SizeGuideTranslationSchema).min(1, "An EN translation is required"),
@@ -120,11 +120,11 @@ export const ProductSchema = z.object({
 
   branding: BrandingEnum,
   garment: GarmentEnum.nullish(),
-  audiences: z.array(AudienceEnum).default([]),
+  audiences: z.array(AudienceEnum).optional(),
   sizeGuideId: z.string().nullish(),
 
   price: z.number().positive("Price must be positive"),
-  discount: z.number().int().min(0).max(100).default(0),
+  discount: z.number().int().min(0).max(100).optional(),
   discountedPrice: z.number().positive("Discounted price must be positive"),
 
   images: z.array(FileSchema).min(1, "At least one image is required"),
@@ -132,9 +132,9 @@ export const ProductSchema = z.object({
   releasedAt: z.coerce.date().nullish(),
   bestSellerRank: z.number().int().nullish(),
 
-  isPreOrder: z.boolean().default(false),
-  isFavorite: z.boolean().default(false),
-  isActive: z.boolean().default(true),
+  isPreOrder: z.boolean().optional(),
+  isFavorite: z.boolean().optional(),
+  isActive: z.boolean().optional(),
 
   variants: z.array(ProductVariantSchema).min(1, "At least one size is required"),
   // An EN row is mandatory; ID is optional (D3). Checked in the handler, since Zod
@@ -161,19 +161,19 @@ export const OrderSchema = z.object({
   postalCode: z.number().int().min(1, "Postal code is required"),
 
   memberId: z.string().nullish(),
-  isMember: z.boolean().default(false),
+  isMember: z.boolean().optional(),
 
   shippingCost: z.number().min(0).positive("Shipping cost must be positive"),
   purchased: z.number().min(0).positive("Purchased must be positive"),
   totalPurchased: z.number().min(0).positive("Total purchased must be positive"),
   totalItemsSold: z.number().min(0).positive("Total items sold must be positive"),
 
-  status: OrderStatusEnum.default("AWAITING_PAYMENT"),
-  isPurchased: z.boolean().default(false),
+  status: OrderStatusEnum.optional(),
+  isPurchased: z.boolean().optional(),
   trackingNumber: z.string().nullish(),
   cancelledAt: z.coerce.date().nullish(),
 
-  paymentMethod: PaymentMethodEnum.default("BANK_TRANSFER"),
+  paymentMethod: PaymentMethodEnum.optional(),
   receiptImage: FileSchema,
   instagram: z.string().optional(),
   reference: z.string().optional(),
@@ -194,7 +194,7 @@ export const ContactInquirySchema = z.object({
   inquiryType: InquiryTypeEnum,
   otherDetail: z.string().nullish(), // only when inquiryType = OTHER
   message: z.string().min(1, "Message is required"),
-  status: InquiryStatusEnum.default("NEW"),
+  status: InquiryStatusEnum.optional(),
   handlingNote: z.string().nullish(),
 });
 
@@ -210,8 +210,8 @@ export const FaqTranslationSchema = z.object({
 export const FaqSchema = z.object({
   id: z.string().optional(),
   topic: z.string().min(1, "Topic is required"),
-  order: z.number().int().nonnegative().default(0),
-  isActive: z.boolean().default(true),
+  order: z.number().int().nonnegative().optional(),
+  isActive: z.boolean().optional(),
   translations: z.array(FaqTranslationSchema).min(1, "An EN translation is required"),
 });
 
@@ -229,7 +229,7 @@ export const ArticleSchema = z.object({
   authorId: z.string().nullish(),
   image: FileSchema,
   imageAlt: z.string().nullish(),
-  featured: z.boolean().default(false),
+  featured: z.boolean().optional(),
   publishedAt: z.coerce.date().nullish(),
   translations: z.array(ArticleTranslationSchema).min(1, "An EN translation is required"),
 });

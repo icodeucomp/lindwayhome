@@ -34,3 +34,14 @@ export const resolveListPrice = (product: PricedProduct): number => toNumber(pro
 export const hasDiscount = (product: PricedProduct): boolean => resolveUnitPrice(product) < resolveListPrice(product);
 
 export const resolveLineTotal = (product: PricedProduct, quantity: number): number => resolveUnitPrice(product) * quantity;
+
+/**
+ * Rounds to whole rupiah.
+ *
+ * IDR has no sub-unit in practice, and the shipping formula produces values like
+ * 18101.6500411588 — meaningless as money. It also matters for correctness: the
+ * checkout token signs a JavaScript float while the database column is
+ * Decimal(12,2), so an unrounded total is signed as one number and stored as
+ * another. Round once, before signing, and the two always agree.
+ */
+export const toRupiah = (value: number): number => Math.round(value);

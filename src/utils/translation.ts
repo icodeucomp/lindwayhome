@@ -19,17 +19,27 @@ export interface TranslationRow {
  * EN is assumed to exist — that invariant is enforced on write and by
  * `npm run db:check` (§B4), because `Product` has no name column of its own.
  */
+/**
+ * A translation row carries its own identity — `id`, `locale`, and the foreign key
+ * back to its parent. Spreading those over the parent would overwrite the parent's
+ * `id` with the translation's, which is silent and breaks every lookup downstream.
+ * Only content fields are merged.
+ */
+const isIdentityField = (field: string) => field === "id" || field === "locale" || field.endsWith("Id");
+
+const contentOf = (row: TranslationRow): Record<string, unknown> => Object.fromEntries(Object.entries(row).filter(([field]) => !isIdentityField(field)));
+
 export const resolveTranslation = <T extends TranslationRow>(translations: T[] | undefined | null, locale: Locale): Partial<T> => {
   if (!translations || translations.length === 0) return {};
 
   const base = translations.find((row) => row.locale === "EN");
   const active = locale === "EN" ? base : translations.find((row) => row.locale === locale);
 
-  if (!active) return (base ?? {}) as Partial<T>;
-  if (!base || active === base) return active as Partial<T>;
+  if (!active) return (base ? contentOf(base) : {}) as Partial<T>;
+  if (!base || active === base) return contentOf(active) as Partial<T>;
 
-  const merged: Record<string, unknown> = { ...base };
-  for (const [field, value] of Object.entries(active)) {
+  const merged: Record<string, unknown> = contentOf(base);
+  for (const [field, value] of Object.entries(contentOf(active))) {
     // null and "" mean "not translated yet"; 0 and false are real values.
     if (value !== null && value !== undefined && value !== "") merged[field] = value;
   }
