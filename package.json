@@ -11,7 +11,8 @@
     "db:generate": "npx prisma generate",
     "db:seed": "npx prisma db seed",
     "db:studio": "npx prisma studio",
-    "db:reset": "npx prisma migrate reset --force"
+    "db:reset": "npx prisma migrate reset --force",
+    "db:trigger": "node prisma/apply-sql.mjs prisma/triggers/product-stock.sql"
   },
   "dependencies": {
     "@faker-js/faker": "^10.2.0",

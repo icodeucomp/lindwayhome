@@ -967,12 +967,13 @@ Phase 1 has to flip the schema, three type files, six API routes and one admin s
 
 `prisma/schema.prisma`, `src/types/zod.ts`, `src/types/api.ts` and `src/utils/api.ts` are deliberately still v1 at the start of this phase. They are not leftovers: they define the contract that the running system speaks, and 16 files depend on them, including the whole checkout subsystem. They cannot move before the schema does.
 
-**1 — Database (destructive, confirm first)**
+**1 — Database** ✅ **DONE**
 
-1. `docs/schema.v2.prisma` → `prisma/schema.prisma`
-2. `npm run db:reset` · `npm run db:migrate` · `npm run db:generate`
-3. `psql "$DATABASE_URL" -f prisma/triggers/product-stock.sql`
-4. Rewrite `prisma/seed.ts`: users, `Size` master, config groups (`shipping`, `package_dimensions`, `tax`, `promotions`, `members`, `product_defaults`, `store_profile`, `media`), size guides from `prisma/seed-data/size-guides.ts`
+Schema applied, database rebuilt, trigger installed, seed rewritten. Current contents: 2 users · 23 sizes · 45 config parameters in 8 groups · 4 published size guides (37 rows) · 6 products with 27 variants and 10 translation rows.
+
+All four §B4 invariants verified clean against the live database, and the stock trigger confirmed working — `products.stock` matched `SUM(variants.quantity)` for every row without the seed ever writing that column.
+
+Translation coverage is deliberately uneven so the per-field fallback chain (§B3.2) can actually be exercised rather than assumed: two products full EN+ID, two with an ID name but no ID description, two EN-only.
 
 **2 — Contract**
 
@@ -1009,6 +1010,17 @@ Untouched: `api/auth/*`, `api/locations/*`, `api/config/*`, `api/files/*`.
 - Admin CRUD for `Size` and `SizeGuide`
 
 **Green checkpoint.** The tree will not compile between steps 1 and 4 — that is expected. Phase 1 is not done until `npx tsc --noEmit` and `npm run build` are clean **and** a checkout has been driven end to end by hand: add to cart → calculate → pay → admin verifies → stock and `soldCount` both moved.
+
+**Current state after step 1: 44 type errors, all inside these seven files.** Nothing else in the tree is broken, which is the useful signal — the blast radius matched the plan.
+
+```
+src/app/api/products/route.ts          src/app/api/guests/route.ts
+src/app/api/products/[id]/route.ts     src/app/api/guests/[id]/route.ts
+src/app/api/dashboard/route.ts         src/app/api/guests/checkout/route.ts
+                                       src/app/api/guests/membership/[id]/route.ts
+```
+
+`types/zod.ts` and `types/api.ts` compile fine on their own — they are plain declarations with no Prisma dependency — but they still describe v1, so they must be rewritten alongside the routes rather than after them.
 
 The Collections mega-menu was built in phase 0 against a placeholder list, on the assumption that phase 1 would swap it for a database query. That swap will never happen — D25 made the taxonomy static, so `src/static/taxonomy.ts` **is** the final source, and the menu is already complete.
 
@@ -1063,13 +1075,23 @@ npm run db:migrate     # prisma migrate dev
 npm run db:seed        # tsx prisma/seed.ts
 npm run db:studio      # prisma studio
 npm run db:reset       # migrate reset --force (DESTRUCTIVE — confirm first)
+npm run db:trigger     # apply prisma/triggers/product-stock.sql
 npm run db:check       # [TARGET] report violations of the §B4 invariants
 ```
 
-**`prisma/migrations/` is gitignored**, so migration history does not survive a fresh clone and a hand-edited migration would be lost. Anything the schema cannot express therefore lives in a tracked file and is applied explicitly after migrating:
+**`prisma/migrations/` is gitignored**, so migration history does not survive a fresh clone and a hand-edited migration would be lost. Anything the schema cannot express therefore lives in a tracked file and is applied explicitly after migrating — `npm run db:trigger`, which is idempotent and also backfills existing rows, so the order it runs in does not matter.
+
+It goes through `prisma/apply-sql.mjs` rather than `psql`, which is not installed in every environment this repo is developed in; `pg` already is.
+
+**Prisma 7 blocks destructive commands run by an AI agent.** `migrate reset` and `migrate dev` require `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION` set to the exact text of the user's consent, and Prisma explicitly does not accept earlier messages as consent. Ask for a fresh confirmation each time.
+
+**Full rebuild sequence:**
 
 ```bash
-psql "$DATABASE_URL" -f prisma/triggers/product-stock.sql   # idempotent, re-run after every db:reset
+npm run db:reset      # drops everything
+npm run db:migrate    # recreates the schema
+npm run db:trigger    # stock trigger + backfill
+npm run db:seed
 ```
 
 **There is no test framework installed** — no runner, no test files. Verification is `npx tsc --noEmit` + `npm run lint` + exercising the flow by hand.

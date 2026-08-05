@@ -49,3 +49,9 @@ AFTER INSERT OR DELETE OR UPDATE OF "quantity", "productId"
 ON "product_variants"
 FOR EACH ROW
 EXECUTE FUNCTION recompute_product_stock();
+
+-- Backfill. The trigger only fires on future writes, so rows that already exist —
+-- anything seeded before this file was applied — would keep a stale stock. Running
+-- it here makes the file correct on its own, in any order.
+UPDATE "products" p
+   SET "stock" = COALESCE((SELECT SUM(v."quantity") FROM "product_variants" v WHERE v."productId" = p."id"), 0);
