@@ -253,6 +253,7 @@ export const ProductForm = ({ productId }: { productId?: string }) => {
   return (
     <>
       <PageHeader
+        narrow
         back={{ href: LIST_HREF, label: "Products" }}
         title={isEdit ? form.name || "Edit product" : "New product"}
         description="The name is the same in both languages (D26). Rich content is optional and can be added later."

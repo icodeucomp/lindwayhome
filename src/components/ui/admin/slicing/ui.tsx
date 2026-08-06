@@ -73,16 +73,21 @@ interface PageHeaderProps {
   description?: string;
   actions?: React.ReactNode;
   back?: { href: string; label: string };
+  /**
+   * Constrain to the form column and centre it. Create/edit screens pass this so the
+   * heading sits directly above the fields; list screens stay full width.
+   */
+  narrow?: boolean;
 }
 
-export const PageHeader = ({ eyebrow, title, description, actions, back }: PageHeaderProps) => (
-  <div className="mb-8">
+export const PageHeader = ({ eyebrow, title, description, actions, back, narrow }: PageHeaderProps) => (
+  <div className={`mb-8 ${narrow ? "w-full max-w-3xl mx-auto" : ""}`}>
     {back ? <div className="mb-5">{<BackLink {...back} />}</div> : eyebrow ? <p className="mb-2 admin-eyebrow">{eyebrow}</p> : null}
 
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
         <h1 className="admin-title">{title}</h1>
-        {description && <p className="max-w-2xl mt-2 text-sm text-body/60">{description}</p>}
+        {description && <p className={`mt-2 text-sm text-body/60 ${narrow ? "" : "max-w-2xl"}`}>{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2 shrink-0">{actions}</div>}
     </div>

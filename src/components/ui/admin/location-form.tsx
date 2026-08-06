@@ -122,6 +122,7 @@ export const LocationForm = ({ locationId }: { locationId?: string }) => {
   return (
     <>
       <PageHeader
+        narrow
         back={{ href: LIST_HREF, label: "Locations" }}
         title={isEdit ? "Edit location" : "New location"}
         description="Coordinates drive the shipping price. Take them from the village centre, not the province."

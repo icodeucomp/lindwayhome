@@ -213,6 +213,7 @@ export const SizeGuideForm = ({ guideId, duplicateFromId }: { guideId?: string; 
   return (
     <>
       <PageHeader
+        narrow
         back={{ href: LIST_HREF, label: "Size Guides" }}
         title={isEdit ? form.title.EN || "Edit size guide" : duplicateFromId ? "Duplicate size guide" : "New size guide"}
         description="Body measurements for a pattern, shared by every product that uses this guide. Packing dimensions are not here — those belong to the individual product (D6)."

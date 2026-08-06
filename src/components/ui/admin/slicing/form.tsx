@@ -14,9 +14,18 @@ import { AdminButton, SectionHeading, Spinner } from "./ui";
 /*                                   Layout                                   */
 /* -------------------------------------------------------------------------- */
 
-/** Centred single-column form body, matching the create/edit screens. */
+/**
+ * Single-column form body, centred in the content area.
+ *
+ * `FORM_COLUMN` is shared with `PageHeader narrow` and `FormActions` so the heading,
+ * the fields and the save bar sit in one column. Centring only the form would leave
+ * the title hanging off to the left of it, which reads worse than left-aligning
+ * everything did.
+ */
+export const FORM_COLUMN = "w-full max-w-3xl mx-auto";
+
 export const FormLayout = ({ children, onSubmit }: { children: React.ReactNode; onSubmit: (event: React.FormEvent<HTMLFormElement>) => void }) => (
-  <form onSubmit={onSubmit} noValidate className="max-w-3xl pb-24 space-y-12">
+  <form onSubmit={onSubmit} noValidate className={`${FORM_COLUMN} pb-28 space-y-12`}>
     {children}
   </form>
 );
@@ -38,16 +47,20 @@ export const FieldRow = ({ children }: { children: React.ReactNode }) => <div cl
  */
 export const FormActions = ({ isPending, submitLabel, onCancel, cancelLabel = "Cancel", note }: { isPending?: boolean; submitLabel: string; onCancel: () => void; cancelLabel?: string; note?: string }) => (
   <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-light/95 backdrop-blur border-border lg:pl-64">
-    <div className="flex items-center justify-between gap-4 px-4 py-3 mx-auto max-w-7xl sm:px-6 lg:px-8">
-      <p className="hidden text-xs sm:block text-body/50">{note}</p>
-      <div className="flex items-center justify-end flex-1 gap-2">
-        <AdminButton type="button" onClick={onCancel} disabled={isPending}>
-          {cancelLabel}
-        </AdminButton>
-        <AdminButton type="submit" variant="solid" disabled={isPending}>
-          {isPending && <Spinner />}
-          {isPending ? "Saving…" : submitLabel}
-        </AdminButton>
+    {/* Mirrors <main>'s own container before narrowing, so the bar lands directly
+        under the form column instead of drifting on very wide screens. */}
+    <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
+      <div className={`${FORM_COLUMN} flex items-center justify-between gap-4 py-3`}>
+        <p className="hidden text-xs sm:block text-body/50">{note}</p>
+        <div className="flex items-center justify-end flex-1 gap-2">
+          <AdminButton type="button" onClick={onCancel} disabled={isPending}>
+            {cancelLabel}
+          </AdminButton>
+          <AdminButton type="submit" variant="solid" disabled={isPending}>
+            {isPending && <Spinner />}
+            {isPending ? "Saving…" : submitLabel}
+          </AdminButton>
+        </div>
       </div>
     </div>
   </div>
