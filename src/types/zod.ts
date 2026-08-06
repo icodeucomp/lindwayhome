@@ -185,6 +185,28 @@ export const CreateOrderSchema = OrderSchema.omit({ id: true });
 export const UpdateOrderSchema = OrderSchema.partial();
 
 // =============================================================================
+// Member
+//
+// The registry of who is a member *now* (D19). `Order.isMember` is the separate,
+// frozen record that a given order was priced as one — revoking here must never
+// reach back into it.
+// =============================================================================
+
+export const MemberSchema = z.object({
+  id: z.string().optional(),
+  // Trimmed and lowercased before validating: checkout looks members up by exact
+  // email, so " Rani@Example.com " and "rani@example.com" must not become two rows.
+  email: z.string().trim().toLowerCase().pipe(z.email("A valid email is required")),
+  fullname: z.string().trim().nullish(),
+  isActive: z.boolean().optional(),
+});
+
+export const CreateMemberSchema = MemberSchema.omit({ id: true });
+
+/** Email is immutable: it is the key checkout matches on, and the identity itself. */
+export const UpdateMemberSchema = MemberSchema.omit({ id: true, email: true }).partial();
+
+// =============================================================================
 // Content
 // =============================================================================
 
@@ -344,6 +366,13 @@ export const LocationQuerySchema = z.object({
   province: z.string().optional(),
   district: z.string().optional(),
   sub_district: z.string().optional(),
+});
+
+export const MemberQuerySchema = z.object({
+  ...baseQuery,
+  // Absent means both — a revoked member the admin cannot see is one they cannot
+  // reinstate.
+  isActive: z.string().optional(),
 });
 
 export const ContactInquiryQuerySchema = z.object({

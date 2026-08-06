@@ -966,7 +966,8 @@ Each phase ends with `npx tsc --noEmit` clean, `npm run build` clean, and the af
 | **1 — Data model** ✅ **DONE** | Drop and rebuild the schema: taxonomy enums, Size/SizeGuide/Variant, Product + translations, Order/OrderItem, Member, content models · apply `product-stock.sql` · new seed · `resolveTranslation` + `resolveUnitPrice` helpers · `db:check` · assert `taxonomy.ts` keys match the Prisma enums · admin CRUD for sizes and size guides | Everything downstream depends on these tables |
 | **2a — Admin catalog** ✅ **DONE** | Admin design system (§C2) · product list with search, taxonomy filters, grid/list and paging · product form: size guide → variants → package dimensions, images, 5 Tiptap fields behind an EN\|ID tab · product **soft delete** (A9.13) | No dependency on the public design, and nothing else can be built against an empty catalog |
 | **2b — Public catalog** | Listings per axis, product detail, New Arrivals, Best Sellers, wishlist | **Blocked on the v2 visual design** — see §B7.5 |
-| **3 — Orders & pricing** | Member registry, `OrderStatus` + tracking number in the admin order screen, server-computed subtotal (F-51), line snapshot (F-55) | Touches the checkout path, so it runs alone |
+| **3a — Member registry** ✅ **DONE** | `Member` CRUD (F-48): grant, revoke, reinstate, per-member order stats. F-51 and F-55 already landed in phase 1 | Reads the checkout path but does not change it |
+| **3 — Orders & pricing** | `OrderStatus` + tracking number in the admin order screen | Touches the checkout path, so it runs alone |
 | **4a — Journal admin** ✅ **DONE** | `Article` + `ArticleCategory` CRUD: zod, types, API routes, client hooks, list and form screens, seed | Independent of 2b and 3 |
 | **4b — FAQ admin** ✅ **DONE** | `Faq` CRUD on the same vertical-slice pattern, grouped by `topic` | Same |
 | **4c — Contact inbox** ✅ **DONE** | `ContactInquiry`: public `POST`, admin queue with status workflow, handling note and sidebar badge (F-47). The storefront form (F-45) and its emails (F-46) are still to come | The endpoint the form will post to exists, so building the form is presentation only |
@@ -1121,6 +1122,18 @@ The contact inbox (F-47). The storefront form (F-45) and its two emails (F-46) a
 - **`statusCounts` is computed across the whole inbox, never the filtered set** — it drives the status tabs and the sidebar badge, and a badge that moved whenever a filter changed would be saying something other than "this many are waiting".
 - **Delete is for spam**; anything genuine should be archived, which keeps the record and its handling note. The dialog says so.
 - `nextStatuses` in [`src/static/inquiry.ts`](src/static/inquiry.ts) is the workflow: nothing leaves `HANDLED` except to archive, so a closed inquiry cannot be quietly reopened without a trace.
+
+## C7. Phase 3a work order `[SHIPPED]`
+
+The member registry (F-48). D19 is the whole point of this screen, so it is what the smoke run proves rather than asserts.
+
+**The D19 boundary, demonstrated end to end.** An order was placed at the member rate, the membership was then revoked, and the order re-read: `isMember` still `true`, `totalPurchased` unchanged, `memberId` still attached — while the *next* quote for the same email came back `isMember: false`. Current state and historical record genuinely do not share a column.
+
+- **`email` is absent from `UpdateMemberSchema`.** It is the key `findActiveMember` matches on, so changing it would silently detach somebody from their own membership. It is also trimmed and lowercased *in the schema*, so ` Rani@Example.com ` and `rani@example.com` cannot become two rows that checkout sees as different people.
+- **`POST /members` upserts**, like the post-order activation it mirrors (§B6.4) — re-granting to somebody previously revoked reinstates them instead of colliding on the unique email. Granting to an already-active member is refused, because that is almost certainly a mistake.
+- **Delete is refused once a member has orders.** `Order.memberId` is an optional relation, so Prisma would null it out and report success — quietly severing every order from the person who placed it. The screen only offers Delete when `orderCount` is 0; the server refuses regardless.
+- **Order stats come from one `groupBy` per page**, not per row, and count only verified orders — an unverified order has not been paid, and showing it as spend overstates what a member is worth.
+- **Order count links to the Orders screen filtered by email** rather than duplicating a list. Its search already matches on email, so there is nothing new to build or keep in sync.
 
 ---
 

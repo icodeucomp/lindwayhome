@@ -584,8 +584,28 @@ export interface Member {
   id: string;
   email: string;
   fullname: string | null;
+  /** false = revoked. Past orders keep their frozen `isMember` either way (D19). */
   isActive: boolean;
+  /** This IS the join date — there is no separate joinedAt (D21). */
   createdAt: string;
+  updatedAt?: string;
+  /** Attached by the list and detail endpoints, not stored. */
+  orderCount?: number;
+  /** Sum of `totalPurchased` across their verified orders. */
+  totalSpent?: number;
+  lastOrderAt?: string | null;
+}
+
+export interface CreateMember {
+  email: string;
+  fullname?: string | null;
+  isActive?: boolean;
+}
+
+/** Email is absent on purpose — it is the key checkout matches on. */
+export interface UpdateMember {
+  fullname?: string | null;
+  isActive?: boolean;
 }
 
 // =============================================================================

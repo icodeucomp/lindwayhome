@@ -27,6 +27,8 @@ import {
   UpdateFaq,
   CreateContactInquiry,
   UpdateContactInquiry,
+  CreateMember,
+  UpdateMember,
 } from "@/types";
 
 import { QueryKey, useMutation, UseMutationOptions, useQuery } from "@tanstack/react-query";
@@ -897,4 +899,41 @@ export const contactInquiriesApi = {
     }),
   useDeleteContactInquiry: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, string>) =>
     useMutation({ mutationFn: mutation<string>((id) => api.delete(`/contact-inquiries/${id}`)), onError: onMutationError, ...mutationOptions }),
+};
+
+export const membersApi = {
+  useGetMembers: <T>({ key, params = {}, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+    return useQuery<T, Error>({
+      queryKey: key,
+      queryFn: async () => {
+        const searchParams = new URLSearchParams();
+        if (params.search) searchParams.append("search", params.search);
+        if (params.isActive) searchParams.append("isActive", params.isActive.toString());
+        if (params.limit) searchParams.append("limit", params.limit.toString());
+        if (params.page) searchParams.append("page", params.page.toString());
+        const { data } = await api.get(`/members?${searchParams.toString()}`);
+        return data;
+      },
+      gcTime,
+      staleTime,
+      enabled,
+      retry: RETRY_TIMES,
+    });
+  },
+  useGetMember: <T>({ key, id, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+    return useQuery<T, Error>({
+      queryKey: key,
+      queryFn: async () => (await api.get(`/members/${id}`)).data,
+      gcTime,
+      staleTime,
+      enabled,
+      retry: RETRY_TIMES,
+    });
+  },
+  useCreateMember: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, CreateMember>) =>
+    useMutation({ mutationFn: mutation<CreateMember>((body) => api.post("/members", body)), onError: onMutationError, ...mutationOptions }),
+  useUpdateMember: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, { id: string; member: UpdateMember }>) =>
+    useMutation({ mutationFn: mutation<{ id: string; member: UpdateMember }>(({ id, member }) => api.put(`/members/${id}`, member)), onError: onMutationError, ...mutationOptions }),
+  useDeleteMember: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, string>) =>
+    useMutation({ mutationFn: mutation<string>((id) => api.delete(`/members/${id}`)), onError: onMutationError, ...mutationOptions }),
 };

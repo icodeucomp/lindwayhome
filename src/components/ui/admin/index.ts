@@ -10,6 +10,7 @@ export * from "./size-guides-dashboard";
 export * from "./size-guide-form";
 
 export * from "./orders-dashboard";
+export * from "./members-dashboard";
 
 export * from "./articles-dashboard";
 export * from "./article-form";
