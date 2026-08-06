@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { $Enums, Prisma } from "prisma-client/client";
 
-import { checkAuth, logError, prisma } from "@/lib";
+import { checkAuth, errorMessage, logError, prisma } from "@/lib";
 
 import { buildDateFilter } from "@/utils";
 
@@ -124,6 +124,6 @@ export async function GET(request: NextRequest) {
     );
   } catch (error) {
     logError(`${pathAPI} error`, Date.now() - startTime, error);
-    return NextResponse.json({ success: false, message: error }, { status: 500 });
+    return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }

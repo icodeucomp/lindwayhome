@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { ConfigService } from "@/services";
-import { logError, logger } from "@/lib";
+import { errorMessage, logError, logger } from "@/lib";
 
 // GET - Fetch specific configuration parameters by keys
 export async function GET(request: NextRequest) {
@@ -21,6 +21,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, data: configParameters }, { status: 200 });
   } catch (error) {
     logError(`${pathAPI} error`, Date.now() - startTime, error);
-    return NextResponse.json({ success: false, message: error }, { status: 500 });
+    return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }

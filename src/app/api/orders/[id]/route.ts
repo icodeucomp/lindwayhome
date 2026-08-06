@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { checkAuth, getClientIp, logError, logger, logRequest, logResponse, orderInclude, prisma } from "@/lib";
+import { checkAuth, errorMessage, getClientIp, logError, logger, logRequest, logResponse, orderInclude, prisma } from "@/lib";
 
 import { z } from "zod";
 
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ success: true, data: order }, { status: 200 });
   } catch (error) {
     logError(`${pathAPI} error`, Date.now() - startTime, error);
-    return NextResponse.json({ success: false, message: error }, { status: 500 });
+    return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }
 
@@ -106,7 +106,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     logError(`${pathAPI} error`, Date.now() - startTime, error);
-    return NextResponse.json({ success: false, message: error }, { status: 500 });
+    return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }
 
@@ -140,6 +140,6 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     return NextResponse.json({ success: true, message: "Order deleted successfully" }, { status: 200 });
   } catch (error) {
     logError(`${pathAPI} error`, Date.now() - startTime, error);
-    return NextResponse.json({ success: false, message: error }, { status: 500 });
+    return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }

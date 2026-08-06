@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { logError, prisma } from "@/lib";
+import { errorMessage, logError, prisma } from "@/lib";
 
 import { SelectOption } from "@/types";
 
@@ -101,6 +101,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, message: "Success", data: result });
   } catch (error) {
     logError(`${pathAPI} error`, Date.now() - startTime, error);
-    return NextResponse.json({ success: false, message: error }, { status: 500 });
+    return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { FileUploader, getClientIp, logError, logger, logRequest, logResponse } from "@/lib";
+import { errorMessage, FileUploader, getClientIp, logError, logger, logRequest, logResponse } from "@/lib";
 
 const uploader = new FileUploader({
   allowedTypes: ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"],
@@ -30,6 +30,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, message: "Images uploaded to temp successfully", data: uploadResults });
   } catch (error) {
     logError(`${pathAPI} error`, Date.now() - startTime, error);
-    return NextResponse.json({ success: false, message: error }, { status: 500 });
+    return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }

@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 
-import { checkAuth, getClientIp, logError, logger, logRequest, logResponse, prisma, productInclude, resolveFiles, toTranslationCreate, toVariantCreate } from "@/lib";
+import { checkAuth, errorMessage, getClientIp, logError, logger, logRequest, logResponse, prisma, productInclude, resolveFiles, toTranslationCreate, toVariantCreate } from "@/lib";
 
 import { calculateDiscountedPrice, nullToUndefined, resolveTranslation, type Locale } from "@/utils";
 
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ success: true, data: { ...product, ...resolveTranslation(product.translations, locale) } });
   } catch (error) {
     logError(`${pathAPI} error`, Date.now() - startTime, error);
-    return NextResponse.json({ success: false, message: error }, { status: 500 });
+    return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }
 
@@ -123,7 +123,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     logError(`${pathAPI} error`, Date.now() - startTime, error);
-    return NextResponse.json({ success: false, message: error }, { status: 500 });
+    return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }
 
@@ -163,6 +163,6 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     return NextResponse.json({ success: true, message: "Product deleted successfully" }, { status: 200 });
   } catch (error) {
     logError(`${pathAPI} error`, Date.now() - startTime, error);
-    return NextResponse.json({ success: false, message: error }, { status: 500 });
+    return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }

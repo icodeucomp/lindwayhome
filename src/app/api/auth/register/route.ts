@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { generateToken, getClientIp, hashPassword, logError, logger, logRequest, logResponse, prisma } from "@/lib";
+import { errorMessage, generateToken, getClientIp, hashPassword, logError, logger, logRequest, logResponse, prisma } from "@/lib";
 
 import { z } from "zod";
 
@@ -64,6 +64,6 @@ export async function POST(request: NextRequest) {
     }
 
     logError(`${pathAPI} error`, Date.now() - startTime, error);
-    return NextResponse.json({ success: false, message: error }, { status: 500 });
+    return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }

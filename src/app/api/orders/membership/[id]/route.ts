@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { prisma, logger, getClientIp, logRequest, logResponse, logError } from "@/lib";
+import { errorMessage, getClientIp, logError, logger, logRequest, logResponse, prisma } from "@/lib";
 
 // PATCH - Activate membership from the post-order page (F-15, §B6.4)
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -39,6 +39,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ success: true, message: "Membership activated successfully." }, { status: 200 });
   } catch (error) {
     logError(`${pathAPI} error`, Date.now() - startTime, error);
-    return NextResponse.json({ success: false, message: error }, { status: 500 });
+    return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }

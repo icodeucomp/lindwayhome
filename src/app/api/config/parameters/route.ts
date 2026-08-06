@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { checkAuth, getClientIp, logError, logRequest, logResponse, resolveFiles } from "@/lib";
+import { checkAuth, errorMessage, getClientIp, logError, logRequest, logResponse, resolveFiles } from "@/lib";
 
 import { ConfigService } from "@/services";
 
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     logError(pathAPI, Date.now() - startTime, error);
 
-    return NextResponse.json({ success: false, message: error }, { status: 500 });
+    return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }
 
@@ -46,6 +46,6 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     logError(pathAPI, Date.now() - startTime, error);
 
-    return NextResponse.json({ success: false, message: error }, { status: 500 });
+    return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }

@@ -4,7 +4,7 @@ import { Prisma } from "prisma-client/client";
 
 import { z } from "zod";
 
-import { checkAuth, FileUploader, getClientIp, logError, logger, logRequest, logResponse, prisma, productInclude, resolveFiles, toTranslationCreate, toVariantCreate } from "@/lib";
+import { checkAuth, errorMessage, FileUploader, getClientIp, logError, logger, logRequest, logResponse, prisma, productInclude, resolveFiles, toTranslationCreate, toVariantCreate } from "@/lib";
 
 import { buildDateFilter, calculateDiscountedPrice, nullToUndefined, resolveTranslation, type Locale } from "@/utils";
 
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
     }
 
     logError(`${pathAPI} error`, Date.now() - startTime, error);
-    return NextResponse.json({ success: false, message: error }, { status: 500 });
+    return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }
 
@@ -183,6 +183,6 @@ export async function POST(request: NextRequest) {
     }
 
     logError(`${pathAPI} error`, Date.now() - startTime, error);
-    return NextResponse.json({ success: false, message: error }, { status: 500 });
+    return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }

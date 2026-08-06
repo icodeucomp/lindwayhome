@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { ConfigService, ShippingService } from "@/services";
 
-import { getClientIp, logCalculation, logError, logger, logRequest, logResponse, prisma, resolveFiles, sendOrderConfirmation } from "@/lib";
+import { errorMessage, getClientIp, logCalculation, logError, logger, logRequest, logResponse, prisma, resolveFiles, sendOrderConfirmation } from "@/lib";
 
 import { API_BASE_URL, calculateDistance, calculateShippingCost, calculateTotalPrice, hashItems, resolveUnitPrice, signCheckoutToken, toRupiah, verifyCheckoutToken, ShippingItem } from "@/utils";
 
@@ -191,7 +191,7 @@ export async function GET(request: NextRequest) {
     }
 
     logError(`${pathAPI} error`, Date.now() - startTime, error);
-    return NextResponse.json({ success: false, message: error }, { status: 500 });
+    return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }
 
@@ -257,7 +257,7 @@ export async function POST(request: NextRequest) {
       };
     } catch (error) {
       logError(`${pathAPI} error`, Date.now() - startTime, error);
-      return NextResponse.json({ success: false, message: error }, { status: 500 });
+      return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
     }
 
     // ── 3. Merge trusted prices, link the member, move the receipt out of temp ──
@@ -355,7 +355,7 @@ export async function POST(request: NextRequest) {
       });
     } catch (error) {
       logError("Send Order Confirmation failed with order ID: " + result.order.id, Date.now() - startTime, error);
-      return NextResponse.json({ success: false, message: error }, { status: 500 });
+      return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
     }
 
     // ── 6. Success response ──────────────────────────────────────────────────
@@ -371,6 +371,6 @@ export async function POST(request: NextRequest) {
     }
 
     logError(`${pathAPI} error`, Date.now() - startTime, error);
-    return NextResponse.json({ success: false, message: error }, { status: 500 });
+    return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }

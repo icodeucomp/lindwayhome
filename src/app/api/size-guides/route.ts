@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { z } from "zod";
 
-import { checkAuth, getClientIp, logError, logger, logRequest, logResponse, prisma, sizeGuideInclude } from "@/lib";
+import { checkAuth, errorMessage, getClientIp, logError, logger, logRequest, logResponse, prisma, sizeGuideInclude } from "@/lib";
 
 import { resolveTranslation, type Locale } from "@/utils";
 
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, data }, { status: 200 });
   } catch (error) {
     logError(`${pathAPI} error`, Date.now() - startTime, error);
-    return NextResponse.json({ success: false, message: error }, { status: 500 });
+    return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }
 
@@ -77,6 +77,6 @@ export async function POST(request: NextRequest) {
     }
 
     logError(`${pathAPI} error`, Date.now() - startTime, error);
-    return NextResponse.json({ success: false, message: error }, { status: 500 });
+    return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }

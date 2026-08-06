@@ -1,6 +1,10 @@
 export const ProgressBar = ({ uploadProgress }: { uploadProgress: number }) => (
-  <div className="flex items-center w-full gap-2 mb-2">
-    <div className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-out text-gray/30" style={{ width: `${uploadProgress}%` }} />
-    <div className="text-sm text-gray">{Math.round(uploadProgress)}%</div>
+  <div className="flex items-center w-full gap-3">
+    {/* v1 put the fill percentage on a bar with no track behind it, so it read as a
+        floating stub rather than progress. The track is the missing half. */}
+    <div className="flex-1 h-1 overflow-hidden rounded-full bg-muted">
+      <div className="h-full duration-300 ease-out rounded-full bg-primary" style={{ width: `${uploadProgress}%` }} />
+    </div>
+    <div className="text-xs text-body/60 tabular-nums">{Math.round(uploadProgress)}%</div>
   </div>
 );

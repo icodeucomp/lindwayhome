@@ -944,6 +944,7 @@ Do not guess these; ask.
 2. **`Order.instagram` / `Order.reference`** — two optional v1 attribution columns ("how did you hear about us"). Still collected, or dropped? Cosmetic either way; decide before the seed is written.
 3. **`ConfigParameter.validation`** — only `validation.options` is ever read (it fills SELECT dropdowns). The min/max/required rules stored there are never enforced anywhere. Keep the loose `Json`, or narrow it to an `options` column?
 4. **`User.username`** — `email` and `username` are both unique and login accepts either. Two identity columns for one person.
+5. **Who designs the public v2 pages** — the admin has its own design system now (§C2), but the storefront does not. Three readings of "semua UI page nyaa dari saya", and they lead to different work: (a) designs already exist and should be implemented as given; (b) designs are coming later, so build the pages structurally correct and visually plain; (c) design them here from the palette and type scale. **Phase 2b is blocked on this** — building a visual treatment that is then replaced is the one genuinely wasted outcome.
 
 ---
 
@@ -951,7 +952,7 @@ Do not guess these; ask.
 
 Each phase ends with `npx tsc --noEmit` clean, `npm run build` clean, and the affected flow exercised by hand. Move the phase's sections from `[TARGET]` to `[SHIPPED]` and delete the superseded Part A text before starting the next one.
 
-**Lint has a pre-existing baseline that v2 did not create.** `npm run lint` reported 10 `react-hooks/set-state-in-effect` errors on the pre-v2 commit. None were introduced since; deleting v1 files removed 7 of them, leaving **3** — `config-field.tsx` (phase 1), `carts/cart.tsx` (phase 2/3), and `useSearchPagination.ts` (whenever a listing touches it). Treat "no new lint errors" as the gate until those three are rewritten, then restore "lint clean".
+**Lint has a pre-existing baseline that v2 did not create.** `npm run lint` reported 10 `react-hooks/set-state-in-effect` errors on the pre-v2 commit. None were introduced since; deleting v1 files removed 7, and the admin rewrite fixed `config-field.tsx` and `useSearchPagination.ts` by deriving during render instead of syncing in an effect. **1 remains** — `carts/cart.tsx`, which phase 2/3 rewrites. Restore "lint clean" as the gate once it goes.
 
 **The database is dropped and rebuilt, not migrated (D-note).** There is no production data to preserve, so phase 1 runs `npm run db:reset` and reseeds. Confirm before running it — it is destructive and irreversible.
 
@@ -960,7 +961,8 @@ Each phase ends with `npx tsc --noEmit` clean, `npm run build` clean, and the af
 | **0b — Teardown** ✅ **DONE** | Delete the v1 UI the new model cannot feed: per-brand listings, product detail and card, hardcoded size guide, admin product forms, the static contact page, `static/categories.ts`, and the dead `lib/redis.ts` · size-guide measurements lifted to `prisma/seed-data/size-guides.ts` before deletion · deleted routes replaced with placeholders | 27 files removed. Everything kept is either frozen-zone code or schema-neutral |
 | **0 — Foundation** ✅ **DONE** | `[lang]` routing + dictionaries · design tokens (`#BA8164`, `#39322C`, `#FAF6F5`, `#F7F3F0`, `#D2D2CA`) · Raleway + Inter via `next/font/google` · new header/footer shell · `tiptap-editor.tsx` shared component · delete `/curated-collections` and `video-carousel.tsx` (D16) | Touches every file. Doing it later means redoing every other phase |
 | **1 — Data model** ✅ **DONE** | Drop and rebuild the schema: taxonomy enums, Size/SizeGuide/Variant, Product + translations, Order/OrderItem, Member, content models · apply `product-stock.sql` · new seed · `resolveTranslation` + `resolveUnitPrice` helpers · `db:check` · assert `taxonomy.ts` keys match the Prisma enums · admin CRUD for sizes and size guides | Everything downstream depends on these tables |
-| **2 — Catalog** | Product form (size guide → variants → package dimensions), listings per axis, product detail, New Arrivals, Best Sellers, wishlist, product **soft delete** (A9.13) | Consumes phase 1 |
+| **2a — Admin catalog** ✅ **DONE** | Admin design system (§C2) · product list with search, taxonomy filters, grid/list and paging · product form: size guide → variants → package dimensions, images, 5 Tiptap fields behind an EN\|ID tab · product **soft delete** (A9.13) | No dependency on the public design, and nothing else can be built against an empty catalog |
+| **2b — Public catalog** | Listings per axis, product detail, New Arrivals, Best Sellers, wishlist | **Blocked on the v2 visual design** — see §B7.5 |
 | **3 — Orders & pricing** | Member registry, `OrderStatus` + tracking number in the admin order screen, server-computed subtotal (F-51), line snapshot (F-55) | Touches the checkout path, so it runs alone |
 | **4 — Content** | Journal, FAQ, Contact form + inbox, public size guide page | Independent of 2 and 3; can run in parallel if needed |
 | **5 — Hardening** | F-52…F-54 security fixes, `DELETE /api/orders/[id]` (A9.6), Denpasar origin coordinates, seed corrections | Deliberately last so it is not lost in the churn |
@@ -1042,6 +1044,40 @@ The size guide screen lists, publishes and deletes but does not create. Authorin
 A third fix came out of the same run: money is rounded with `toRupiah` before signing. The shipping formula produced `18101.6500411588`, which the token signed in full while `Decimal(12,2)` stored `18101.65` — the signed and stored totals disagreed.
 
 The Collections mega-menu was built in phase 0 against a placeholder list, on the assumption that phase 1 would swap it for a database query. That swap will never happen — D25 made the taxonomy static, so `src/static/taxonomy.ts` **is** the final source, and the menu is already complete.
+
+## C2. Admin design system `[SHIPPED]`
+
+Every admin screen composes from one kit rather than inventing its own chrome. Build new screens out of these; do not hand-roll a table, a filter bar or a form control.
+
+| File | Provides |
+| --- | --- |
+| `slicing/ui.tsx` | `PageHeader`, `SectionHeading`, `BlockHeading`, `Panel`, `StatGrid`/`Stat`, `TableShell`/`Th`/`Td`, `Badge`, `Chip`, `RowAction`, `AdminButton`, `AdminLinkButton`, `ConfirmDialog`, loading/error/empty states |
+| `slicing/form.tsx` | `FormLayout`, `FormSection`, `FieldRow`, `FormActions`, `Field`, `TextInput`, `TextArea`, `SelectInput`, `CheckboxGroup`, `RadioGroup`, `Toggle`, `RichTextField`, `LocaleTabs` |
+| `slicing/toolbar.tsx` | `ListToolbar`, `SearchBar`, `FilterDropdown`, `ViewToggle`, `DataPagination`, `ResultCount` |
+
+**The language.** Uppercase letterspaced micro-labels, hairline rules instead of card borders, square corners (`rounded-sm`), Raleway for headings and labels. `body` (#39322C) carries solid fills — the active nav item, the primary button; `primary` (#BA8164) is the accent only — eyebrows, links, active marks, chart series. Blue and slate are gone; the legacy `btn-blue`/`btn-gray` aliases in `globals.css` now render on-palette so untouched v1 components do not look foreign.
+
+`--color-sidebar` is the one derived value: `#f7f3f0` against `#faf6f5` is too close to read as a separate surface, so the sidebar blends `footer` toward `light`.
+
+**List screens** put search, filters, view mode and page in the URL via `useSearchPagination`, so a filtered view is shareable and survives a refresh. Pass `filterKeys` for the params that screen filters on.
+
+**Create/edit are pages, not modals** — `…/create` and `…/[id]/edit`, with a `FormActions` bar pinned to the viewport. `LocationForm` and `ProductForm` are the two worked examples.
+
+**Loading a record into form state happens during render**, guarded by a `loadedId` comparison — never in an effect. An effect re-runs on every background refetch and discards whatever the admin has typed.
+
+## C3. Phase 2a work order `[SHIPPED]`
+
+The admin catalog, built on §C2. Verified by driving the real API: create → read back → edit → delete, with the image moving out of temp, the stock trigger recomputing after a variant was dropped, `discountedPrice` recomputed server-side, and the ID locale falling back to EN field by field.
+
+- **Product list** — search over name/SKU/slug, filters for branding, garment, audience, status and sort, grid/list, paging. `isActive` is only sent when the admin filters on it: the admin list must show inactive products, so an unfiltered list is the whole catalog.
+- **Product form** — `ProductImages` (temp upload, reorder, first is primary), `ProductVariants` (size guide → offered sizes → quantity + optional per-variant packaging), `ProductContent` (EN\|ID tabs, name + 5 Tiptap fields).
+- **The size guide constrains the variant list.** With a guide selected, only its rows' sizes are offered, which is how the §B4 invariant is enforced — by not offering anything else. Changing the guide drops variants the new one does not contain. Without a guide the invariant does not apply and the full active size list is offered.
+- **A size whose `code` has no `package_dimensions` entry is flagged inline**, because that is a checkout 404 the buyer would otherwise discover.
+- **`stock` is never submitted** (D24), and neither is `discountedPrice` — the server derives it from `price` and `discount`.
+
+One contract limit worth knowing: `ProductTranslationSchema` requires `name` on every translation row, so an ID row carrying only a description cannot be submitted. The form asks for an ID name whenever any other ID field is filled. Copying the EN name in renders identically to the per-field fallback, so nothing is lost — but if per-field ID-without-name is wanted, the schema is where it would change.
+
+**One defect fixed across the whole API.** Handlers end `catch (error) { … message: error }` (§E3). An `Error` has no enumerable own properties, so it serialized to `{}` — every 500 reached the admin as an empty toast while the log held the real cause. `errorMessage(error)` from `@/lib` now wraps those 38 sites. The response shape is unchanged.
 
 ---
 
@@ -1149,6 +1185,8 @@ try {
 
 Responses are always `{ success, message?, data?, pagination? }`. List endpoints share the query convention `page`, `limit`, `search`, `order`, `year`, `month`, `dateFrom`, `dateTo`, parsed by a `*QuerySchema`.
 
+**Always pass a caught error through `errorMessage()` from `@/lib`** rather than putting it in the body directly. `JSON.stringify(new Error("…"))` is `{}`, so `message: error` reaches the client empty and the admin sees a toast with nothing in it.
+
 ## E4. Client data layer
 
 `src/utils/api.ts` is the single axios + TanStack Query layer — grouped objects (`productsApi`, `guestsApi`, `guestCheckoutApi`, `configParametersApi`, `locationsApi`, `dashboardApi`, `filesApi`) exporting hooks. Mutations already raise `react-hot-toast` on success and error and unwrap array-shaped Zod responses into a newline-joined message; **do not re-toast at the call site**. Default `staleTime`/`gcTime` are 6 hours; queries retry 3×.
@@ -1167,5 +1205,6 @@ Always read configuration through `ConfigService` (`@/services`), never with raw
 - Tailwind v4 (`@tailwindcss/postcss`, no `tailwind.config`); theme tokens live in `src/app/globals.css` under `@theme inline`.
 - `react-icons` for icons; `framer-motion` through the `motion` wrapper in `src/components/motion.tsx`.
 - Larger UI is a container in `src/components/ui/<feature>/` plus a `slicing/` subfolder for its parts.
+- Admin screens compose from the kit in §C2 — do not hand-roll tables, filter bars, buttons or form controls there.
 - `next.config.ts` has `output: "standalone"` deliberately commented out — leave it unless deployment changes.
 - Tiptap content is admin-authored HTML/JSON rendered into public pages: **sanitize on render**. A compromised admin account otherwise executes script in every visitor's browser.

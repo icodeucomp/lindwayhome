@@ -4,7 +4,7 @@ import { Prisma } from "prisma-client/client";
 
 import z from "zod";
 
-import { checkAuth, logError, orderInclude, prisma } from "@/lib";
+import { checkAuth, errorMessage, logError, orderInclude, prisma } from "@/lib";
 
 import { buildDateFilter } from "@/utils";
 
@@ -73,6 +73,6 @@ export async function GET(request: NextRequest) {
     }
 
     logError(`${pathAPI} error`, Date.now() - startTime, error);
-    return NextResponse.json({ success: false, message: error }, { status: 500 });
+    return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }
