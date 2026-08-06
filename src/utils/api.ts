@@ -708,6 +708,21 @@ export const sizeGuidesApi = {
       retry: RETRY_TIMES,
     });
   },
+  useGetSizeGuide: <T>({ key, id, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+    return useQuery<T, Error>({
+      queryKey: key,
+      queryFn: async () => {
+        // The form needs every locale, so it does not pass `locale` — the response
+        // carries the raw `translations` array alongside the resolved fields.
+        const { data } = await api.get(`/size-guides/${id}`);
+        return data;
+      },
+      gcTime,
+      staleTime,
+      enabled,
+      retry: RETRY_TIMES,
+    });
+  },
   useCreateSizeGuide: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, CreateSizeGuide>) =>
     useMutation({ mutationFn: mutation<CreateSizeGuide>((body) => api.post("/size-guides", body)), onError: onMutationError, ...mutationOptions }),
   useUpdateSizeGuide: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, { id: string; guide: UpdateSizeGuide }>) =>

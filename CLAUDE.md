@@ -1027,7 +1027,7 @@ Two guards in the size API worth knowing about, because both prevent a failure t
 - Creating a size whose `code` has no `package_dimensions` entry **succeeds with a warning** rather than failing. Refusing would block a legitimate workflow; staying silent would mean checkout 404s for that size later.
 - Renaming a size code is **refused** once variants use it. The code is stored as a string on `OrderItem.selectedSize` and is the key into `package_dimensions`, so renaming breaks both retroactively.
 
-The size guide screen lists, publishes and deletes but does not create. Authoring belongs on the product form (F-38: pick a guide, adjust it, save as new), which is phase 2 — duplicating that editor here would give two places to maintain.
+~~The size guide screen lists, publishes and deletes but does not create. Authoring belongs on the product form…~~ **Wrong, and corrected in phase 2a.** A size guide is a shared master record, so requiring a product in order to create one is backwards — and it left the screen called "Size Guides" unable to make a size guide. Authoring lives on that screen; `?from=<id>` gives F-38 its fork by pre-filling the same editor from an existing guide. One editor, two entry points.
 
 **Green checkpoint** ✅ **MET.** `npx tsc --noEmit` clean, `npm run build` clean, lint back to its 3-error baseline, and a checkout driven end to end: calculate → order → admin verifies → stock and `soldCount` both moved.
 
@@ -1074,6 +1074,7 @@ The admin catalog, built on §C2. Verified by driving the real API: create → r
 
 - **Product list** — search over name/SKU/slug, filters for branding, garment, audience, status and sort, grid/list, paging. `isActive` is only sent when the admin filters on it: the admin list must show inactive products, so an unfiltered list is the whole catalog.
 - **Product form** — `ProductImages` (temp upload, reorder, first is primary), `ProductVariants` (size guide → offered sizes → quantity + optional per-variant packaging), `ProductContent` (EN\|ID tabs over the 5 Tiptap fields; the name sits in Details, D26).
+- **Size guide form** (`SizeGuideForm`) — title and description behind EN\|ID tabs, a measurement table where each column is a stable key plus per-locale labels, and a size × measurement grid. The key follows the English label until edited by hand, so an admin never types an identifier. Rows are submitted in `size.order`, never selection order (D21). Duplicating always lands as a draft — publishing an unedited twin onto the public page is not a useful default.
 - **The size guide constrains the variant list.** With a guide selected, only its rows' sizes are offered, which is how the §B4 invariant is enforced — by not offering anything else. Changing the guide drops variants the new one does not contain. Without a guide the invariant does not apply and the full active size list is offered.
 - **A size whose `code` has no `package_dimensions` entry is flagged inline**, because that is a checkout 404 the buyer would otherwise discover.
 - **`stock` is never submitted** (D24), and neither is `discountedPrice` — the server derives it from `price` and `discount`.

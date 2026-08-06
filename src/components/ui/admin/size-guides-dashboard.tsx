@@ -8,13 +8,16 @@ import { convertDate, sizeGuidesApi } from "@/utils";
 
 import { ApiResponse, SizeGuide } from "@/types";
 
-import { Badge, ConfirmDialog, EmptyState, ErrorState, LoadingState, PageHeader, Panel, RowAction, TableShell, Td, Th } from "./slicing";
+import { AdminLinkButton, Badge, ConfirmDialog, EmptyState, ErrorState, LoadingState, PageHeader, Panel, RowAction, RowActionLink, TableShell, Td, Th } from "./slicing";
 
 /**
- * Read-and-publish screen. Creating a guide from scratch belongs on the product
- * form (F-38: pick an existing guide, tweak the measurements, save as a new one),
- * so this screen deliberately does not duplicate that editor — it lists what
- * exists, shows the measurements, and controls what the public page sees.
+ * Home of the size guide master record: list, create, edit, publish, delete.
+ *
+ * An earlier note here claimed authoring belonged on the product form instead. That
+ * was wrong in a way worth recording: a size guide is a shared master record, so
+ * requiring a product in order to create one is backwards — and it left the screen
+ * called "Size Guides" unable to make a size guide. Duplicate (F-38) is the same
+ * editor pre-filled from an existing guide, so there is still only one editor.
  */
 export const SizeGuidesDashboard = () => {
   const [toDelete, setToDelete] = React.useState<SizeGuide | null>(null);
@@ -40,7 +43,8 @@ export const SizeGuidesDashboard = () => {
       <PageHeader
         eyebrow="Catalog"
         title="Size Guides"
-        description="Published guides appear on the public Size Guide page as a flat list, ordered by the number below. Unpublished ones are drafts. Authoring happens on the product form (F-38), so this screen lists and publishes rather than duplicating that editor."
+        description="Body measurements shared by every product that uses a guide. Published guides appear on the public Size Guide page as a flat list, ordered by the number below; the rest are drafts, still assignable to products."
+        actions={<AdminLinkButton href="/admin/dashboard/size-guides/create" variant="solid">New size guide</AdminLinkButton>}
       />
 
       {isLoading ? (
@@ -48,7 +52,12 @@ export const SizeGuidesDashboard = () => {
       ) : isError ? (
         <ErrorState onRetry={refetch} />
       ) : guides.length === 0 ? (
-        <EmptyState icon={<PiTable className="size-6" />} title="No size guides yet" description="Create one from a product's size guide picker." />
+        <EmptyState
+          icon={<PiTable className="size-6" />}
+          title="No size guides yet"
+          description="A guide is a measurement table shared by every product that uses it."
+          action={<AdminLinkButton href="/admin/dashboard/size-guides/create" variant="solid">New size guide</AdminLinkButton>}
+        />
       ) : (
         <Panel className="overflow-hidden">
           <TableShell>
@@ -79,6 +88,9 @@ export const SizeGuidesDashboard = () => {
                       <Td className="text-right">
                         <div className="flex justify-end gap-4">
                           <RowAction onClick={() => setExpanded(expanded === guide.id ? null : guide.id)}>{expanded === guide.id ? "Hide" : "View"}</RowAction>
+                          <RowActionLink href={`/admin/dashboard/size-guides/${guide.id}/edit`}>Edit</RowActionLink>
+                          {/* F-38: the same editor, pre-filled from this guide and starting as a draft. */}
+                          <RowActionLink href={`/admin/dashboard/size-guides/create?from=${guide.id}`}>Duplicate</RowActionLink>
                           <RowAction onClick={() => togglePublished(guide)} disabled={updateGuide.isPending}>
                             {guide.publishedAt ? "Unpublish" : "Publish"}
                           </RowAction>
