@@ -14,13 +14,11 @@
  *     the same in both languages.
  */
 
-// These mirror the Prisma enums of the same name. They are declared locally rather
-// than imported from `prisma-client/client` so this file compiles before the phase-1
-// migration exists. Once it does, add a compile-time assertion that the two agree —
-// a silent drift here would mean a product tagged with a key no page can render.
-export type BrandingType = "MY_LINDWAY" | "SIMPLY_LINDWAY" | "LURE_BY_LINDWAY" | "STUDIO_BY_LINDWAY" | "LINDWAY_AWP";
-export type AudienceType = "WOMEN" | "MEN" | "KIDS";
-export type GarmentType = "DRESSES" | "TOPS" | "SKIRTS";
+import type { $Enums } from "prisma-client/client";
+
+export type BrandingType = $Enums.BrandingType;
+export type AudienceType = $Enums.AudienceType;
+export type GarmentType = $Enums.GarmentType;
 
 export interface TaxonomyEntry<T extends string> {
   key: T;
@@ -37,7 +35,7 @@ export interface BrandingEntry extends TaxonomyEntry<BrandingType> {
   image: string;
 }
 
-export const BRANDING: BrandingEntry[] = [
+export const BRANDING = [
   {
     key: "MY_LINDWAY",
     label: "My Lindway",
@@ -85,33 +83,57 @@ export const BRANDING: BrandingEntry[] = [
     order: 5,
     isActive: false,
   },
-];
+] as const satisfies readonly BrandingEntry[];
 
-export const AUDIENCE: TaxonomyEntry<AudienceType>[] = [
+export const AUDIENCE = [
   { key: "WOMEN", label: "Women", slug: "women", order: 1, isActive: true },
   { key: "MEN", label: "Men", slug: "men", order: 2, isActive: true },
   { key: "KIDS", label: "Kids", slug: "kids", order: 3, isActive: true },
-];
+] as const satisfies readonly TaxonomyEntry<AudienceType>[];
 
-export const GARMENT: TaxonomyEntry<GarmentType>[] = [
+export const GARMENT = [
   { key: "DRESSES", label: "Dresses", slug: "dresses", order: 1, isActive: true },
   { key: "TOPS", label: "Tops", slug: "tops", order: 2, isActive: true },
   { key: "SKIRTS", label: "Skirts", slug: "skirts", order: 3, isActive: true },
-];
+] as const satisfies readonly TaxonomyEntry<GarmentType>[];
 
-const activeSorted = <T extends TaxonomyEntry<string>>(entries: T[]) => entries.filter((entry) => entry.isActive).sort((a, b) => a.order - b.order);
+// =============================================================================
+// Drift guard
+//
+// The tables were dropped in favour of enums (D25), so nothing at runtime checks
+// that this file still describes every enum value. Without the assertions below,
+// adding LINDWAY_XYZ to the Prisma enum and forgetting this file would produce a
+// product tagged with a key that no page can render — and no error anywhere.
+//
+// These fail at COMPILE time: the arrays are `as const`, so their `key` fields are
+// literal types, and AssertCovers resolves to an un-assignable object type listing
+// exactly which enum value is missing.
+// =============================================================================
+
+/** Every enum value listed above must appear, or this resolves to `never`. */
+type AssertCovers<Enum extends string, Listed extends string> = [Exclude<Enum, Listed>] extends [never] ? true : { MISSING_FROM_TAXONOMY_TS: Exclude<Enum, Listed> };
+
+const _brandingCovered: AssertCovers<BrandingType, (typeof BRANDING)[number]["key"]> = true;
+const _audienceCovered: AssertCovers<AudienceType, (typeof AUDIENCE)[number]["key"]> = true;
+const _garmentCovered: AssertCovers<GarmentType, (typeof GARMENT)[number]["key"]> = true;
+
+void _brandingCovered;
+void _audienceCovered;
+void _garmentCovered;
+
+const activeSorted = <T extends TaxonomyEntry<string>>(entries: readonly T[]) => entries.filter((entry) => entry.isActive).sort((a, b) => a.order - b.order);
 
 export const activeBranding = () => activeSorted(BRANDING);
 export const activeAudience = () => activeSorted(AUDIENCE);
 export const activeGarment = () => activeSorted(GARMENT);
 
-const bySlug = <T extends TaxonomyEntry<string>>(entries: T[], slug: string) => entries.find((entry) => entry.slug === slug && entry.isActive);
+const bySlug = <T extends TaxonomyEntry<string>>(entries: readonly T[], slug: string) => entries.find((entry) => entry.slug === slug && entry.isActive);
 
 export const brandingBySlug = (slug: string) => bySlug(BRANDING, slug);
 export const audienceBySlug = (slug: string) => bySlug(AUDIENCE, slug);
 export const garmentBySlug = (slug: string) => bySlug(GARMENT, slug);
 
-const byKey = <T extends TaxonomyEntry<string>>(entries: T[], key: string) => entries.find((entry) => entry.key === key);
+const byKey = <T extends TaxonomyEntry<string>>(entries: readonly T[], key: string) => entries.find((entry) => entry.key === key);
 
 export const brandingByKey = (key: BrandingType) => byKey(BRANDING, key);
 export const audienceByKey = (key: AudienceType) => byKey(AUDIENCE, key);

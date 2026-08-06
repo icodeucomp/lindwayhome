@@ -7,3 +7,5 @@ export * from "./locations-dashboard";
 
 
 export * from "./login";
+export * from "./sizes-dashboard";
+export * from "./size-guides-dashboard";

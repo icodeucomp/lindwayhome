@@ -6,7 +6,7 @@ import Link from "next/link";
 
 import { usePathname, useRouter } from "next/navigation";
 
-import { FaBars, FaBoxOpen, FaMapMarkerAlt, FaSignOutAlt, FaSlidersH, FaThLarge, FaTimes, FaUsers } from "react-icons/fa";
+import { FaBars, FaBoxOpen, FaMapMarkerAlt, FaRulerHorizontal, FaSignOutAlt, FaSlidersH, FaTable, FaThLarge, FaTimes, FaUsers } from "react-icons/fa";
 import { PiCaretDownBold } from "react-icons/pi";
 
 import { Img } from "@/components";
@@ -14,19 +14,27 @@ import { Img } from "@/components";
 import { useAuthStore, useToggleState } from "@/hooks";
 
 interface NavItem {
+  group: string;
   href: string;
   label: string;
   description: string;
   icon: React.ReactNode;
 }
 
+// Grouped per §B2.3. Contact Inbox, Members, Articles and FAQ arrive with their
+// phases; there is no Taxonomy section because branding, audience and garment are
+// enums edited in code (D25).
 const NAV_ITEMS: NavItem[] = [
-  { href: "/admin/dashboard", label: "Dashboard", description: "Overview of your store", icon: <FaThLarge className="size-4" /> },
-  { href: "/admin/dashboard/products", label: "Products", description: "Manage catalog and stock", icon: <FaBoxOpen className="size-4" /> },
-  { href: "/admin/dashboard/orders", label: "Orders", description: "Transactions and fulfilment", icon: <FaUsers className="size-4" /> },
-  { href: "/admin/dashboard/parameters", label: "Parameters", description: "Store configuration", icon: <FaSlidersH className="size-4" /> },
-  { href: "/admin/dashboard/locations", label: "Locations", description: "Shipping destinations", icon: <FaMapMarkerAlt className="size-4" /> },
+  { group: "Overview", href: "/admin/dashboard", label: "Dashboard", description: "Overview of your store", icon: <FaThLarge className="size-4" /> },
+  { group: "Catalog", href: "/admin/dashboard/products", label: "Products", description: "Manage catalog and stock", icon: <FaBoxOpen className="size-4" /> },
+  { group: "Catalog", href: "/admin/dashboard/sizes", label: "Sizes", description: "The size master list", icon: <FaRulerHorizontal className="size-4" /> },
+  { group: "Catalog", href: "/admin/dashboard/size-guides", label: "Size Guides", description: "Measurement tables", icon: <FaTable className="size-4" /> },
+  { group: "Sales", href: "/admin/dashboard/orders", label: "Orders", description: "Transactions and fulfilment", icon: <FaUsers className="size-4" /> },
+  { group: "Settings", href: "/admin/dashboard/parameters", label: "Parameters", description: "Store configuration", icon: <FaSlidersH className="size-4" /> },
+  { group: "Settings", href: "/admin/dashboard/locations", label: "Locations", description: "Shipping destinations", icon: <FaMapMarkerAlt className="size-4" /> },
 ];
+
+const NAV_GROUPS = [...new Set(NAV_ITEMS.map((item) => item.group))];
 
 const isNavActive = (href: string, pathname: string) => (href === "/admin/dashboard" ? pathname === href : pathname.startsWith(href));
 
@@ -52,23 +60,27 @@ const SidebarContent = ({ pathname, onNavigate }: { pathname: string; onNavigate
       )}
     </div>
 
-    <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto scrollbar">
-      <p className="px-3 pb-2 text-xxs font-semibold tracking-[0.15em] uppercase text-gray/50">Menu</p>
-      {NAV_ITEMS.map((item) => {
-        const isActive = isNavActive(item.href, pathname);
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onNavigate}
-            aria-current={isActive ? "page" : undefined}
-            className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium duration-300 rounded-lg ${isActive ? "bg-gray text-light shadow-sm" : "text-gray hover:bg-gray/10 hover:text-dark"}`}
-          >
-            <span className={isActive ? "text-light" : "text-gray/70"}>{item.icon}</span>
-            {item.label}
-          </Link>
-        );
-      })}
+    <nav className="flex-1 px-4 py-6 space-y-4 overflow-y-auto scrollbar">
+      {NAV_GROUPS.map((group) => (
+        <div key={group} className="space-y-1">
+          <p className="px-3 pb-1 text-xxs font-semibold tracking-[0.15em] uppercase text-gray/50">{group}</p>
+          {NAV_ITEMS.filter((item) => item.group === group).map((item) => {
+            const isActive = isNavActive(item.href, pathname);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onNavigate}
+                aria-current={isActive ? "page" : undefined}
+                className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium duration-300 rounded-lg ${isActive ? "bg-gray text-light shadow-sm" : "text-gray hover:bg-gray/10 hover:text-dark"}`}
+              >
+                <span className={isActive ? "text-light" : "text-gray/70"}>{item.icon}</span>
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
     </nav>
   </>
 );

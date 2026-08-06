@@ -959,7 +959,7 @@ Each phase ends with `npx tsc --noEmit` clean, `npm run build` clean, and the af
 | --- | --- | --- |
 | **0b — Teardown** ✅ **DONE** | Delete the v1 UI the new model cannot feed: per-brand listings, product detail and card, hardcoded size guide, admin product forms, the static contact page, `static/categories.ts`, and the dead `lib/redis.ts` · size-guide measurements lifted to `prisma/seed-data/size-guides.ts` before deletion · deleted routes replaced with placeholders | 27 files removed. Everything kept is either frozen-zone code or schema-neutral |
 | **0 — Foundation** ✅ **DONE** | `[lang]` routing + dictionaries · design tokens (`#BA8164`, `#39322C`, `#FAF6F5`, `#F7F3F0`, `#D2D2CA`) · Raleway + Inter via `next/font/google` · new header/footer shell · `tiptap-editor.tsx` shared component · delete `/curated-collections` and `video-carousel.tsx` (D16) | Touches every file. Doing it later means redoing every other phase |
-| **1 — Data model** | Drop and rebuild the schema: taxonomy enums, Size/SizeGuide/Variant, Product + translations, Order/OrderItem, Member, content models · apply `product-stock.sql` · new seed · `resolveTranslation` + `resolveUnitPrice` helpers · `db:check` · assert `taxonomy.ts` keys match the Prisma enums · admin CRUD for sizes and size guides | Everything downstream depends on these tables |
+| **1 — Data model** ✅ **DONE** | Drop and rebuild the schema: taxonomy enums, Size/SizeGuide/Variant, Product + translations, Order/OrderItem, Member, content models · apply `product-stock.sql` · new seed · `resolveTranslation` + `resolveUnitPrice` helpers · `db:check` · assert `taxonomy.ts` keys match the Prisma enums · admin CRUD for sizes and size guides | Everything downstream depends on these tables |
 | **2 — Catalog** | Product form (size guide → variants → package dimensions), listings per axis, product detail, New Arrivals, Best Sellers, wishlist, product **soft delete** (A9.13) | Consumes phase 1 |
 | **3 — Orders & pricing** | Member registry, `OrderStatus` + tracking number in the admin order screen, server-computed subtotal (F-51), line snapshot (F-55) | Touches the checkout path, so it runs alone |
 | **4 — Content** | Journal, FAQ, Contact form + inbox, public size guide page | Independent of 2 and 3; can run in parallel if needed |
@@ -1010,12 +1010,19 @@ Untouched: `api/auth/*`, `api/locations/*`, `api/config/*`, `api/files/*`.
 | `components/ui/carts/*` | `CreateGuest` → `CreateOrder` in `order-summary`, `checkout-form`, `payment-step`, `complete-step` |
 | `admin/guests-dashboard.tsx` + `slicing/guests-lists.tsx` | Become the Order screen: `status`, `trackingNumber`, `OrderItem` snapshots |
 
-**5 — New in this phase**
+**5 — New in this phase** ✅ **DONE**
 
-- `resolveTranslation` (§B3.2) and `resolveUnitPrice` (F-49) — one implementation each, before anything computes a price or a label twice
-- `npm run db:check` (F-56) — the four invariants from §B4
-- Compile-time assertion that `src/static/taxonomy.ts` keys match the Prisma enums
-- Admin CRUD for `Size` and `SizeGuide`
+- `resolveTranslation` (§B3.2) and `resolveUnitPrice` (F-49) — one implementation each, before anything computes a price or a label twice.
+- **`npm run db:check`** (F-56) — seven checks over the §B4 invariants, exiting non-zero so it can gate a deploy. Each one names the failure it prevents rather than just the rule it enforces.
+- **Taxonomy drift guard.** `src/static/taxonomy.ts` now imports its key types from `$Enums` and const-asserts its arrays, so a value added to a Prisma enum but forgotten here is a compile error naming the missing key (`MISSING_FROM_TAXONOMY_TS: "LINDWAY_AWP"`). The first attempt used `Object.fromEntries(...) as Record<T, …>`, which silently type-asserted its way past the very drift it was meant to catch — verified by deleting an entry and watching it still compile.
+- **Admin CRUD** for `Size` (`/admin/dashboard/sizes`) and `SizeGuide` (`/admin/dashboard/size-guides`), with the sidebar regrouped per §B2.3.
+
+Two guards in the size API worth knowing about, because both prevent a failure the admin would otherwise only see from a buyer:
+
+- Creating a size whose `code` has no `package_dimensions` entry **succeeds with a warning** rather than failing. Refusing would block a legitimate workflow; staying silent would mean checkout 404s for that size later.
+- Renaming a size code is **refused** once variants use it. The code is stored as a string on `OrderItem.selectedSize` and is the key into `package_dimensions`, so renaming breaks both retroactively.
+
+The size guide screen lists, publishes and deletes but does not create. Authoring belongs on the product form (F-38: pick a guide, adjust it, save as new), which is phase 2 — duplicating that editor here would give two places to maintain.
 
 **Green checkpoint** ✅ **MET.** `npx tsc --noEmit` clean, `npm run build` clean, lint back to its 3-error baseline, and a checkout driven end to end: calculate → order → admin verifies → stock and `soldCount` both moved.
 
@@ -1089,7 +1096,7 @@ npm run db:studio      # prisma studio
 npm run db:reset       # migrate reset --force (DESTRUCTIVE — confirm first)
 npm run db:trigger     # apply prisma/triggers/product-stock.sql
 npm run smoke:checkout # drive a real checkout against a running dev server
-npm run db:check       # [TARGET] report violations of the §B4 invariants
+npm run db:check       # report violations of the §B4 invariants (exits 1 on failure)
 ```
 
 **`prisma/migrations/` is gitignored**, so migration history does not survive a fresh clone and a hand-edited migration would be lost. Anything the schema cannot express therefore lives in a tracked file and is applied explicitly after migrating — `npm run db:trigger`, which is idempotent and also backfills existing rows, so the order it runs in does not matter.

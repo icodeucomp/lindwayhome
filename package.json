@@ -13,7 +13,8 @@
     "db:studio": "npx prisma studio",
     "db:reset": "npx prisma migrate reset --force",
     "db:trigger": "node prisma/apply-sql.mjs prisma/triggers/product-stock.sql",
-    "smoke:checkout": "node scripts/smoke-checkout.mjs"
+    "smoke:checkout": "node scripts/smoke-checkout.mjs",
+    "db:check": "node scripts/db-check.mjs"
   },
   "dependencies": {
     "@faker-js/faker": "^10.2.0",

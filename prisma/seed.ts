@@ -319,6 +319,16 @@ async function seedConfig() {
 }
 
 async function seedSizeGuides() {
+  // `create` is not idempotent, so a re-run would silently duplicate every guide —
+  // and duplicates are invisible until the public size guide page shows each table
+  // twice. Users, sizes and config all use upsert/skipDuplicates; these two need an
+  // explicit guard instead.
+  const existing = await prisma.sizeGuide.count();
+  if (existing > 0) {
+    console.log(`📐 size guides… skipped (${existing} already present)`);
+    return;
+  }
+
   console.log("📐 size guides…");
 
   const sizes = await prisma.size.findMany({ select: { id: true, code: true } });
@@ -445,6 +455,12 @@ const PRODUCTS = [
 ];
 
 async function seedProducts() {
+  const existing = await prisma.product.count();
+  if (existing > 0) {
+    console.log(`👔 products… skipped (${existing} already present)`);
+    return;
+  }
+
   console.log("👔 products…");
 
   const sizes = await prisma.size.findMany({ select: { id: true, code: true } });

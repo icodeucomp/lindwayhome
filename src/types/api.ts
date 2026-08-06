@@ -192,7 +192,27 @@ export interface SizeGuide {
   /** Present when the API resolved translations for a locale. */
   title?: string;
   description?: string | null;
+  parameterLabels?: Record<string, string> | null;
 }
+
+export interface CreateSize {
+  code: string;
+  label: string;
+  order?: number;
+  isActive?: boolean;
+}
+
+export type UpdateSize = Partial<CreateSize>;
+
+export interface CreateSizeGuide {
+  order?: number;
+  /** null keeps it a draft — this is the on/off switch (D1). */
+  publishedAt?: string | null;
+  rows: { sizeId: string; measurements: Record<string, number> }[];
+  translations: SizeGuideTranslation[];
+}
+
+export type UpdateSizeGuide = Partial<CreateSizeGuide>;
 
 // =============================================================================
 // Product

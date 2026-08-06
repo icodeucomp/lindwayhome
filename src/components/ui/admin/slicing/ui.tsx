@@ -130,8 +130,10 @@ export const Th = ({ className, children }: { className?: string; children: Reac
   <th className={`px-6 py-3.5 text-xs font-semibold tracking-wider text-left uppercase whitespace-nowrap text-gray/70 ${className ?? ""}`}>{children}</th>
 );
 
-export const Td = ({ className, children }: { className?: string; children: React.ReactNode }) => (
-  <td className={`px-6 py-4 text-sm align-middle text-gray ${className ?? ""}`}>{children}</td>
+export const Td = ({ className, colSpan, children }: { className?: string; colSpan?: number; children: React.ReactNode }) => (
+  <td colSpan={colSpan} className={`px-6 py-4 text-sm align-middle text-gray ${className ?? ""}`}>
+    {children}
+  </td>
 );
 
 /* -------------------------------------------------------------------------- */

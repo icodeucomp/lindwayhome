@@ -130,13 +130,13 @@ export async function GET(request: NextRequest) {
     // ── 7. Calculate total price ─────────────────────────────────────────────
     const totalPurchased = toRupiah(
       calculateTotalPrice({
-      basePrice: purchased,
-      member: member ? (configParameters.member_discount as number) : 0,
-      memberType: configParameters.member_type as DiscountType,
-      promo: configParameters.promotion_discount as number,
-      promoType: configParameters.promo_type as DiscountType,
-      tax: configParameters.tax_rate as number,
-      taxType: configParameters.tax_type as DiscountType,
+        basePrice: purchased,
+        member: member ? (configParameters.member_discount as number) : 0,
+        memberType: configParameters.member_type as DiscountType,
+        promo: configParameters.promotion_discount as number,
+        promoType: configParameters.promo_type as DiscountType,
+        tax: configParameters.tax_rate as number,
+        taxType: configParameters.tax_type as DiscountType,
         shipping: shippingCost,
       }),
     );

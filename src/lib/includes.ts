@@ -11,6 +11,12 @@ export const productInclude = {
   sizeGuide: { include: { translations: true, rows: { include: { size: true }, orderBy: { size: { order: "asc" } } } } },
 } satisfies Prisma.ProductInclude;
 
+/** Rows ordered by `size.order` — SizeGuideRow deliberately has no order column (D21). */
+export const sizeGuideInclude = {
+  translations: true,
+  rows: { include: { size: true }, orderBy: { size: { order: "asc" } } },
+} satisfies Prisma.SizeGuideInclude;
+
 /** Standard shape for reading an order with its lines. */
 export const orderInclude = {
   member: true,

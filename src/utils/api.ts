@@ -15,6 +15,10 @@ import {
   EditConfigParameter,
   CreateLocation,
   UpdateLocation,
+  CreateSize,
+  UpdateSize,
+  CreateSizeGuide,
+  UpdateSizeGuide,
 } from "@/types";
 
 import { QueryKey, useMutation, UseMutationOptions, useQuery } from "@tanstack/react-query";
@@ -640,4 +644,72 @@ export const filesApi = {
       throw error;
     }
   },
+};
+
+// Sizes & size guides Api
+const mutation = <TInput>(run: (input: TInput) => Promise<{ data: { message?: string } }>) => {
+  return async (input: TInput) => {
+    try {
+      const { data } = await run(input);
+      toast.success(data.message || "Success");
+      return data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const responseData = error.response?.data.message;
+        if (Array.isArray(responseData)) throw new Error(responseData.map((err, index) => `${index + 1}. ${err.message}`).join("\n"));
+        throw new Error(responseData || "An error occurred");
+      }
+      throw new Error("An unexpected error occurred");
+    }
+  };
+};
+
+const onMutationError = (error: unknown) => toast.error(error instanceof Error ? error.message : "An unknown error occurred");
+
+export const sizesApi = {
+  useGetSizes: <T>({ key, params = {}, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+    return useQuery<T, Error>({
+      queryKey: key,
+      queryFn: async () => {
+        const searchParams = new URLSearchParams();
+        if (params.isActive !== undefined) searchParams.append("isActive", params.isActive.toString());
+        const { data } = await api.get(`/sizes?${searchParams.toString()}`);
+        return data;
+      },
+      gcTime,
+      staleTime,
+      enabled,
+      retry: RETRY_TIMES,
+    });
+  },
+  useCreateSize: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, CreateSize>) =>
+    useMutation({ mutationFn: mutation<CreateSize>((body) => api.post("/sizes", body)), onError: onMutationError, ...mutationOptions }),
+  useUpdateSize: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, { id: string; size: UpdateSize }>) =>
+    useMutation({ mutationFn: mutation<{ id: string; size: UpdateSize }>(({ id, size }) => api.put(`/sizes/${id}`, size)), onError: onMutationError, ...mutationOptions }),
+  useDeleteSize: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, string>) =>
+    useMutation({ mutationFn: mutation<string>((id) => api.delete(`/sizes/${id}`)), onError: onMutationError, ...mutationOptions }),
+};
+
+export const sizeGuidesApi = {
+  useGetSizeGuides: <T>({ key, params = {}, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions & { published?: boolean }) => {
+    return useQuery<T, Error>({
+      queryKey: key,
+      queryFn: async () => {
+        const searchParams = new URLSearchParams();
+        if (params.locale) searchParams.append("locale", params.locale);
+        const { data } = await api.get(`/size-guides?${searchParams.toString()}`);
+        return data;
+      },
+      gcTime,
+      staleTime,
+      enabled,
+      retry: RETRY_TIMES,
+    });
+  },
+  useCreateSizeGuide: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, CreateSizeGuide>) =>
+    useMutation({ mutationFn: mutation<CreateSizeGuide>((body) => api.post("/size-guides", body)), onError: onMutationError, ...mutationOptions }),
+  useUpdateSizeGuide: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, { id: string; guide: UpdateSizeGuide }>) =>
+    useMutation({ mutationFn: mutation<{ id: string; guide: UpdateSizeGuide }>(({ id, guide }) => api.put(`/size-guides/${id}`, guide)), onError: onMutationError, ...mutationOptions }),
+  useDeleteSizeGuide: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, string>) =>
+    useMutation({ mutationFn: mutation<string>((id) => api.delete(`/size-guides/${id}`)), onError: onMutationError, ...mutationOptions }),
 };
