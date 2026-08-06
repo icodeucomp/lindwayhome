@@ -379,8 +379,9 @@ const PRODUCTS = [
     guide: "Women — Kebaya",
     sizes: ["XS", "S", "M", "L", "XL"],
     isFavorite: true,
-    en: { name: "Melati Embroidered Kebaya", description: "Hand-embroidered kebaya with jasmine motifs along the placket and cuffs." },
-    id: { name: "Kebaya Bordir Melati", description: "Kebaya bordir tangan dengan motif melati di sepanjang plaket dan ujung lengan." },
+    name: "Melati Embroidered Kebaya",
+    en: { description: "Hand-embroidered kebaya with jasmine motifs along the placket and cuffs." },
+    id: { description: "Kebaya bordir tangan dengan motif melati di sepanjang plaket dan ujung lengan." },
   },
   {
     sku: "MLW-BTK-002",
@@ -393,8 +394,9 @@ const PRODUCTS = [
     guide: "Women — Batik",
     sizes: ["S", "M", "L", "XL", "XXL"],
     isFavorite: true,
-    en: { name: "Parang Seling Batik Skirt", description: "Wrapped batik skirt in the parang seling pattern, hand-drawn on cotton." },
-    id: { name: "Rok Batik Parang Seling", description: "Rok lilit batik motif parang seling, ditulis tangan di atas katun." },
+    name: "Parang Seling Batik Skirt",
+    en: { description: "Wrapped batik skirt in the parang seling pattern, hand-drawn on cotton." },
+    id: { description: "Rok lilit batik motif parang seling, ditulis tangan di atas katun." },
   },
   {
     sku: "SLW-DRS-003",
@@ -407,8 +409,11 @@ const PRODUCTS = [
     guide: "Women — Kebaya",
     sizes: ["XS", "S", "M", "L"],
     isFavorite: false,
-    en: { name: "Cotton Day Dress", description: "An everyday dress in breathable cotton, cut for Bali's humidity." },
-    id: { name: "Gaun Katun Harian", description: null },
+    name: "Cotton Day Dress",
+    en: { description: "An everyday dress in breathable cotton, cut for Bali's humidity." },
+    // An ID row that exists but leaves `description` null, so the per-field fallback
+    // (§B3.2) is exercised rather than assumed: ID notes, EN description, same page.
+    id: { description: null, notes: "Dicuci dengan tangan menggunakan air dingin." },
   },
   {
     sku: "SLW-TOP-004",
@@ -421,8 +426,9 @@ const PRODUCTS = [
     guide: "Men — Shirt & Everyday Wear",
     sizes: ["S", "M", "L", "XL"],
     isFavorite: false,
-    en: { name: "Relaxed Linen Top", description: "A unisex linen top with a dropped shoulder and a straight hem." },
-    id: { name: "Atasan Linen Longgar", description: null },
+    name: "Relaxed Linen Top",
+    en: { description: "A unisex linen top with a dropped shoulder and a straight hem." },
+    id: { description: null, notes: "Serat linen alami; sedikit kerutan adalah ciri khasnya." },
   },
   {
     sku: "LBL-DRS-005",
@@ -435,7 +441,8 @@ const PRODUCTS = [
     guide: "Women — Batik",
     sizes: ["S", "M", "L"],
     isFavorite: true,
-    en: { name: "Modern Batik Slip Dress", description: "A bias-cut slip dress carrying a reinterpreted traditional motif." },
+    name: "Modern Batik Slip Dress",
+    en: { description: "A bias-cut slip dress carrying a reinterpreted traditional motif." },
     id: null,
   },
   {
@@ -449,7 +456,8 @@ const PRODUCTS = [
     guide: "Baby & Kids",
     sizes: ["1Y", "2Y", "3Y", "4Y", "5Y", "6Y"],
     isFavorite: false,
-    en: { name: "Kids Cotton Tee", description: "Soft, breathable cotton tee designed for our littlest customers." },
+    name: "Kids Cotton Tee",
+    en: { description: "Soft, breathable cotton tee designed for our littlest customers." },
     id: null,
   },
 ];
@@ -472,18 +480,25 @@ async function seedProducts() {
   for (const [index, product] of PRODUCTS.entries()) {
     const discountedPrice = Math.round(product.price - (product.price * product.discount) / 100);
 
-    // Every translatable entity must have an EN row; ID is optional (D3).
+    // Names are not translated (D26), so a translation row now carries rich content
+    // only. ID is optional, and an ID row may leave individual fields null — that is
+    // what makes the per-field fallback (§B3.2) testable rather than assumed.
     const translations: Prisma.ProductTranslationCreateWithoutProductInput[] = [
-      { locale: "EN", name: product.en.name, description: product.en.description ? doc(p(product.en.description)) : undefined },
+      { locale: "EN", description: product.en.description ? doc(p(product.en.description)) : undefined },
     ];
     if (product.id) {
-      translations.push({ locale: "ID", name: product.id.name, description: product.id.description ? doc(p(product.id.description)) : undefined });
+      translations.push({
+        locale: "ID",
+        description: product.id.description ? doc(p(product.id.description)) : undefined,
+        notes: "notes" in product.id && product.id.notes ? doc(p(product.id.notes)) : undefined,
+      });
     }
 
     await prisma.product.create({
       data: {
         sku: product.sku,
         slug: product.slug,
+        name: product.name,
         branding: product.branding,
         garment: product.garment,
         audiences: product.audiences,

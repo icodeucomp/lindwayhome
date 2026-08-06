@@ -65,9 +65,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       }
     }
 
-    if (updateData.translations && !updateData.translations.some((translation) => translation.locale === "EN")) {
-      logger.error(`${pathAPI} error`, { error: "An EN translation is required" });
-      return NextResponse.json({ success: false, message: "An EN translation is required" }, { status: 400 });
+    // Translations are optional now that `name` is a column (D26), but ID without EN
+    // is still refused — the per-field fallback runs ID → EN, so an ID-only row hides
+    // the text from English visitors entirely.
+    if (updateData.translations?.length && !updateData.translations.some((translation) => translation.locale === "EN")) {
+      logger.error(`${pathAPI} error`, { error: "An EN translation is required alongside ID" });
+      return NextResponse.json({ success: false, message: "An EN translation is required alongside the Indonesian one" }, { status: 400 });
     }
 
     for (const [field, value] of [

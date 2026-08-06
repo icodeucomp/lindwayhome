@@ -1,15 +1,13 @@
 "use client";
 
-import * as React from "react";
-
 import type { JSONContent } from "@tiptap/react";
 
 import { Locale, RichText } from "@/types";
 
-import { Field, LocaleTabs, RichTextField, TextInput } from "./form";
+import { LocaleTabs, RichTextField } from "./form";
 
+/** No `name` — it is a single untranslated column on Product (D26). */
 export interface TranslationDraft {
-  name: string;
   description: RichText | null;
   notes: RichText | null;
   fabricInformation: RichText | null;
@@ -17,7 +15,7 @@ export interface TranslationDraft {
   returnPolicy: RichText | null;
 }
 
-export const EMPTY_TRANSLATION: TranslationDraft = { name: "", description: null, notes: null, fabricInformation: null, shippingDelivery: null, returnPolicy: null };
+export const EMPTY_TRANSLATION: TranslationDraft = { description: null, notes: null, fabricInformation: null, shippingDelivery: null, returnPolicy: null };
 
 export const LOCALES = ["EN", "ID"] as const;
 
@@ -34,17 +32,16 @@ const DEFAULTED_FIELDS = [
 ] as const;
 
 /** True when the locale carries anything worth marking the tab for. */
-export const hasContent = (draft: TranslationDraft) => Boolean(draft.name.trim() || draft.description || draft.notes || draft.fabricInformation || draft.shippingDelivery || draft.returnPolicy);
+export const hasContent = (draft: TranslationDraft) => Boolean(draft.description || draft.notes || draft.fabricInformation || draft.shippingDelivery || draft.returnPolicy);
 
 interface ProductContentProps {
   drafts: Record<Locale, TranslationDraft>;
   activeLocale: Locale;
   onLocaleChange: (locale: Locale) => void;
   onChange: (locale: Locale, patch: Partial<TranslationDraft>) => void;
-  nameError?: string;
 }
 
-export const ProductContent = ({ drafts, activeLocale, onLocaleChange, onChange, nameError }: ProductContentProps) => {
+export const ProductContent = ({ drafts, activeLocale, onLocaleChange, onChange }: ProductContentProps) => {
   const draft = drafts[activeLocale];
   const isEnglish = activeLocale === "EN";
 
@@ -55,25 +52,11 @@ export const ProductContent = ({ drafts, activeLocale, onLocaleChange, onChange,
       <div className="flex flex-wrap items-center justify-between gap-3">
         <LocaleTabs locales={LOCALES} active={activeLocale} onChange={onLocaleChange} filled={{ EN: hasContent(drafts.EN), ID: hasContent(drafts.ID) }} />
         <p className="text-xs text-body/50">
-          {isEnglish ? "English is required — it is the fallback for every field." : "Indonesian is optional. Any field left empty falls back to English, field by field (§B3.2)."}
+          {isEnglish
+            ? "Optional — leave it all empty and the product still publishes, using the store defaults."
+            : "Optional. Any field left empty falls back to English, field by field (§B3.2)."}
         </p>
       </div>
-
-      <Field
-        label={`Product name (${activeLocale})`}
-        htmlFor={`name-${activeLocale}`}
-        required={isEnglish}
-        error={isEnglish ? nameError : undefined}
-        hint={isEnglish ? "Product has no name column — this is where the name lives." : "Leave empty to show the English name to Indonesian visitors."}
-      >
-        <TextInput
-          id={`name-${activeLocale}`}
-          value={draft.name}
-          onChange={(event) => onChange(activeLocale, { name: event.target.value })}
-          invalid={isEnglish && Boolean(nameError)}
-          placeholder={isEnglish ? "Cotton Day Dress" : drafts.EN.name || "Gaun Katun Harian"}
-        />
-      </Field>
 
       <RichTextField
         label={`Description (${activeLocale})`}

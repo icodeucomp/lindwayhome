@@ -49,14 +49,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const result = await prisma.$transaction(async (tx) => {
       const existingOrder = await tx.order.findUnique({
         where: { id },
-        include: { items: { include: { product: { select: { id: true, isActive: true, translations: { where: { locale: "EN" }, select: { name: true } } } } } } },
+        include: { items: { include: { product: { select: { id: true, isActive: true, name: true } } } } },
       });
 
       if (!existingOrder) throw new Error("Order not found");
 
       if (updateData.isPurchased === true && !existingOrder.isPurchased) {
         for (const item of existingOrder.items) {
-          const name = item.product.translations[0]?.name ?? item.productId;
+          const name = item.product.name;
 
           if (!item.product.isActive) throw new Error(`Product "${name}" is no longer available for purchase.`);
 

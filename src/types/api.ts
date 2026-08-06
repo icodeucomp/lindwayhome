@@ -232,9 +232,9 @@ export interface ProductVariant {
   } | null;
 }
 
+/** No `name` — it is a plain column on Product (D26). Every field here is optional. */
 export interface ProductTranslation {
   locale: Locale;
-  name: string;
   description?: RichText | null;
   notes?: RichText | null;
   fabricInformation?: RichText | null;
@@ -246,6 +246,8 @@ export interface Product {
   id: string;
   sku: string;
   slug: string;
+  /** Single name for both languages (D26) — never resolved through a fallback. */
+  name: string;
 
   branding: BrandingType;
   garment: GarmentType | null;
@@ -273,7 +275,6 @@ export interface Product {
   translations: ProductTranslation[];
 
   /** Flattened by `resolveTranslation` for the requested locale (§B3.2). */
-  name?: string;
   description?: RichText | null;
   notes?: RichText | null;
   fabricInformation?: RichText | null;
@@ -287,6 +288,7 @@ export interface Product {
 export interface CreateProduct {
   sku: string;
   slug: string;
+  name: string;
   branding: BrandingType;
   garment?: GarmentType | null;
   audiences: AudienceType[];
@@ -300,7 +302,8 @@ export interface CreateProduct {
   isFavorite: boolean;
   isActive: boolean;
   variants: { sizeId: string; quantity: number; packageDimensions?: ProductVariant["packageDimensions"] }[];
-  translations: ProductTranslation[];
+  /** Optional — a product with no rich content at all is valid (D26). */
+  translations?: ProductTranslation[];
 }
 
 export type EditProduct = Partial<CreateProduct>;
@@ -343,7 +346,7 @@ export interface ProductCartItems extends CartProduct, CartItem {
 export interface OrderItem {
   id: string;
   productId: string;
-  product?: Pick<Product, "id" | "sku" | "slug" | "images"> & { name?: string };
+  product?: Pick<Product, "id" | "sku" | "slug" | "name" | "images">;
   quantity: number;
   selectedSize: string;
   /** Snapshot taken at order time — not the product's current price. */

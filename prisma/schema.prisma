@@ -140,6 +140,7 @@ model Product {
   id   String @id @default(cuid())
   sku  String @unique // also the image folder name
   slug String @unique // public URL, single locale (D4)
+  name String // NOT translated (D26) — one name in both languages, like the slug
 
   // Taxonomy is three enums, not three tables (D25). Display data — label, slug,
   // description, hero image, menu order — lives in src/static/taxonomy.ts.
@@ -185,6 +186,8 @@ model Product {
   @@index([bestSellerRank, soldCount]) // Best Sellers sorts by rank then soldCount
   @@index([isActive, isFavorite])
   @@index([audiences], type: Gin) // array containment: "products for Women"
+  // Search is `contains` on name/sku/slug, which a btree index does not help. Add a
+  // pg_trgm GIN index on name if it gets slow.
   @@map("products")
 }
 
@@ -209,8 +212,10 @@ model ProductTranslation {
   productId String
   locale    Locale
 
-  name              String
-  description       Json? // Tiptap
+  // `name` lives on Product (D26). Every field here is nullable, so a product with
+  // no translation rows at all is valid and still renders — the four defaulted
+  // fields fall back to config, and description is simply not written yet.
+  description       Json? // Tiptap — no global default, so it stops at EN
   notes             Json? // Tiptap — falls back to config product_defaults (D9)
   fabricInformation Json? // Tiptap — falls back to config
   shippingDelivery  Json? // Tiptap — falls back to config
@@ -218,8 +223,6 @@ model ProductTranslation {
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  // Search uses `contains`; a btree index does not help it. Add a pg_trgm GIN
-  // index later if search gets slow.
   @@unique([productId, locale])
   @@map("product_translations")
 }

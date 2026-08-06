@@ -27,9 +27,11 @@ export const orderInclude = {
           id: true,
           sku: true,
           slug: true,
+          // A plain column since D26 — order screens and the confirmation email no
+          // longer resolve a name through the translation table.
+          name: true,
           images: true,
           branding: true,
-          translations: true,
         },
       },
     },

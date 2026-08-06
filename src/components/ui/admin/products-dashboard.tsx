@@ -112,7 +112,7 @@ export const ProductsDashboard = () => {
 
       <ConfirmDialog
         isVisible={toDelete !== null}
-        title={`Delete ${toDelete?.name ?? toDelete?.sku ?? "this product"}?`}
+        title={`Delete ${toDelete?.name ?? "this product"}?`}
         description="A product that has been ordered is deactivated instead of deleted, so order history and sold counts stay intact (A9.13)."
         confirmLabel="Delete product"
         isPending={deleteProduct.isPending}

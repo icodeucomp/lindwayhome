@@ -54,15 +54,15 @@ export async function GET(request: NextRequest) {
     if (typeof isActive === "string") where.isActive = isActive === "true";
     if (typeof isFavorite === "string") where.isFavorite = isFavorite === "true";
 
-    // Search has to reach the translation table, and it has to look at EN as well as
-    // the active locale — otherwise a product nobody has translated yet becomes
-    // invisible the moment a visitor switches to Indonesian (§B3.3).
+    // `name` is a column now (D26), so search never joins the translation table and
+    // the §B3.3 hazard is gone with it: there is no locale in which an untranslated
+    // product can become unsearchable, because there is nothing to translate.
     if (search) {
       where.OR = [
         { id: { contains: search } },
         { sku: { contains: search, mode: "insensitive" } },
         { slug: { contains: search, mode: "insensitive" } },
-        { translations: { some: { locale: { in: ["EN", locale] }, name: { contains: search, mode: "insensitive" } } } },
+        { name: { contains: search, mode: "insensitive" } },
       ];
     }
 
@@ -121,12 +121,16 @@ export async function POST(request: NextRequest) {
 
     const createData = CreateProductSchema.parse({ ...body, discountedPrice });
 
-    // Prisma cannot express "one translation must be EN", and the whole fallback
-    // chain assumes it exists — a product without one renders nameless everywhere,
-    // because Product has no name column (§B4).
-    if (!createData.translations.some((translation) => translation.locale === "EN")) {
-      logger.error(`${pathAPI} error`, { error: "An EN translation is required" });
-      return NextResponse.json({ success: false, message: "An EN translation is required" }, { status: 400 });
+    // Since `name` moved onto Product (D26), translations are optional — a product
+    // with none still renders. What is still not allowed is ID without EN: the
+    // fallback runs ID → EN per field, so an ID-only row leaves English visitors
+    // with a blank description and no way to reach the text that exists.
+    const translationRows = createData.translations ?? [];
+    const hasEnglish = translationRows.some((translation) => translation.locale === "EN");
+
+    if (translationRows.length > 0 && !hasEnglish) {
+      logger.error(`${pathAPI} error`, { error: "An EN translation is required alongside ID" });
+      return NextResponse.json({ success: false, message: "An EN translation is required alongside the Indonesian one" }, { status: 400 });
     }
 
     const totalStock = createData.variants.reduce((sum, variant) => sum + variant.quantity, 0);
@@ -155,7 +159,10 @@ export async function POST(request: NextRequest) {
     const moved = await Promise.all(createData.images.filter((image) => !image.isMoved).map((image) => uploader.moveFromTemp(image, folder)));
     const resolvedImages = await resolveFiles([], [...createData.images.filter((image) => image.isMoved), ...moved], folder);
 
+    // `translations` is destructured out but not used — `translationRows` above is the
+    // normalised copy, and leaving it in `product` would reach Prisma as a raw array.
     const { variants, translations, sizeGuideId, garment, releasedAt, bestSellerRank, ...product } = createData;
+    void translations;
 
     await prisma.product.create({
       data: {
@@ -169,7 +176,7 @@ export async function POST(request: NextRequest) {
         // `stock` is deliberately absent — the product_variant_stock_sync trigger
         // derives it from the variants below (D24).
         variants: { create: variants.map(toVariantCreate) },
-        translations: { create: translations.map(toTranslationCreate) },
+        ...(translationRows.length > 0 ? { translations: { create: translationRows.map(toTranslationCreate) } } : {}),
       },
     });
 

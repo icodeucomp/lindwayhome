@@ -16,11 +16,16 @@ await client.connect();
 
 const checks = [
   {
-    name: "Every product has an EN translation",
-    why: "Product has no name column — a product without an EN row renders nameless everywhere (D3)",
+    // Products no longer need an EN row at all: `name` is a column (D26) and every
+    // remaining translated field is either nullable or config-defaulted. What is
+    // still wrong is ID without EN, because the fallback runs ID → EN per field —
+    // an ID-only row hides that text from English visitors with no way to reach it.
+    name: "No product has an ID translation without an EN one",
+    why: "The per-field fallback runs ID → EN, so an ID-only row is invisible to English visitors (§B3.2)",
     sql: `SELECT p.sku AS detail
             FROM products p
-           WHERE NOT EXISTS (SELECT 1 FROM product_translations t WHERE t."productId" = p.id AND t.locale = 'EN')
+           WHERE EXISTS (SELECT 1 FROM product_translations t WHERE t."productId" = p.id AND t.locale = 'ID')
+             AND NOT EXISTS (SELECT 1 FROM product_translations t WHERE t."productId" = p.id AND t.locale = 'EN')
            ORDER BY p.sku`,
   },
   {

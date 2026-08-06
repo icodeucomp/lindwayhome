@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
     for (const item of validatedData.items) {
       const product = await prisma.product.findUnique({
         where: { id: item.productId },
-        select: { id: true, isActive: true, price: true, discountedPrice: true, translations: { where: { locale: "EN" }, select: { name: true } } },
+        select: { id: true, isActive: true, name: true, price: true, discountedPrice: true },
       });
 
       if (!product || !product.isActive) {
@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: false, message: `Dimensions for size "${item.selectedSize}" not found in configuration.` }, { status: 404 });
       }
 
-      logCalculation("Line priced", { productId: item.productId, name: product.translations[0]?.name, size: item.selectedSize, quantity: item.quantity, unitPrice });
+      logCalculation("Line priced", { productId: item.productId, name: product.name, size: item.selectedSize, quantity: item.quantity, unitPrice });
 
       itemsWithDimensions.push({ ...dimensions, quantity: item.quantity });
     }
@@ -284,14 +284,14 @@ export async function POST(request: NextRequest) {
             isActive: true,
             price: true,
             discountedPrice: true,
-            translations: { where: { locale: "EN" }, select: { name: true } },
+            name: true,
             variants: { where: { size: { code: item.selectedSize.toUpperCase() } }, select: { quantity: true } },
           },
         });
 
         if (!product) throw new Error(`Product with ID "${item.productId}" not found.`);
 
-        const name = product.translations[0]?.name ?? product.id;
+        const name = product.name;
 
         if (!product.isActive) throw new Error(`Product "${name}" is not available for purchase.`);
 

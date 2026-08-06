@@ -312,7 +312,8 @@ Contact Inbox is a menu of its own rather than a Content sub-item (D15) — it i
 | Static UI copy | Yes | `en.json` / `id.json` via `get-dictionary.ts` |
 | Article | Yes | `ArticleTranslation` |
 | FAQ | Yes | `FaqTranslation` |
-| Product (name + 5 rich-text fields) | Yes, **ID optional** | `ProductTranslation` |
+| Product **name** | **No** | plain `Product.name` column (D26) |
+| Product (5 rich-text fields) | Yes, **ID optional** | `ProductTranslation` |
 | Branding / Audience / Garment labels | **No** | single label column |
 | Size guide title, description, measurement labels | Yes | `SizeGuideTranslation` |
 | Public-facing config values (`product_defaults`, media alt) | Yes | value shape `{ en, id }` |
@@ -342,7 +343,7 @@ product override (active locale)
 
 ### B3.3 Consequences that must not be forgotten
 
-- **Product search must join translations.** `GET /api/products` currently searches `name`/`description` on the product table. It must search the active locale **plus EN**, or untranslated products become invisible in ID.
+- ~~**Product search must join translations.**~~ Dropped by D26: `name` is a plain column, so `GET /api/products` searches it directly and there is no locale in which a product can become unsearchable. The hazard remains real for **Article** and **FAQ**, whose titles are still translated.
 - **Admin forms use an EN | ID tab**, not both languages side by side. A product form otherwise carries 5 rich-text editors × 2 locales on one screen.
 - **`generateStaticParams`** for the `[lang]` segment, plus `hreflang` tags on public pages.
 
@@ -354,7 +355,7 @@ All ids are `cuid()` (D7). All tables follow the existing `@@map("snake_case")` 
 
 | Invariant | What breaks without it |
 | --- | --- |
-| Every translatable entity has an `EN` translation row (`ID` optional, D3) | A product with no translation rows is creatable and renders **nameless** everywhere, because `Product` has no `name` column |
+| An `ID` translation never exists without its `EN` counterpart (`ID` optional, D3) | The fallback runs ID → EN per field, so an ID-only row is unreachable for English visitors. **Products** need no row at all since D26 — `name` is a column and every remaining field is nullable or config-defaulted. **Article** and **FAQ** still require `EN`, since their title lives in the translation |
 | `Size.code` matches a `package_dimensions` config key exactly | Checkout returns 404 for that size — discovered by the buyer, not the admin |
 | `ProductVariant.sizeId` is one of the sizes in the product's `sizeGuide` | Orphan variants that never appear in the size table |
 | `products.stock` equals `SUM(product_variants.quantity)` | Overselling. This one is additionally enforced by a database trigger (D24), so the check is a backstop rather than the only line of defence |
@@ -453,6 +454,7 @@ model Product {
   id              String               @id @default(cuid())
   sku             String               @unique  // also the image folder name
   slug            String               @unique  // public URL, single locale (D4)
+  name            String                        // NOT translated (D26)
 
   branding        BrandingType                  // required (D5)
   garment         GarmentType?                  // single
@@ -509,12 +511,12 @@ model ProductVariant {
   @@map("product_variants")
 }
 
+// No `name` (D26). Every field is nullable, so a product may carry no rows at all.
 model ProductTranslation {
   id                String  @id @default(cuid())
   productId         String
   locale            Locale
-  name              String
-  description       Json?   // Tiptap
+  description       Json?   // Tiptap — no global default, so its chain stops at EN
   notes             Json?   // Tiptap — falls back to config product_defaults
   fabricInformation Json?   // Tiptap — falls back to config
   shippingDelivery  Json?   // Tiptap — falls back to config
@@ -528,10 +530,11 @@ model ProductTranslation {
 ```
 
 - **One branding (required), one garment, many audiences** (D5) — so a product can be unisex.
-- `Product` no longer carries `name`, `description`, `notes`, `category`, `sizes`, or `productionNotes`. Name and content moved to `ProductTranslation`; category became three relations; sizes became `ProductVariant`. `productionNotes` held the customer-facing "made-to-order, allow 21-25 days" line in v1 — untranslatable and duplicating what `notes` now covers with a global default (D9, D21).
+- `Product` keeps `name` but loses `description`, `notes`, `category`, `sizes` and `productionNotes`. Content moved to `ProductTranslation`; category became three enums; sizes became `ProductVariant`. `productionNotes` held the customer-facing "made-to-order, allow 21-25 days" line in v1 — untranslatable and duplicating what `notes` now covers with a global default (D9, D21).
+- **`name` is not translated (D26)** — one name in both languages, like the slug. It never passes through the fallback chain, and a product with no translation rows at all is valid and renders.
 - `isFavorite` keeps its v1 meaning: an admin flag for featured products, now surfaced on that product's branding page (D11). It is **not** the wishlist.
 - The five translated content fields hold Tiptap JSON (D10). All are nullable; empty falls back per §B6.1.
-- Product search filters on `ProductTranslation.name`/`description` with `contains`. A plain btree index does not help `contains`, so none is declared — add a `pg_trgm` GIN index later if search gets slow.
+- Product search filters `name`/`sku`/`slug` with `contains`. A plain btree index does not help `contains`, so none is declared — add a `pg_trgm` GIN index on `name` later if search gets slow.
 
 ### B4.4 Stock and metrics
 
@@ -840,7 +843,7 @@ enum ParameterType { TEXT  NUMBER  DECIMAL  BOOLEAN  SELECT  MULTI_SELECT  IMAGE
 | Content | `ArticleCategory`, `ArticleCategoryTranslation`, `Article`, `ArticleTranslation`, `Faq`, `FaqTranslation`, `ContactInquiry` |
 | Settings | `ConfigParameterGroup`, `ConfigParameter`, `Location` *(unchanged)* |
 
-The full file is assembled and validated at [`docs/schema.v2.prisma`](docs/schema.v2.prisma) — a review copy, kept outside `prisma/` because the Prisma editor extension merges every `.prisma` file in that folder and would report the v1 and v2 models as duplicates. `prisma/schema.prisma` still holds v1 until phase 1 runs.
+Phase 1 applied this to [`prisma/schema.prisma`](prisma/schema.prisma), which is now the single source. The `docs/schema.v2.prisma` review copy was deleted with it — the sections above are a summary, and the schema file wins wherever they disagree.
 
 ## B5. Target functional requirements `[TARGET]`
 
@@ -897,7 +900,7 @@ render field (locale L)
   → config product_defaults[field].en
 ```
 
-One helper implements this for all four content fields. `name` and `description` have no global default, so their chain stops at EN.
+One helper implements this for all four content fields. `description` has no global default, so its chain stops at EN. `name` is not in the chain at all — it is a plain column (D26).
 
 ### B6.2 Package dimension resolution
 
@@ -1070,12 +1073,12 @@ Every admin screen composes from one kit rather than inventing its own chrome. B
 The admin catalog, built on §C2. Verified by driving the real API: create → read back → edit → delete, with the image moving out of temp, the stock trigger recomputing after a variant was dropped, `discountedPrice` recomputed server-side, and the ID locale falling back to EN field by field.
 
 - **Product list** — search over name/SKU/slug, filters for branding, garment, audience, status and sort, grid/list, paging. `isActive` is only sent when the admin filters on it: the admin list must show inactive products, so an unfiltered list is the whole catalog.
-- **Product form** — `ProductImages` (temp upload, reorder, first is primary), `ProductVariants` (size guide → offered sizes → quantity + optional per-variant packaging), `ProductContent` (EN\|ID tabs, name + 5 Tiptap fields).
+- **Product form** — `ProductImages` (temp upload, reorder, first is primary), `ProductVariants` (size guide → offered sizes → quantity + optional per-variant packaging), `ProductContent` (EN\|ID tabs over the 5 Tiptap fields; the name sits in Details, D26).
 - **The size guide constrains the variant list.** With a guide selected, only its rows' sizes are offered, which is how the §B4 invariant is enforced — by not offering anything else. Changing the guide drops variants the new one does not contain. Without a guide the invariant does not apply and the full active size list is offered.
 - **A size whose `code` has no `package_dimensions` entry is flagged inline**, because that is a checkout 404 the buyer would otherwise discover.
 - **`stock` is never submitted** (D24), and neither is `discountedPrice` — the server derives it from `price` and `discount`.
 
-One contract limit worth knowing: `ProductTranslationSchema` requires `name` on every translation row, so an ID row carrying only a description cannot be submitted. The form asks for an ID name whenever any other ID field is filled. Copying the EN name in renders identically to the per-field fallback, so nothing is lost — but if per-field ID-without-name is wanted, the schema is where it would change.
+~~One contract limit worth knowing: `ProductTranslationSchema` requires `name` on every translation row…~~ **Removed by D26.** The name is a plain column, so it sits in the Details section with the SKU and slug, the locale tabs carry rich content only, and a product may be saved with no translation rows at all.
 
 **One defect fixed across the whole API.** Handlers end `catch (error) { … message: error }` (§E3). An `Error` has no enumerable own properties, so it serialized to `{}` — every 500 reached the admin as an empty toast while the log held the real cause. `errorMessage(error)` from `@/lib` now wraps those 38 sites. The response shape is unchanged.
 
@@ -1110,6 +1113,7 @@ Agreed in discussion. Do not reopen without a new decision recorded here.
 | **D22** | **No `Discount` entity.** Discounting is `Product.discount` → `discountedPrice`, plus the v1 config groups `promotions` (store-wide) and `members` (member rate). Targeted and scheduled campaigns are out of scope | The tables bought targeting and validity windows that Lindway does not run, and cost three real risks: the effective price had to be resolved at read time in two places, so the price shown could differ from the price charged; the token carried only aggregates, so per-line snapshots could contradict the signed total; and layered `FIXED` discounts could drive a line negative, surfacing as a meaningless validation error after the buyer had already uploaded a receipt. Keeping `discountedPrice` a stored column also keeps price sorting and filtering in SQL |
 | **D23** | `Order` gains `status` (`OrderStatus`), `trackingNumber` and `cancelledAt`. `isPurchased` stays beside `status`. `ContactInquiry` gains `handlingNote`; `Article` gains `authorId` | v1 expressed the whole order lifecycle as one boolean — no way to say cancelled or shipped, and nowhere to put the tracking number the storefront already promises buyers. `isPurchased` is kept because it is what triggers the stock and `soldCount` transaction, and moving that would touch the frozen zone. `handlingNote` records *how* an inquiry was resolved, which `HANDLED` alone does not |
 | **D25** | Branding, audience and garment are **Prisma enums**, not tables. Display data (label, slug, description, hero image, order, `isActive`) lives in `src/static/taxonomy.ts`. `ProductAudience` is replaced by an `AudienceType[]` array on `Product` | Removes three tables, one join table, and three admin CRUD screens. The cost is real and accepted: adding a value needs a migration plus a deploy, and per-branding hero copy is no longer editable by an admin. Justified because the axes are stable — the two brandings still to come are already in the enum, and Lindway does not add garment types often |
+| **D26** | **`Product.name` is a plain column, not translated.** One name in both languages, like the slug. `ProductTranslation` keeps only the five rich-text fields, all nullable, so a product may have no translation rows at all. `Article`, `FAQ` and `SizeGuide` are unaffected — their title *is* the translation | Product names are brand and garment language ("Melati Embroidered Kebaya"), which reads the same in both locales, so translating them bought nothing and cost everywhere: `Product` had no name column, which made a nameless product possible, forced search to join the translation table on the active locale *plus* EN, put the name behind a locale tab in the admin form, and — because the API required a `name` on every translation row — made an ID row carrying only a description impossible to submit. All four problems are structural consequences of that one field, and all four disappear with it. Superseding consequence: **an EN translation row is no longer required for products**; requiring one would only force an all-null row, since the four defaulted fields fall back to config with or without it. ID-without-EN is still refused, because the per-field fallback runs ID → EN |
 | **D24** | `Product.stock` is maintained by a Postgres trigger (`prisma/triggers/product-stock.sql`), not by application code | It is the number that gates overselling. A trigger makes drift structurally impossible rather than merely unlikely — any write path that forgot to recompute would otherwise let the store sell stock it does not have, silently. Consequence: application code must never write `stock` |
 | **D21** | Field audit removed seven columns that produced nothing: `code` on the three taxonomy tables *(since superseded — the tables themselves are gone, D25)*, `SizeGuide.isActive`, `SizeGuideRow.order`, `Product.productionNotes`, `Member.joinedAt`. Ruling principle: **`isActive` is a manual switch, `publishedAt` / date windows are a schedule** — a model needs both only when it needs both behaviours | Each removal deleted a second source of truth: `code` duplicated `slug`, `isActive` beside `publishedAt` had no defined combination, a row `order` could contradict `size.order`, `productionNotes` duplicated the translated `notes`, and `joinedAt` duplicated `createdAt` |
 

@@ -103,9 +103,10 @@ export const ProductVariantSchema = z.object({
     .nullish(),
 });
 
+// `name` is not here — it is a plain column on Product (D26). Every remaining field
+// is nullable, so a product may carry no translation rows at all.
 export const ProductTranslationSchema = z.object({
   locale: LocaleEnum,
-  name: z.string().min(1, "Product name is required"),
   description: TiptapSchema.nullish(),
   notes: TiptapSchema.nullish(),
   fabricInformation: TiptapSchema.nullish(),
@@ -117,6 +118,7 @@ export const ProductSchema = z.object({
   id: z.string().optional(),
   sku: z.string().min(1, "Product SKU is required"),
   slug: z.string().min(1, "Product slug is required"),
+  name: z.string().min(1, "Product name is required"),
 
   branding: BrandingEnum,
   garment: GarmentEnum.nullish(),
@@ -137,10 +139,11 @@ export const ProductSchema = z.object({
   isActive: z.boolean().optional(),
 
   variants: z.array(ProductVariantSchema).min(1, "At least one size is required"),
-  // An EN row is mandatory; ID is optional (D3). Checked in the handler, since Zod
-  // cannot express "one element must have locale === EN" without a refinement that
-  // produces a worse error message.
-  translations: z.array(ProductTranslationSchema).min(1, "An EN translation is required"),
+  // Optional entirely, now that `name` is a column (D26): the four defaulted fields
+  // fall back to config with or without a row, so requiring an EN row would only
+  // force an all-null one. The handler still refuses ID-without-EN, since ID falls
+  // back to EN per field and an EN visitor would otherwise see nothing.
+  translations: z.array(ProductTranslationSchema).optional(),
 });
 
 // `stock` and `soldCount` are absent on purpose: stock belongs to the database

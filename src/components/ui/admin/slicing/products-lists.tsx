@@ -25,7 +25,11 @@ interface ProductsListsProps {
 
 const editHref = (product: Product) => `/admin/dashboard/products/${product.id}/edit`;
 
-/** EN / ID marks under the title, mirroring the reference cards. */
+/**
+ * Marks under the title. Since D26 the name is untranslated, so EN/ID here means
+ * "has rich content in that locale" — a muted chip is missing content, not a
+ * missing name.
+ */
 const TranslationChips = ({ product }: { product: Product }) => {
   const locales = new Set((product.translations ?? []).map((translation) => translation.locale));
 
@@ -69,7 +73,7 @@ export const ProductsLists = ({ products, view, isLoading, isError, hasFilters, 
           <article key={product.id} className="flex flex-col">
             <div className="relative overflow-hidden border rounded-sm border-border bg-muted">
               {product.images?.[0] ? (
-                <Img src={product.images[0].url} alt={product.images[0].alt || product.name || product.sku} className="w-full aspect-4/5" cover />
+                <Img src={product.images[0].url} alt={product.images[0].alt || product.name} className="w-full aspect-4/5" cover />
               ) : (
                 <div className="grid w-full aspect-4/5 place-items-center text-body/25">
                   <PiTShirt className="size-8" />
@@ -81,7 +85,7 @@ export const ProductsLists = ({ products, view, isLoading, isError, hasFilters, 
               </span>
             </div>
 
-            <h3 className="mt-3 text-lg font-normal font-heading text-body">{product.name ?? product.sku}</h3>
+            <h3 className="mt-3 text-lg font-normal font-heading text-body">{product.name}</h3>
             <div className="mt-1">
               <TranslationChips product={product} />
             </div>
@@ -137,7 +141,7 @@ export const ProductsLists = ({ products, view, isLoading, isError, hasFilters, 
                     </span>
                   )}
                   <span className="min-w-0">
-                    <span className="block truncate text-body">{product.name ?? "(untranslated)"}</span>
+                    <span className="block truncate text-body">{product.name}</span>
                     <span className="block font-mono text-xs text-body/45">{product.sku}</span>
                   </span>
                 </span>

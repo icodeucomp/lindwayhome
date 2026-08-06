@@ -39,6 +39,7 @@ const LIST_HREF = "/admin/dashboard/products";
 interface FormState {
   sku: string;
   slug: string;
+  name: string;
   branding: BrandingType | "";
   garment: GarmentType | "";
   audiences: AudienceType[];
@@ -58,6 +59,7 @@ interface FormState {
 const EMPTY: FormState = {
   sku: "",
   slug: "",
+  name: "",
   branding: "",
   garment: "",
   audiences: [],
@@ -83,13 +85,14 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-type FormErrors = Partial<Record<"sku" | "slug" | "branding" | "price" | "discount" | "images" | "variants" | "nameEN" | "nameID", string>>;
+type FormErrors = Partial<Record<"sku" | "slug" | "name" | "branding" | "price" | "discount" | "images" | "variants", string>>;
 
 const validate = (form: FormState): FormErrors => {
   const errors: FormErrors = {};
 
   if (!form.sku.trim()) errors.sku = "SKU is required — it is also the image folder name";
   if (!form.slug.trim()) errors.slug = "Slug is required";
+  if (!form.name.trim()) errors.name = "Name is required";
   if (!form.branding) errors.branding = "Branding is required (D5)";
 
   const price = Number(form.price);
@@ -104,13 +107,9 @@ const validate = (form: FormState): FormErrors => {
   if (form.variants.length === 0) errors.variants = "Select at least one size";
   else if (form.variants.reduce((sum, variant) => sum + variant.quantity, 0) <= 0) errors.variants = "Total stock must be greater than zero";
 
-  if (!form.translations.EN.name.trim()) errors.nameEN = "The English name is required — Product has no name column";
-
-  // The API requires a name on every translation row it receives, so an Indonesian
-  // row carrying only a description cannot be submitted. Copying the English name in
-  // renders identically to the per-field fallback, so the ask is one keystroke.
-  if (hasContent(form.translations.ID) && !form.translations.ID.name.trim()) errors.nameID = "Add an Indonesian name, or clear the other Indonesian fields";
-
+  // Nothing to validate under the locale tabs any more. Since D26 moved `name` out
+  // of the translations, every field there is optional rich content — a product with
+  // no translation rows at all is valid and still renders.
   return errors;
 };
 
@@ -138,7 +137,6 @@ export const ProductForm = ({ productId }: { productId?: string }) => {
     const translations: Record<Locale, TranslationDraft> = { EN: { ...EMPTY_TRANSLATION }, ID: { ...EMPTY_TRANSLATION } };
     for (const row of record.translations ?? []) {
       translations[row.locale] = {
-        name: row.name ?? "",
         description: row.description ?? null,
         notes: row.notes ?? null,
         fabricInformation: row.fabricInformation ?? null,
@@ -150,6 +148,7 @@ export const ProductForm = ({ productId }: { productId?: string }) => {
     setForm({
       sku: record.sku,
       slug: record.slug,
+      name: record.name,
       branding: record.branding,
       garment: record.garment ?? "",
       audiences: record.audiences ?? [],
@@ -182,16 +181,14 @@ export const ProductForm = ({ productId }: { productId?: string }) => {
 
   const clearError = (key: keyof FormErrors) => setErrors((previous) => (previous[key] ? { ...previous, [key]: undefined } : previous));
 
-  const setTranslation = (locale: Locale, changes: Partial<TranslationDraft>) => {
-    setForm((previous) => {
-      const next = { ...previous, translations: { ...previous.translations, [locale]: { ...previous.translations[locale], ...changes } } };
-      // Creating a product derives the slug from the English name until the admin
-      // edits it themselves; after that it is theirs and never moves under them.
-      if (locale === "EN" && changes.name !== undefined && !isSlugTouched && !isEdit) next.slug = slugify(changes.name);
-      return next;
-    });
-    if (locale === "EN") clearError("nameEN");
-    else clearError("nameID");
+  const setTranslation = (locale: Locale, changes: Partial<TranslationDraft>) =>
+    setForm((previous) => ({ ...previous, translations: { ...previous.translations, [locale]: { ...previous.translations[locale], ...changes } } }));
+
+  // Creating a product derives the slug from the name until the admin edits the slug
+  // themselves; after that it is theirs and never moves under them.
+  const setName = (name: string) => {
+    setForm((previous) => ({ ...previous, name, ...(!isSlugTouched && !isEdit ? { slug: slugify(name) } : {}) }));
+    clearError("name");
   };
 
   const handleSizeGuideChange = (sizeGuideId: string | null, allowedSizeIds: string[] | null) => {
@@ -210,17 +207,14 @@ export const ProductForm = ({ productId }: { productId?: string }) => {
     const found = validate(form);
     setErrors(found);
 
-    if (Object.keys(found).length > 0) {
-      // Both name errors live behind the locale tabs, so jumping there is the only way
-      // the admin sees why the save was refused.
-      if (found.nameEN) setActiveLocale("EN");
-      else if (found.nameID) setActiveLocale("ID");
-      return;
-    }
+    if (Object.keys(found).length > 0) return;
 
-    const translations = (["EN", "ID"] as const)
-      .filter((locale) => locale === "EN" || hasContent(form.translations[locale]))
-      .map((locale) => ({ locale, ...form.translations[locale] }));
+    // Only locales that actually carry content get a row. An EN row is included
+    // whenever ID has one, because the fallback runs ID → EN and the server refuses
+    // ID-without-EN — but neither is required on its own (D26).
+    const filled = (["EN", "ID"] as const).filter((locale) => hasContent(form.translations[locale]));
+    const locales: Locale[] = filled.includes("ID") && !filled.includes("EN") ? ["EN", ...filled] : [...filled];
+    const translations = locales.map((locale) => ({ locale, ...form.translations[locale] }));
 
     // `discountedPrice`, `stock` and `soldCount` are absent on purpose: the server
     // derives the first, a trigger owns the second (D24), and the order transaction
@@ -228,6 +222,7 @@ export const ProductForm = ({ productId }: { productId?: string }) => {
     const payload: CreateProduct = {
       sku: form.sku.trim(),
       slug: form.slug.trim(),
+      name: form.name.trim(),
       branding: form.branding as BrandingType,
       garment: form.garment || null,
       audiences: form.audiences,
@@ -259,12 +254,16 @@ export const ProductForm = ({ productId }: { productId?: string }) => {
     <>
       <PageHeader
         back={{ href: LIST_HREF, label: "Products" }}
-        title={isEdit ? form.translations.EN.name || "Edit product" : "New product"}
-        description="English content is required; Indonesian can be added later."
+        title={isEdit ? form.name || "Edit product" : "New product"}
+        description="The name is the same in both languages (D26). Rich content is optional and can be added later."
       />
 
       <FormLayout onSubmit={handleSubmit}>
         <FormSection title="Details">
+          <Field label="Name" htmlFor="name" required error={errors.name} hint="One name for both languages — never translated, like the slug">
+            <TextInput id="name" value={form.name} onChange={(event) => setName(event.target.value)} invalid={Boolean(errors.name)} placeholder="Cotton Day Dress" />
+          </Field>
+
           <FieldRow>
             <Field label="SKU" htmlFor="sku" required error={errors.sku} hint="Also the image folder name">
               <TextInput
@@ -393,13 +392,7 @@ export const ProductForm = ({ productId }: { productId?: string }) => {
         </FormSection>
 
         <FormSection title="Content">
-          <ProductContent
-            drafts={form.translations}
-            activeLocale={activeLocale}
-            onLocaleChange={setActiveLocale}
-            onChange={setTranslation}
-            nameError={activeLocale === "EN" ? errors.nameEN : errors.nameID}
-          />
+          <ProductContent drafts={form.translations} activeLocale={activeLocale} onLocaleChange={setActiveLocale} onChange={setTranslation} />
         </FormSection>
 
         <FormSection title="Publishing">

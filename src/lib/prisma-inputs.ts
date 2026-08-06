@@ -29,9 +29,9 @@ export const toVariantCreate = (variant: VariantInput): Prisma.ProductVariantCre
   packageDimensions: json(variant.packageDimensions as JsonInput),
 });
 
+/** No `name` — that is a column on Product now (D26). */
 export interface ProductTranslationInput {
   locale: "EN" | "ID";
-  name: string;
   description?: JsonInput;
   notes?: JsonInput;
   fabricInformation?: JsonInput;
@@ -41,7 +41,6 @@ export interface ProductTranslationInput {
 
 export const toTranslationCreate = (translation: ProductTranslationInput): Prisma.ProductTranslationCreateWithoutProductInput => ({
   locale: translation.locale,
-  name: translation.name,
   description: json(translation.description),
   notes: json(translation.notes),
   fabricInformation: json(translation.fabricInformation),
