@@ -10,6 +10,10 @@ export * from "./size-guide-form";
 
 export * from "./orders-dashboard";
 
+export * from "./articles-dashboard";
+export * from "./article-form";
+export * from "./article-categories-dashboard";
+
 export * from "./locations-dashboard";
 export * from "./location-form";
 export * from "./config-parameters-dashboard";

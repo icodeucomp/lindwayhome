@@ -17,6 +17,20 @@ export const sizeGuideInclude = {
   rows: { include: { size: true }, orderBy: { size: { order: "asc" } } },
 } satisfies Prisma.SizeGuideInclude;
 
+/** Categories carry their name only in the translation, so it is always included. */
+export const articleCategoryInclude = {
+  translations: true,
+  _count: { select: { articles: true } },
+} satisfies Prisma.ArticleCategoryInclude;
+
+export const articleInclude = {
+  translations: true,
+  category: { select: { id: true, slug: true, translations: true } },
+  // Author is nullable so removing an admin does not remove their articles; the
+  // password hash must never leave the server, hence the explicit select.
+  author: { select: { id: true, username: true } },
+} satisfies Prisma.ArticleInclude;
+
 /** Standard shape for reading an order with its lines. */
 export const orderInclude = {
   member: true,

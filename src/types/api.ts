@@ -107,6 +107,9 @@ export interface QueryParams {
   isPurchased?: string;
   status?: OrderStatus | string;
   paymentMethod?: PaymentMethods | string;
+  categoryId?: string;
+  featured?: string;
+  published?: string;
   year?: string;
   month?: string;
   dateFrom?: string;
@@ -307,6 +310,81 @@ export interface CreateProduct {
 }
 
 export type EditProduct = Partial<CreateProduct>;
+
+// =============================================================================
+// Content — Journal
+// =============================================================================
+
+export interface ArticleCategoryTranslation {
+  locale: Locale;
+  name: string;
+  description?: string | null;
+}
+
+export interface ArticleCategory {
+  id: string;
+  slug: string;
+  order: number;
+  isActive: boolean;
+  translations: ArticleCategoryTranslation[];
+  /** Resolved for the requested locale (§B3.2). The name lives only here. */
+  name?: string;
+  description?: string | null;
+  /** How many articles point at this category — a category in use cannot be deleted. */
+  articleCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateArticleCategory {
+  slug: string;
+  order?: number;
+  isActive?: boolean;
+  translations: ArticleCategoryTranslation[];
+}
+
+export type UpdateArticleCategory = Partial<CreateArticleCategory>;
+
+export interface ArticleTranslation {
+  locale: Locale;
+  title: string;
+  excerpt?: string | null;
+  content: RichText;
+}
+
+export interface Article {
+  id: string;
+  slug: string;
+  categoryId: string;
+  category?: Pick<ArticleCategory, "id" | "slug" | "translations"> & { name?: string };
+  authorId: string | null;
+  author?: Pick<User, "id" | "username"> | null;
+  image: Files;
+  imageAlt: string | null;
+  featured: boolean;
+  /** null = draft. This IS the on/off switch, as on SizeGuide (D1). */
+  publishedAt: string | null;
+  translations: ArticleTranslation[];
+  /** Resolved for the requested locale (§B3.2). */
+  title?: string;
+  excerpt?: string | null;
+  content?: RichText;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateArticle {
+  slug: string;
+  categoryId: string;
+  authorId?: string | null;
+  image: Files;
+  imageAlt?: string | null;
+  featured?: boolean;
+  publishedAt?: string | null;
+  translations: ArticleTranslation[];
+}
+
+export type UpdateArticle = Partial<CreateArticle>;
 
 // =============================================================================
 // Cart — client-side only, never persisted server-side before checkout (F-6)

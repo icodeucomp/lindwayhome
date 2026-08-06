@@ -522,6 +522,97 @@ async function seedProducts() {
 
 // =============================================================================
 
+// =============================================================================
+// Journal
+// =============================================================================
+
+const ARTICLE_CATEGORIES = [
+  { slug: "craft-and-process", order: 1, en: { name: "Craft & Process", description: "How the pieces are made." }, id: { name: "Kriya & Proses", description: "Bagaimana setiap karya dibuat." } },
+  { slug: "our-people", order: 2, en: { name: "Our People", description: "The artisans behind the label." }, id: { name: "Orang-Orang Kami", description: "Para perajin di balik label ini." } },
+  { slug: "sustainability", order: 3, en: { name: "Sustainability", description: null }, id: null },
+];
+
+const ARTICLES = [
+  {
+    slug: "how-our-batik-is-made",
+    category: "craft-and-process",
+    featured: true,
+    published: true,
+    en: { title: "How our batik is made", excerpt: "From canting to final rinse — the seven days behind a single length of cloth.", body: "Every metre begins with wax and a canting, drawn by hand." },
+    id: { title: "Bagaimana batik kami dibuat", excerpt: "Dari canting hingga bilasan terakhir — tujuh hari di balik selembar kain.", body: "Setiap meter dimulai dari malam dan canting, digambar dengan tangan." },
+  },
+  {
+    slug: "meet-the-kebaya-embroiderers",
+    category: "our-people",
+    featured: false,
+    published: true,
+    // EN only, so the Journal exercises the same fallback the product pages do.
+    en: { title: "Meet the kebaya embroiderers", excerpt: "Four women in Denpasar whose needlework defines the Melati line.", body: "The jasmine motif takes a full day to embroider on each placket." },
+    id: null,
+  },
+  {
+    slug: "why-we-dye-in-small-batches",
+    category: "sustainability",
+    featured: false,
+    // A draft, so the admin list has something that must never reach the public page.
+    published: false,
+    en: { title: "Why we dye in small batches", excerpt: "Smaller runs, less water, and colour we can actually stand behind.", body: "A large dye run wastes more water than it saves in time." },
+    id: null,
+  },
+];
+
+async function seedJournal() {
+  const existing = await prisma.articleCategory.count();
+  if (existing > 0) {
+    console.log(`📰 journal… skipped (${existing} categories already present)`);
+    return;
+  }
+
+  console.log("📰 journal…");
+
+  const categoryIdBySlug = new Map<string, string>();
+
+  for (const category of ARTICLE_CATEGORIES) {
+    const created = await prisma.articleCategory.create({
+      data: {
+        slug: category.slug,
+        order: category.order,
+        translations: {
+          create: [
+            { locale: "EN", name: category.en.name, description: category.en.description ?? undefined },
+            ...(category.id ? [{ locale: "ID" as const, name: category.id.name, description: category.id.description ?? undefined }] : []),
+          ],
+        },
+      },
+    });
+    categoryIdBySlug.set(category.slug, created.id);
+  }
+
+  const author = await prisma.user.findFirst({ where: { username: "admin" }, select: { id: true } });
+
+  for (const [index, article] of ARTICLES.entries()) {
+    await prisma.article.create({
+      data: {
+        slug: article.slug,
+        categoryId: categoryIdBySlug.get(article.category)!,
+        authorId: author?.id,
+        image: imageNode(`customer-moment-photo-${(index % 8) + 1}.webp`),
+        imageAlt: article.en.title,
+        featured: article.featured,
+        publishedAt: article.published ? new Date(Date.now() - index * 5 * 24 * 60 * 60 * 1000) : null,
+        translations: {
+          create: [
+            { locale: "EN", title: article.en.title, excerpt: article.en.excerpt, content: doc(p(article.en.body)) },
+            ...(article.id ? [{ locale: "ID" as const, title: article.id.title, excerpt: article.id.excerpt, content: doc(p(article.id.body)) }] : []),
+          ],
+        },
+      },
+    });
+  }
+}
+
+// =============================================================================
+
 async function main() {
   console.log("🌱 seeding…\n");
 
@@ -531,8 +622,9 @@ async function main() {
   await seedConfig();
   await seedSizeGuides();
   await seedProducts();
+  await seedJournal();
 
-  const [users, sizeCount, guideCount, productCount, variantCount, configCount, locationCount] = await Promise.all([
+  const [users, sizeCount, guideCount, productCount, variantCount, configCount, locationCount, categoryCount, articleCount, draftCount] = await Promise.all([
     prisma.user.count(),
     prisma.size.count(),
     prisma.sizeGuide.count(),
@@ -540,6 +632,9 @@ async function main() {
     prisma.productVariant.count(),
     prisma.configParameter.count(),
     prisma.location.count(),
+    prisma.articleCategory.count(),
+    prisma.article.count(),
+    prisma.article.count({ where: { publishedAt: null } }),
   ]);
 
   const stockSynced = await prisma.product.findMany({ select: { sku: true, stock: true } });
@@ -547,6 +642,7 @@ async function main() {
   console.log("\n✅ done");
   console.log(`   users ${users} · sizes ${sizeCount} · size guides ${guideCount} · config ${configCount} · locations ${locationCount}`);
   console.log(`   products ${productCount} · variants ${variantCount}`);
+  console.log(`   article categories ${categoryCount} · articles ${articleCount} (${draftCount} draft)`);
   console.log(`   stock from trigger: ${stockSynced.map((product) => `${product.sku}=${product.stock}`).join(" ")}`);
   if (stockSynced.every((product) => product.stock === 0)) {
     console.warn("\n⚠️  every product has stock 0 — the trigger was probably not applied.");

@@ -218,6 +218,25 @@ export const FaqSchema = z.object({
   translations: z.array(FaqTranslationSchema).min(1, "An EN translation is required"),
 });
 
+export const ArticleCategoryTranslationSchema = z.object({
+  locale: LocaleEnum,
+  name: z.string().min(1, "Name is required"),
+  description: z.string().nullish(),
+});
+
+export const ArticleCategorySchema = z.object({
+  id: z.string().optional(),
+  slug: z.string().min(1, "Slug is required"),
+  order: z.number().int().nonnegative().optional(),
+  isActive: z.boolean().optional(),
+  // The name lives here, not on the category, so an EN row is genuinely required —
+  // unlike Product, which has its own `name` column (D26).
+  translations: z.array(ArticleCategoryTranslationSchema).min(1, "An EN translation is required"),
+});
+
+export const CreateArticleCategorySchema = ArticleCategorySchema.omit({ id: true });
+export const UpdateArticleCategorySchema = ArticleCategorySchema.partial();
+
 export const ArticleTranslationSchema = z.object({
   locale: LocaleEnum,
   title: z.string().min(1, "Title is required"),
@@ -233,9 +252,12 @@ export const ArticleSchema = z.object({
   image: FileSchema,
   imageAlt: z.string().nullish(),
   featured: z.boolean().optional(),
-  publishedAt: z.coerce.date().nullish(),
+  publishedAt: z.coerce.date().nullish(), // null = draft
   translations: z.array(ArticleTranslationSchema).min(1, "An EN translation is required"),
 });
+
+export const CreateArticleSchema = ArticleSchema.omit({ id: true });
+export const UpdateArticleSchema = ArticleSchema.partial();
 
 // =============================================================================
 // Location — unchanged from v1
@@ -300,6 +322,16 @@ export const LocationQuerySchema = z.object({
   province: z.string().optional(),
   district: z.string().optional(),
   sub_district: z.string().optional(),
+});
+
+export const ArticleQuerySchema = z.object({
+  ...baseQuery,
+  locale: LocaleEnum.optional().default("EN"),
+  categoryId: z.string().optional(),
+  featured: z.string().optional(),
+  // "true" = published only, "false" = drafts only. Absent means both, which is what
+  // the admin list wants — a draft the admin cannot see is a draft they cannot finish.
+  published: z.string().optional(),
 });
 
 // =============================================================================

@@ -19,6 +19,10 @@ import {
   UpdateSize,
   CreateSizeGuide,
   UpdateSizeGuide,
+  CreateArticle,
+  UpdateArticle,
+  CreateArticleCategory,
+  UpdateArticleCategory,
 } from "@/types";
 
 import { QueryKey, useMutation, UseMutationOptions, useQuery } from "@tanstack/react-query";
@@ -729,4 +733,81 @@ export const sizeGuidesApi = {
     useMutation({ mutationFn: mutation<{ id: string; guide: UpdateSizeGuide }>(({ id, guide }) => api.put(`/size-guides/${id}`, guide)), onError: onMutationError, ...mutationOptions }),
   useDeleteSizeGuide: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, string>) =>
     useMutation({ mutationFn: mutation<string>((id) => api.delete(`/size-guides/${id}`)), onError: onMutationError, ...mutationOptions }),
+};
+
+export const articleCategoriesApi = {
+  useGetArticleCategories: <T>({ key, params = {}, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+    return useQuery<T, Error>({
+      queryKey: key,
+      queryFn: async () => {
+        const searchParams = new URLSearchParams();
+        if (params.locale) searchParams.append("locale", params.locale);
+        if (params.isActive !== undefined) searchParams.append("isActive", params.isActive.toString());
+        const { data } = await api.get(`/article-categories?${searchParams.toString()}`);
+        return data;
+      },
+      gcTime,
+      staleTime,
+      enabled,
+      retry: RETRY_TIMES,
+    });
+  },
+  useGetArticleCategory: <T>({ key, id, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+    return useQuery<T, Error>({
+      queryKey: key,
+      // No `locale` on purpose — the form edits every translation, not a resolved one.
+      queryFn: async () => (await api.get(`/article-categories/${id}`)).data,
+      gcTime,
+      staleTime,
+      enabled,
+      retry: RETRY_TIMES,
+    });
+  },
+  useCreateArticleCategory: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, CreateArticleCategory>) =>
+    useMutation({ mutationFn: mutation<CreateArticleCategory>((body) => api.post("/article-categories", body)), onError: onMutationError, ...mutationOptions }),
+  useUpdateArticleCategory: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, { id: string; category: UpdateArticleCategory }>) =>
+    useMutation({ mutationFn: mutation<{ id: string; category: UpdateArticleCategory }>(({ id, category }) => api.put(`/article-categories/${id}`, category)), onError: onMutationError, ...mutationOptions }),
+  useDeleteArticleCategory: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, string>) =>
+    useMutation({ mutationFn: mutation<string>((id) => api.delete(`/article-categories/${id}`)), onError: onMutationError, ...mutationOptions }),
+};
+
+export const articlesApi = {
+  useGetArticles: <T>({ key, params = {}, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+    return useQuery<T, Error>({
+      queryKey: key,
+      queryFn: async () => {
+        const searchParams = new URLSearchParams();
+        if (params.locale) searchParams.append("locale", params.locale);
+        if (params.search) searchParams.append("search", params.search);
+        if (params.categoryId) searchParams.append("categoryId", params.categoryId);
+        if (params.featured) searchParams.append("featured", params.featured.toString());
+        if (params.published) searchParams.append("published", params.published.toString());
+        if (params.limit) searchParams.append("limit", params.limit.toString());
+        if (params.page) searchParams.append("page", params.page.toString());
+        const { data } = await api.get(`/articles?${searchParams.toString()}`);
+        return data;
+      },
+      gcTime,
+      staleTime,
+      enabled,
+      retry: RETRY_TIMES,
+    });
+  },
+  useGetArticle: <T>({ key, id, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+    return useQuery<T, Error>({
+      queryKey: key,
+      // Same reason as above: the form needs the raw translations array.
+      queryFn: async () => (await api.get(`/articles/${id}`)).data,
+      gcTime,
+      staleTime,
+      enabled,
+      retry: RETRY_TIMES,
+    });
+  },
+  useCreateArticle: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, CreateArticle>) =>
+    useMutation({ mutationFn: mutation<CreateArticle>((body) => api.post("/articles", body)), onError: onMutationError, ...mutationOptions }),
+  useUpdateArticle: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, { id: string; article: UpdateArticle }>) =>
+    useMutation({ mutationFn: mutation<{ id: string; article: UpdateArticle }>(({ id, article }) => api.put(`/articles/${id}`, article)), onError: onMutationError, ...mutationOptions }),
+  useDeleteArticle: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, string>) =>
+    useMutation({ mutationFn: mutation<string>((id) => api.delete(`/articles/${id}`)), onError: onMutationError, ...mutationOptions }),
 };

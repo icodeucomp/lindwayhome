@@ -299,6 +299,8 @@ Content    Articles · Article Categories · FAQ
 Settings   Parameters · Locations
 ```
 
+Articles and Article Categories are live; the rest arrive with their phases.
+
 There is no Taxonomy section: branding, audience and garment are enums edited in code (D25). There are no Promotions or Member Discounts sections either — discounting is `Product.discount` plus two config values (D22), so it lives on the product form and the Parameters page.
 
 Contact Inbox is a menu of its own rather than a Content sub-item (D15) — it is a work queue an admin returns to daily, not content to author.
@@ -967,7 +969,8 @@ Each phase ends with `npx tsc --noEmit` clean, `npm run build` clean, and the af
 | **2a — Admin catalog** ✅ **DONE** | Admin design system (§C2) · product list with search, taxonomy filters, grid/list and paging · product form: size guide → variants → package dimensions, images, 5 Tiptap fields behind an EN\|ID tab · product **soft delete** (A9.13) | No dependency on the public design, and nothing else can be built against an empty catalog |
 | **2b — Public catalog** | Listings per axis, product detail, New Arrivals, Best Sellers, wishlist | **Blocked on the v2 visual design** — see §B7.5 |
 | **3 — Orders & pricing** | Member registry, `OrderStatus` + tracking number in the admin order screen, server-computed subtotal (F-51), line snapshot (F-55) | Touches the checkout path, so it runs alone |
-| **4 — Content** | Journal, FAQ, Contact form + inbox, public size guide page | Independent of 2 and 3; can run in parallel if needed |
+| **4a — Journal admin** ✅ **DONE** | `Article` + `ArticleCategory` CRUD: zod, types, API routes, client hooks, list and form screens, seed | Independent of 2b and 3 |
+| **4 — Content** | FAQ, Contact form + inbox, public size guide page, public Journal pages | Independent of 2 and 3; can run in parallel if needed |
 | **5 — Hardening** | F-52…F-54 security fixes, `DELETE /api/orders/[id]` (A9.6), Denpasar origin coordinates, seed corrections | Deliberately last so it is not lost in the churn |
 
 Phase 1 also carries the D17 rename (`Guest`→`Order`, `Cart`→`OrderItem`, `/api/guests/*`→`/api/orders/*`, `guestsApi`→`ordersApi`). It touches ~15 files, all mechanical, and most of them are being rewritten in that phase anyway for the variant-stock change.
@@ -1082,6 +1085,20 @@ The admin catalog, built on §C2. Verified by driving the real API: create → r
 ~~One contract limit worth knowing: `ProductTranslationSchema` requires `name` on every translation row…~~ **Removed by D26.** The name is a plain column, so it sits in the Details section with the SKU and slug, the locale tabs carry rich content only, and a product may be saved with no translation rows at all.
 
 **One defect fixed across the whole API.** Handlers end `catch (error) { … message: error }` (§E3). An `Error` has no enumerable own properties, so it serialized to `{}` — every 500 reached the admin as an empty toast while the log held the real cause. `errorMessage(error)` from `@/lib` now wraps those 38 sites. The response shape is unchanged.
+
+## C4. Phase 4a work order `[SHIPPED]`
+
+Journal admin, built as a full vertical slice — the schema existed but nothing above it did: no zod (beyond a stray `ArticleSchema`), no API types, no routes, no client hooks, no screens.
+
+- **`GET /articles` search joins the translation table** on the active locale *plus* EN. Product escapes this via D26, but `Article.title` **is** the translation, so the §B3.3 hazard is live here: without the EN arm, an untranslated article vanishes the moment a visitor switches language.
+- **`published` is a tri-state.** Absent means both — the admin list must show drafts, since a draft nobody can see is a draft nobody can finish. The public Journal passes `published=true`.
+- **`publishedAt` is the on/off switch** (D1, same as `SizeGuide`). Re-publishing keeps the original date rather than resetting it, so saving an edit does not push an old article back to the top.
+- **Deleting a category is refused while articles point at it.** `Article.categoryId` is required, so there is no "uncategorised" to fall back to and the foreign key would refuse anyway; the message names the count and offers deactivation instead.
+- **Deleting an article also deletes its cover image** via `resolveFiles([image], [], folder)`, or the uploads folder accumulates files nothing references.
+- **`authorId` is stamped on create only**, so an edit by a different admin does not silently reassign authorship. It is nullable — removing an admin must not remove their articles.
+- Categories edit inline (two fields, like Sizes); articles get dedicated pages (image + Tiptap body).
+
+One contract limit, the mirror of the product one D26 removed: `ArticleTranslationSchema` requires `title` and `content` on every row, so a half-filled Indonesian row cannot be submitted. The form asks for an ID title whenever any other ID field is filled.
 
 ---
 
