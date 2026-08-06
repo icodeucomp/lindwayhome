@@ -968,7 +968,8 @@ Each phase ends with `npx tsc --noEmit` clean, `npm run build` clean, and the af
 | **2b — Public catalog** | Listings per axis, product detail, New Arrivals, Best Sellers, wishlist | **Blocked on the v2 visual design** — see §B7.5 |
 | **3 — Orders & pricing** | Member registry, `OrderStatus` + tracking number in the admin order screen, server-computed subtotal (F-51), line snapshot (F-55) | Touches the checkout path, so it runs alone |
 | **4a — Journal admin** ✅ **DONE** | `Article` + `ArticleCategory` CRUD: zod, types, API routes, client hooks, list and form screens, seed | Independent of 2b and 3 |
-| **4 — Content** | FAQ, Contact form + inbox, public size guide page, public Journal pages | Independent of 2 and 3; can run in parallel if needed |
+| **4b — FAQ admin** ✅ **DONE** | `Faq` CRUD on the same vertical-slice pattern, grouped by `topic` | Same |
+| **4 — Content** | Contact form + inbox, public size guide page, public Journal and FAQ pages | Independent of 2 and 3; can run in parallel if needed |
 | **5 — Hardening** | F-52…F-54 security fixes, `DELETE /api/orders/[id]` (A9.6), Denpasar origin coordinates, seed corrections | Deliberately last so it is not lost in the churn |
 
 Phase 1 also carries the D17 rename (`Guest`→`Order`, `Cart`→`OrderItem`, `/api/guests/*`→`/api/orders/*`, `guestsApi`→`ordersApi`). It touches ~15 files, all mechanical, and most of them are being rewritten in that phase anyway for the variant-stock change.
@@ -1097,6 +1098,16 @@ Journal admin, built as a full vertical slice — the schema existed but nothing
 - Categories edit inline (two fields, like Sizes); articles get dedicated pages (image + Tiptap body).
 
 One contract limit, the mirror of the product one D26 removed: `ArticleTranslationSchema` requires `title` and `content` on every row, so a half-filled Indonesian row cannot be submitted. The form asks for an ID title whenever any other ID field is filled.
+
+## C5. Phase 4b work order `[SHIPPED]`
+
+FAQ, on the same vertical slice as the Journal. Simpler: no image, no category relation, no publish date.
+
+- **`topic` is a free-text grouping key**, not a relation — topics have no attributes beyond their name. `GET /faqs` also returns the distinct topic list, which powers both the admin's topic filter and a `datalist` on the form, so a new entry reuses an existing topic rather than creating a near-duplicate by typo.
+- **Ordering is `topic` then `createdAt`** (D27) — no position column. Reordering within a topic means recreating, which was the accepted cost of that decision.
+- **`isActive` is absent from the query unless the admin filters on it**, same as `published` on articles: an inactive entry the admin cannot see is one they cannot bring back.
+- **Search joins the translation table on the active locale plus EN**, exactly as Article does — `Faq.question` *is* the translation. Verified: `search=pengiriman` returns nothing at the default EN locale and one row at `locale=ID`, which is the intended §B3.3 semantic rather than a miss.
+- The admin list never passes `locale`, so its search is EN-only. That is consistent with the admin UI being English-only (D3).
 
 ---
 

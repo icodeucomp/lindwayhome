@@ -13,6 +13,8 @@ export * from "./orders-dashboard";
 export * from "./articles-dashboard";
 export * from "./article-form";
 export * from "./article-categories-dashboard";
+export * from "./faqs-dashboard";
+export * from "./faq-form";
 
 export * from "./locations-dashboard";
 export * from "./location-form";

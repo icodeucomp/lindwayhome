@@ -6,7 +6,7 @@ import Link from "next/link";
 
 import { usePathname, useRouter } from "next/navigation";
 
-import { PiSquaresFour, PiTShirt, PiRuler, PiTable, PiReceipt, PiNewspaper, PiTag, PiSlidersHorizontal, PiMapPinLine, PiSignOut, PiList, PiX } from "react-icons/pi";
+import { PiSquaresFour, PiTShirt, PiRuler, PiTable, PiReceipt, PiNewspaper, PiTag, PiQuestion, PiSlidersHorizontal, PiMapPinLine, PiSignOut, PiList, PiX } from "react-icons/pi";
 
 import { useAuthStore } from "@/hooks";
 
@@ -32,6 +32,7 @@ const NAV_ITEMS: NavItem[] = [
   { group: "Sales", href: "/admin/dashboard/orders", label: "Orders", icon: PiReceipt },
   { group: "Content", href: "/admin/dashboard/articles", label: "Articles", icon: PiNewspaper },
   { group: "Content", href: "/admin/dashboard/article-categories", label: "Article Categories", icon: PiTag },
+  { group: "Content", href: "/admin/dashboard/faqs", label: "FAQ", icon: PiQuestion },
   { group: "Settings", href: "/admin/dashboard/parameters", label: "Parameters", icon: PiSlidersHorizontal },
   { group: "Settings", href: "/admin/dashboard/locations", label: "Locations", icon: PiMapPinLine },
 ];

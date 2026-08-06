@@ -23,6 +23,8 @@ import {
   UpdateArticle,
   CreateArticleCategory,
   UpdateArticleCategory,
+  CreateFaq,
+  UpdateFaq,
 } from "@/types";
 
 import { QueryKey, useMutation, UseMutationOptions, useQuery } from "@tanstack/react-query";
@@ -810,4 +812,44 @@ export const articlesApi = {
     useMutation({ mutationFn: mutation<{ id: string; article: UpdateArticle }>(({ id, article }) => api.put(`/articles/${id}`, article)), onError: onMutationError, ...mutationOptions }),
   useDeleteArticle: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, string>) =>
     useMutation({ mutationFn: mutation<string>((id) => api.delete(`/articles/${id}`)), onError: onMutationError, ...mutationOptions }),
+};
+
+export const faqsApi = {
+  useGetFaqs: <T>({ key, params = {}, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+    return useQuery<T, Error>({
+      queryKey: key,
+      queryFn: async () => {
+        const searchParams = new URLSearchParams();
+        if (params.locale) searchParams.append("locale", params.locale);
+        if (params.search) searchParams.append("search", params.search);
+        if (params.topic) searchParams.append("topic", params.topic);
+        if (params.isActive) searchParams.append("isActive", params.isActive.toString());
+        if (params.limit) searchParams.append("limit", params.limit.toString());
+        if (params.page) searchParams.append("page", params.page.toString());
+        const { data } = await api.get(`/faqs?${searchParams.toString()}`);
+        return data;
+      },
+      gcTime,
+      staleTime,
+      enabled,
+      retry: RETRY_TIMES,
+    });
+  },
+  useGetFaq: <T>({ key, id, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+    return useQuery<T, Error>({
+      queryKey: key,
+      // No `locale` — the form edits every translation, not a resolved one.
+      queryFn: async () => (await api.get(`/faqs/${id}`)).data,
+      gcTime,
+      staleTime,
+      enabled,
+      retry: RETRY_TIMES,
+    });
+  },
+  useCreateFaq: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, CreateFaq>) =>
+    useMutation({ mutationFn: mutation<CreateFaq>((body) => api.post("/faqs", body)), onError: onMutationError, ...mutationOptions }),
+  useUpdateFaq: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, { id: string; faq: UpdateFaq }>) =>
+    useMutation({ mutationFn: mutation<{ id: string; faq: UpdateFaq }>(({ id, faq }) => api.put(`/faqs/${id}`, faq)), onError: onMutationError, ...mutationOptions }),
+  useDeleteFaq: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, string>) =>
+    useMutation({ mutationFn: mutation<string>((id) => api.delete(`/faqs/${id}`)), onError: onMutationError, ...mutationOptions }),
 };

@@ -211,10 +211,16 @@ export const FaqTranslationSchema = z.object({
 
 export const FaqSchema = z.object({
   id: z.string().optional(),
+  // A free-text grouping key, so one component can serve several pages. Not a
+  // relation: topics have no attributes of their own beyond their name.
   topic: z.string().min(1, "Topic is required"),
   isActive: z.boolean().optional(),
+  // The question lives here, not on the FAQ, so an EN row is genuinely required.
   translations: z.array(FaqTranslationSchema).min(1, "An EN translation is required"),
 });
+
+export const CreateFaqSchema = FaqSchema.omit({ id: true });
+export const UpdateFaqSchema = FaqSchema.partial();
 
 export const ArticleCategoryTranslationSchema = z.object({
   locale: LocaleEnum,
@@ -319,6 +325,15 @@ export const LocationQuerySchema = z.object({
   province: z.string().optional(),
   district: z.string().optional(),
   sub_district: z.string().optional(),
+});
+
+export const FaqQuerySchema = z.object({
+  ...baseQuery,
+  locale: LocaleEnum.optional().default("EN"),
+  topic: z.string().optional(),
+  // Absent means both — the admin list must show inactive entries, or they cannot be
+  // brought back. The public page passes isActive=true.
+  isActive: z.string().optional(),
 });
 
 export const ArticleQuerySchema = z.object({

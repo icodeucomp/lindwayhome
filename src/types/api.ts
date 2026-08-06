@@ -102,7 +102,8 @@ export interface QueryParams {
   garment?: string;
   audience?: string;
   sort?: "latest" | "new-arrivals" | "best-sellers" | "price-asc" | "price-desc";
-  isActive?: boolean;
+  /** String form carries the tri-state a list screen needs: "" (both), "true", "false". */
+  isActive?: boolean | string;
   isFavorite?: boolean;
   isPurchased?: string;
   status?: OrderStatus | string;
@@ -110,6 +111,7 @@ export interface QueryParams {
   categoryId?: string;
   featured?: string;
   published?: string;
+  topic?: string;
   year?: string;
   month?: string;
   dateFrom?: string;
@@ -381,6 +383,38 @@ export interface CreateArticle {
 }
 
 export type UpdateArticle = Partial<CreateArticle>;
+
+export interface FaqTranslation {
+  locale: Locale;
+  question: string;
+  answer: RichText;
+}
+
+export interface Faq {
+  id: string;
+  /** Free-text grouping key so one component can serve several pages. */
+  topic: string;
+  isActive: boolean;
+  translations: FaqTranslation[];
+  /** Resolved for the requested locale (§B3.2). The question lives only here. */
+  question?: string;
+  answer?: RichText;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateFaq {
+  topic: string;
+  isActive?: boolean;
+  translations: FaqTranslation[];
+}
+
+export type UpdateFaq = Partial<CreateFaq>;
+
+/** The list endpoint also returns every distinct topic, for the filter and suggestions. */
+export interface FaqListResponse extends ApiResponse<Faq[]> {
+  topics: string[];
+}
 
 // =============================================================================
 // Cart — client-side only, never persisted server-side before checkout (F-6)

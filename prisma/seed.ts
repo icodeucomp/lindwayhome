@@ -612,6 +612,68 @@ async function seedJournal() {
 }
 
 // =============================================================================
+// FAQ
+//
+// `topic` groups entries so one component can serve several pages. Within a topic
+// the order is insertion order — Faq has no position column (D27).
+// =============================================================================
+
+const FAQS = [
+  {
+    topic: "shipping",
+    en: { q: "How long does delivery take?", a: "Orders within Bali arrive in 1-2 days. Elsewhere in Indonesia allow 3-5 working days after the piece ships." },
+    id: { q: "Berapa lama pengiriman?", a: "Pesanan di dalam Bali tiba dalam 1-2 hari. Ke luar Bali, mohon menunggu 3-5 hari kerja setelah barang dikirim." },
+  },
+  {
+    topic: "shipping",
+    en: { q: "Do you ship internationally?", a: "Yes, on request. Send us the destination and we will quote the freight before you pay." },
+    id: null,
+  },
+  {
+    topic: "sizing",
+    en: { q: "How do I choose my size?", a: "Every product page links the size guide for its pattern. Measure a garment you already own flat and compare." },
+    id: { q: "Bagaimana memilih ukuran?", a: "Setiap halaman produk menautkan panduan ukuran untuk polanya. Ukur pakaian yang sudah Anda miliki dalam keadaan rata, lalu bandingkan." },
+  },
+  {
+    topic: "orders",
+    en: { q: "How do I confirm my payment?", a: "Upload your transfer receipt at checkout. We verify it by hand, usually within one working day." },
+    id: { q: "Bagaimana konfirmasi pembayaran?", a: "Unggah bukti transfer Anda saat checkout. Kami memeriksanya secara manual, biasanya dalam satu hari kerja." },
+  },
+  {
+    topic: "orders",
+    // Inactive, so the admin list has something the public page must never show.
+    isActive: false,
+    en: { q: "Can I pay with a credit card?", a: "Not yet. Bank transfer and QRIS are the two ways to pay today." },
+    id: null,
+  },
+];
+
+async function seedFaqs() {
+  const existing = await prisma.faq.count();
+  if (existing > 0) {
+    console.log(`❓ faqs… skipped (${existing} already present)`);
+    return;
+  }
+
+  console.log("❓ faqs…");
+
+  for (const faq of FAQS) {
+    await prisma.faq.create({
+      data: {
+        topic: faq.topic,
+        isActive: faq.isActive ?? true,
+        translations: {
+          create: [
+            { locale: "EN", question: faq.en.q, answer: doc(p(faq.en.a)) },
+            ...(faq.id ? [{ locale: "ID" as const, question: faq.id.q, answer: doc(p(faq.id.a)) }] : []),
+          ],
+        },
+      },
+    });
+  }
+}
+
+// =============================================================================
 
 async function main() {
   console.log("🌱 seeding…\n");
@@ -623,8 +685,9 @@ async function main() {
   await seedSizeGuides();
   await seedProducts();
   await seedJournal();
+  await seedFaqs();
 
-  const [users, sizeCount, guideCount, productCount, variantCount, configCount, locationCount, categoryCount, articleCount, draftCount] = await Promise.all([
+  const [users, sizeCount, guideCount, productCount, variantCount, configCount, locationCount, categoryCount, articleCount, draftCount, faqCount] = await Promise.all([
     prisma.user.count(),
     prisma.size.count(),
     prisma.sizeGuide.count(),
@@ -635,6 +698,7 @@ async function main() {
     prisma.articleCategory.count(),
     prisma.article.count(),
     prisma.article.count({ where: { publishedAt: null } }),
+    prisma.faq.count(),
   ]);
 
   const stockSynced = await prisma.product.findMany({ select: { sku: true, stock: true } });
@@ -642,7 +706,7 @@ async function main() {
   console.log("\n✅ done");
   console.log(`   users ${users} · sizes ${sizeCount} · size guides ${guideCount} · config ${configCount} · locations ${locationCount}`);
   console.log(`   products ${productCount} · variants ${variantCount}`);
-  console.log(`   article categories ${categoryCount} · articles ${articleCount} (${draftCount} draft)`);
+  console.log(`   article categories ${categoryCount} · articles ${articleCount} (${draftCount} draft) · faqs ${faqCount}`);
   console.log(`   stock from trigger: ${stockSynced.map((product) => `${product.sku}=${product.stock}`).join(" ")}`);
   if (stockSynced.every((product) => product.stock === 0)) {
     console.warn("\n⚠️  every product has stock 0 — the trigger was probably not applied.");
