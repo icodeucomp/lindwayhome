@@ -78,7 +78,7 @@ export const ProductsDashboard = () => {
       <PageHeader
         eyebrow="Catalog"
         title="Products"
-        description="The catalog, its per-size stock and its translated content. Stock is derived from variants by a database trigger, so it is never edited directly."
+        description="Everything you sell. Add new pieces, change prices, and see what is running low. You set the quantity for each size, and the total stock adds itself up."
         actions={<AdminLinkButton href="/admin/dashboard/products/create" variant="solid">New product</AdminLinkButton>}
       />
 
@@ -113,7 +113,7 @@ export const ProductsDashboard = () => {
       <ConfirmDialog
         isVisible={toDelete !== null}
         title={`Delete ${toDelete?.name ?? "this product"}?`}
-        description="A product that has been ordered is deactivated instead of deleted, so order history and sold counts stay intact (A9.13)."
+        description="If anyone has already bought this product, it will be hidden from the shop instead of deleted — that way your past orders and sales figures stay correct."
         confirmLabel="Delete product"
         isPending={deleteProduct.isPending}
         onConfirm={() => toDelete && deleteProduct.mutate(toDelete.id)}

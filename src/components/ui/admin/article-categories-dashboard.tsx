@@ -128,7 +128,7 @@ export const ArticleCategoriesDashboard = () => {
 
   return (
     <>
-      <PageHeader eyebrow="Content" title="Article Categories" description="How the Journal is grouped. The name lives in the translation, so an English one is always required — Indonesian falls back to it field by field." />
+      <PageHeader eyebrow="Content" title="Article Categories" description="Groups that organise your Journal, such as “Craft & Process”. Every article belongs to one. The English name is required; if you leave the Indonesian name blank, Indonesian visitors will see the English one." />
 
       <Panel className="p-5 mb-8 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
@@ -150,7 +150,7 @@ export const ArticleCategoriesDashboard = () => {
               />
             </Field>
 
-            <Field label="Slug" htmlFor="slug" required hint="The public URL segment — one slug for both languages (D4)">
+            <Field label="Slug" htmlFor="slug" required hint="The short name used in the web address. The same one is used for both languages.">
               <TextInput
                 id="slug"
                 value={form.slug}

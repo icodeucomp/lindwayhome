@@ -25,10 +25,10 @@ export const LOCALES = ["EN", "ID"] as const;
  * chain, so the hints say so rather than nagging the admin to fill them in.
  */
 const DEFAULTED_FIELDS = [
-  { key: "notes", label: "Notes", hint: "Empty falls back to the store default (product_defaults.default_notes) — the made-to-order lead time." },
-  { key: "fabricInformation", label: "Fabric information", hint: "Empty falls back to product_defaults.default_fabric_information." },
-  { key: "shippingDelivery", label: "Shipping & delivery", hint: "Empty falls back to product_defaults.default_shipping_delivery." },
-  { key: "returnPolicy", label: "Return policy", hint: "Empty falls back to product_defaults.default_return_policy." },
+  { key: "notes", label: "Notes", hint: "Leave blank to use your standard note — the made-to-order lead time. You can change that standard text under Parameters." },
+  { key: "fabricInformation", label: "Fabric information", hint: "Leave blank to use your standard fabric text, set under Parameters." },
+  { key: "shippingDelivery", label: "Shipping & delivery", hint: "Leave blank to use your standard delivery text, set under Parameters." },
+  { key: "returnPolicy", label: "Return policy", hint: "Leave blank to use your standard return policy, set under Parameters." },
 ] as const;
 
 /** True when the locale carries anything worth marking the tab for. */
@@ -54,13 +54,13 @@ export const ProductContent = ({ drafts, activeLocale, onLocaleChange, onChange 
         <p className="text-xs text-body/50">
           {isEnglish
             ? "Optional — leave it all empty and the product still publishes, using the store defaults."
-            : "Optional. Any field left empty falls back to English, field by field (§B3.2)."}
+            : "Optional. Anything you leave blank will show the English text instead."}
         </p>
       </div>
 
       <RichTextField
         label={`Description (${activeLocale})`}
-        hint="No store-wide default — an empty Indonesian description falls back to English and stops there."
+        hint="There is no standard text for this one. If you leave the Indonesian version blank, shoppers see the English description."
         value={draft.description as JSONContent | null}
         onChange={setField("description")}
         placeholder="Describe the piece…"

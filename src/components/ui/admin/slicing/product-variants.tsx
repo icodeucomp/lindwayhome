@@ -81,7 +81,7 @@ const VariantRow = ({ size, variant, hasDefaultDimensions, onToggle, onQuantity,
         {isEnabled && !hasOverride && !hasDefaultDimensions && (
           <span className="flex items-center gap-1.5 text-xs text-amber-700">
             <PiWarningCircle className="size-3.5 shrink-0" />
-            No package_dimensions entry for {size.code}
+            No parcel size set for {size.code}
           </span>
         )}
       </div>
@@ -111,8 +111,8 @@ const VariantRow = ({ size, variant, hasDefaultDimensions, onToggle, onQuantity,
           ) : (
             <p className="text-xs text-body/50">
               {hasDefaultDimensions
-                ? `Shipping uses the package_dimensions entry for ${size.code}. Override only when this product packs differently from others of the same size.`
-                : `There is no package_dimensions entry for ${size.code}, so checkout will fail for it. Add one on the Parameters page, or set a custom size here.`}
+                ? `Delivery is worked out from the standard parcel size for ${size.code}. Only override it if this piece packs differently from others of the same size.`
+                : `No parcel size has been set for ${size.code} yet, so customers cannot check out in it. Add one under Parameters, or enter a custom size here.`}
             </p>
           )}
         </div>

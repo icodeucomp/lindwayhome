@@ -125,7 +125,7 @@ export const LocationForm = ({ locationId }: { locationId?: string }) => {
         narrow
         back={{ href: LIST_HREF, label: "Locations" }}
         title={isEdit ? "Edit location" : "New location"}
-        description="Coordinates drive the shipping price. Take them from the village centre, not the province."
+        description="Delivery cost is calculated from these coordinates, so pick a point in the middle of the village — not the middle of the province."
       />
 
       <FormLayout onSubmit={handleSubmit}>

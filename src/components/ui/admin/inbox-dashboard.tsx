@@ -169,7 +169,7 @@ export const InboxDashboard = () => {
       <PageHeader
         eyebrow="Inbox"
         title="Contact Inbox"
-        description="Everything sent through the contact form. This is a work queue, not an email relay — an inquiry stays here until somebody marks it handled."
+        description="Messages people send from the contact page on your website. Each one stays here until you mark it handled, so nothing gets forgotten."
       />
 
       {/* Status tabs count the whole inbox, not the filtered set, so the numbers mean

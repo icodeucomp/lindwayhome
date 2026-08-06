@@ -114,7 +114,7 @@ export const MembersDashboard = () => {
       <PageHeader
         eyebrow="Sales"
         title="Members"
-        description="Who gets the member rate right now. Revoking stops future discounts — it never touches past orders, which keep the price they were actually charged (D19)."
+        description="Customers who receive the member discount. Revoking stops the discount on their next order; anything they have already bought keeps the price they actually paid."
       />
 
       {/* Granting by hand is the same upsert the post-order page performs, so an email

@@ -111,7 +111,7 @@ const StatusPipeline = ({ pipeline }: { pipeline: DashboardData["statusPipeline"
 
   return (
     <div>
-      <BlockHeading title="Pipeline by status" aside="D23 lifecycle" />
+      <BlockHeading title="Pipeline by status" aside="Where orders are sitting" />
 
       <div className="space-y-3">
         {pipeline.map((stage) => (
@@ -153,7 +153,7 @@ export const MainDashboard = () => {
       <PageHeader
         eyebrow="Overview"
         title="Dashboard"
-        description="Activity across the store — orders awaiting verification, catalog depth and the member registry."
+        description="A quick look at how the store is doing: recent sales, orders waiting for you, and what you have in stock."
         actions={
           <>
             <FilterDropdown label="Month" value={month} options={MONTHS} onChange={setMonth} />

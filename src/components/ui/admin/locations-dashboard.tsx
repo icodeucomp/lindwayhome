@@ -38,7 +38,7 @@ export const LocationsDashboard = () => {
       <PageHeader
         eyebrow="Settings"
         title="Locations"
-        description="Shipping destinations. Checkout measures the distance from the store origin to these coordinates, so an inaccurate pin misprices every order to that village."
+        description="The places you deliver to. Delivery cost is worked out from how far each place is from your store, so a wrong location means customers there are charged the wrong price."
         actions={<AdminLinkButton href="/admin/dashboard/locations/create" variant="solid">New location</AdminLinkButton>}
       />
 

@@ -146,7 +146,7 @@ export const FaqForm = ({ faqId }: { faqId?: string }) => {
         narrow
         back={{ href: LIST_HREF, label: "FAQ" }}
         title={isEdit ? form.translations.EN.question || "Edit FAQ" : "New FAQ"}
-        description="Grouped by topic so one component can serve several pages. English is required; Indonesian is optional."
+        description="Choose a topic so this question appears on the right page. The English version is required; leave Indonesian blank to show the English one instead."
       />
 
       <FormLayout onSubmit={handleSubmit}>

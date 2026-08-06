@@ -86,7 +86,7 @@ export const FaqsDashboard = () => {
       <PageHeader
         eyebrow="Content"
         title="FAQ"
-        description="Grouped by topic so one component can serve several pages. Within a topic the order is the order they were written in — there is no position column (D27)."
+        description="Questions and answers shown on your website. Give each one a topic so it appears on the right page. Within a topic they show in the order you added them."
         actions={<AdminLinkButton href="/admin/dashboard/faqs/create" variant="solid">New FAQ</AdminLinkButton>}
       />
 

@@ -219,7 +219,7 @@ export const ArticleForm = ({ articleId }: { articleId?: string }) => {
         narrow
         back={{ href: LIST_HREF, label: "Articles" }}
         title={isEdit ? form.translations.EN.title || "Edit article" : "New article"}
-        description="English is required; Indonesian is optional and falls back to English field by field."
+        description="Write the English version first — it is required. Indonesian is optional, and anything you leave blank will show the English text instead."
       />
 
       <FormLayout onSubmit={handleSubmit}>
@@ -239,7 +239,7 @@ export const ArticleForm = ({ articleId }: { articleId?: string }) => {
               />
             </Field>
 
-            <Field label="Slug" htmlFor="slug" required error={errors.slug} hint="The public URL — one slug for both languages (D4)">
+            <Field label="Slug" htmlFor="slug" required error={errors.slug} hint="The short name used in the web address. The same one is used for both languages.">
               <TextInput
                 id="slug"
                 value={form.slug}
