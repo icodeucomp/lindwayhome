@@ -25,6 +25,8 @@ import {
   UpdateArticleCategory,
   CreateFaq,
   UpdateFaq,
+  CreateContactInquiry,
+  UpdateContactInquiry,
 } from "@/types";
 
 import { QueryKey, useMutation, UseMutationOptions, useQuery } from "@tanstack/react-query";
@@ -852,4 +854,47 @@ export const faqsApi = {
     useMutation({ mutationFn: mutation<{ id: string; faq: UpdateFaq }>(({ id, faq }) => api.put(`/faqs/${id}`, faq)), onError: onMutationError, ...mutationOptions }),
   useDeleteFaq: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, string>) =>
     useMutation({ mutationFn: mutation<string>((id) => api.delete(`/faqs/${id}`)), onError: onMutationError, ...mutationOptions }),
+};
+
+export const contactInquiriesApi = {
+  useGetContactInquiries: <T>({ key, params = {}, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+    return useQuery<T, Error>({
+      queryKey: key,
+      queryFn: async () => {
+        const searchParams = new URLSearchParams();
+        if (params.search) searchParams.append("search", params.search);
+        if (params.status) searchParams.append("status", params.status.toString());
+        if (params.inquiryType) searchParams.append("inquiryType", params.inquiryType.toString());
+        if (params.limit) searchParams.append("limit", params.limit.toString());
+        if (params.page) searchParams.append("page", params.page.toString());
+        const { data } = await api.get(`/contact-inquiries?${searchParams.toString()}`);
+        return data;
+      },
+      gcTime,
+      staleTime,
+      enabled,
+      retry: RETRY_TIMES,
+    });
+  },
+  useGetContactInquiry: <T>({ key, id, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+    return useQuery<T, Error>({
+      queryKey: key,
+      queryFn: async () => (await api.get(`/contact-inquiries/${id}`)).data,
+      gcTime,
+      staleTime,
+      enabled,
+      retry: RETRY_TIMES,
+    });
+  },
+  /** Public — this is what the storefront contact form posts to (F-45). */
+  useCreateContactInquiry: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, CreateContactInquiry>) =>
+    useMutation({ mutationFn: mutation<CreateContactInquiry>((body) => api.post("/contact-inquiries", body)), onError: onMutationError, ...mutationOptions }),
+  useUpdateContactInquiry: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, { id: string; inquiry: UpdateContactInquiry }>) =>
+    useMutation({
+      mutationFn: mutation<{ id: string; inquiry: UpdateContactInquiry }>(({ id, inquiry }) => api.put(`/contact-inquiries/${id}`, inquiry)),
+      onError: onMutationError,
+      ...mutationOptions,
+    }),
+  useDeleteContactInquiry: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, string>) =>
+    useMutation({ mutationFn: mutation<string>((id) => api.delete(`/contact-inquiries/${id}`)), onError: onMutationError, ...mutationOptions }),
 };

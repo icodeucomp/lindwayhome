@@ -969,7 +969,8 @@ Each phase ends with `npx tsc --noEmit` clean, `npm run build` clean, and the af
 | **3 — Orders & pricing** | Member registry, `OrderStatus` + tracking number in the admin order screen, server-computed subtotal (F-51), line snapshot (F-55) | Touches the checkout path, so it runs alone |
 | **4a — Journal admin** ✅ **DONE** | `Article` + `ArticleCategory` CRUD: zod, types, API routes, client hooks, list and form screens, seed | Independent of 2b and 3 |
 | **4b — FAQ admin** ✅ **DONE** | `Faq` CRUD on the same vertical-slice pattern, grouped by `topic` | Same |
-| **4 — Content** | Contact form + inbox, public size guide page, public Journal and FAQ pages | Independent of 2 and 3; can run in parallel if needed |
+| **4c — Contact inbox** ✅ **DONE** | `ContactInquiry`: public `POST`, admin queue with status workflow, handling note and sidebar badge (F-47). The storefront form (F-45) and its emails (F-46) are still to come | The endpoint the form will post to exists, so building the form is presentation only |
+| **4 — Content** | Contact form + its emails, public size guide page, public Journal and FAQ pages | Independent of 2 and 3; can run in parallel if needed |
 | **5 — Hardening** | F-52…F-54 security fixes, `DELETE /api/orders/[id]` (A9.6), Denpasar origin coordinates, seed corrections | Deliberately last so it is not lost in the churn |
 
 Phase 1 also carries the D17 rename (`Guest`→`Order`, `Cart`→`OrderItem`, `/api/guests/*`→`/api/orders/*`, `guestsApi`→`ordersApi`). It touches ~15 files, all mechanical, and most of them are being rewritten in that phase anyway for the variant-stock change.
@@ -1108,6 +1109,18 @@ FAQ, on the same vertical slice as the Journal. Simpler: no image, no category r
 - **`isActive` is absent from the query unless the admin filters on it**, same as `published` on articles: an inactive entry the admin cannot see is one they cannot bring back.
 - **Search joins the translation table on the active locale plus EN**, exactly as Article does — `Faq.question` *is* the translation. Verified: `search=pengiriman` returns nothing at the default EN locale and one row at `locale=ID`, which is the intended §B3.3 semantic rather than a miss.
 - The admin list never passes `locale`, so its search is EN-only. That is consistent with the admin UI being English-only (D3).
+
+## C6. Phase 4c work order `[SHIPPED]`
+
+The contact inbox (F-47). The storefront form (F-45) and its two emails (F-46) are not built — the endpoint they need exists, so what remains there is presentation.
+
+- **`POST /contact-inquiries` is public**, everything else requires `checkAuth`. `status` and the handling fields are omitted from `CreateContactInquirySchema`, so a caller cannot submit something pre-marked `HANDLED` — verified by trying.
+- **`UpdateContactInquirySchema` is not `ContactInquirySchema.partial()`.** It accepts `status` and `handlingNote` and nothing else. An inquiry is a record of what somebody sent; letting an admin edit the name, email or message would rewrite that record while still looking like a support action.
+- **`ContactInquirySchema` trims before validating.** It is the only schema fed straight from a public form, where a pasted email arrives as `" name@example.com "` often enough to matter — validating first rejects that as malformed, and trimming only in the handler lets a whitespace-only message past `min(1)` and stores it empty. Both cases are covered by the smoke run.
+- **`handledAt` and `handledById` are stamped once**, on the first transition into `HANDLED`. Re-saving a handled inquiry must not move the timestamp or reassign who dealt with it. `checkAuth` only answers "may this proceed", so the identity comes from `authenticate()` separately.
+- **`statusCounts` is computed across the whole inbox, never the filtered set** — it drives the status tabs and the sidebar badge, and a badge that moved whenever a filter changed would be saying something other than "this many are waiting".
+- **Delete is for spam**; anything genuine should be archived, which keeps the record and its handling note. The dialog says so.
+- `nextStatuses` in [`src/static/inquiry.ts`](src/static/inquiry.ts) is the workflow: nothing leaves `HANDLED` except to archive, so a closed inquiry cannot be quietly reopened without a trace.
 
 ---
 

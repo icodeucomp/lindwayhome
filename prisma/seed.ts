@@ -674,6 +674,81 @@ async function seedFaqs() {
 }
 
 // =============================================================================
+// Contact inbox
+//
+// Spread across the workflow so the inbox has something at every stage — an empty
+// queue tells you nothing about whether the status transitions work.
+// =============================================================================
+
+const INQUIRIES = [
+  {
+    fullname: "Sinta Wijaya",
+    email: "sinta.wijaya@example.com",
+    phone: "+62 812 3456 7890",
+    inquiryType: "PRODUCT_INQUIRY" as const,
+    message: "Is the Melati Embroidered Kebaya available in XXL? I could not find it on the size picker.",
+    status: "NEW" as const,
+  },
+  {
+    fullname: "Andre Kusuma",
+    email: "andre.k@example.com",
+    inquiryType: "ORDER_SUPPORT" as const,
+    message: "I transferred yesterday but my order still shows as awaiting payment. The receipt is attached to the order.",
+    status: "NEW" as const,
+  },
+  {
+    fullname: "Maria Halim",
+    email: "maria@boutique.example.com",
+    phone: "+62 813 9999 1111",
+    inquiryType: "WHOLESALE_B2B" as const,
+    message: "We run a boutique in Seminyak and would like to stock the Simply Lindway line. Could you send wholesale terms?",
+    status: "IN_PROGRESS" as const,
+  },
+  {
+    fullname: "Putu Ardana",
+    email: "putu.ardana@example.com",
+    inquiryType: "CUSTOM_ORDER" as const,
+    message: "I need six matching kebaya for a family ceremony in November. Is that possible?",
+    status: "HANDLED" as const,
+    handlingNote: "Quoted for six pieces, 5 weeks lead time. Customer confirmed by WhatsApp.",
+  },
+  {
+    fullname: "Growth Partners",
+    email: "no-reply@spam.example.com",
+    inquiryType: "OTHER" as const,
+    otherDetail: "Marketing services",
+    message: "Boost your SEO ranking with our proven backlink strategy!",
+    status: "ARCHIVED" as const,
+  },
+];
+
+async function seedInquiries() {
+  const existing = await prisma.contactInquiry.count();
+  if (existing > 0) {
+    console.log(`📨 inquiries… skipped (${existing} already present)`);
+    return;
+  }
+
+  console.log("📨 inquiries…");
+
+  const admin = await prisma.user.findFirst({ where: { username: "admin" }, select: { id: true } });
+
+  for (const [index, inquiry] of INQUIRIES.entries()) {
+    const isHandled = inquiry.status === "HANDLED";
+
+    await prisma.contactInquiry.create({
+      data: {
+        ...inquiry,
+        // Spread over the past fortnight so the list is not one timestamp repeated.
+        createdAt: new Date(Date.now() - index * 3 * 24 * 60 * 60 * 1000),
+        handledAt: isHandled ? new Date(Date.now() - 24 * 60 * 60 * 1000) : null,
+        handledById: isHandled ? admin?.id : null,
+      },
+    });
+  }
+}
+
+// =============================================================================
 
 async function main() {
   console.log("🌱 seeding…\n");
@@ -686,8 +761,9 @@ async function main() {
   await seedProducts();
   await seedJournal();
   await seedFaqs();
+  await seedInquiries();
 
-  const [users, sizeCount, guideCount, productCount, variantCount, configCount, locationCount, categoryCount, articleCount, draftCount, faqCount] = await Promise.all([
+  const [users, sizeCount, guideCount, productCount, variantCount, configCount, locationCount, categoryCount, articleCount, draftCount, faqCount, inquiryCount] = await Promise.all([
     prisma.user.count(),
     prisma.size.count(),
     prisma.sizeGuide.count(),
@@ -699,6 +775,7 @@ async function main() {
     prisma.article.count(),
     prisma.article.count({ where: { publishedAt: null } }),
     prisma.faq.count(),
+    prisma.contactInquiry.count(),
   ]);
 
   const stockSynced = await prisma.product.findMany({ select: { sku: true, stock: true } });
@@ -706,7 +783,7 @@ async function main() {
   console.log("\n✅ done");
   console.log(`   users ${users} · sizes ${sizeCount} · size guides ${guideCount} · config ${configCount} · locations ${locationCount}`);
   console.log(`   products ${productCount} · variants ${variantCount}`);
-  console.log(`   article categories ${categoryCount} · articles ${articleCount} (${draftCount} draft) · faqs ${faqCount}`);
+  console.log(`   article categories ${categoryCount} · articles ${articleCount} (${draftCount} draft) · faqs ${faqCount} · inquiries ${inquiryCount}`);
   console.log(`   stock from trigger: ${stockSynced.map((product) => `${product.sku}=${product.stock}`).join(" ")}`);
   if (stockSynced.every((product) => product.stock === 0)) {
     console.warn("\n⚠️  every product has stock 0 — the trigger was probably not applied.");

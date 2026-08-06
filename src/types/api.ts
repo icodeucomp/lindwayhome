@@ -112,6 +112,7 @@ export interface QueryParams {
   featured?: string;
   published?: string;
   topic?: string;
+  inquiryType?: InquiryType | string;
   year?: string;
   month?: string;
   dateFrom?: string;
@@ -414,6 +415,49 @@ export type UpdateFaq = Partial<CreateFaq>;
 /** The list endpoint also returns every distinct topic, for the filter and suggestions. */
 export interface FaqListResponse extends ApiResponse<Faq[]> {
   topics: string[];
+}
+
+// =============================================================================
+// Contact inbox
+// =============================================================================
+
+export interface ContactInquiry {
+  id: string;
+  fullname: string;
+  email: string;
+  phone: string | null;
+  inquiryType: InquiryType;
+  /** Only meaningful when inquiryType is OTHER. */
+  otherDetail: string | null;
+  message: string;
+  status: InquiryStatus;
+  /** What the admin actually did — HANDLED alone does not record how (D23). */
+  handlingNote: string | null;
+  handledAt: string | null;
+  handledById: string | null;
+  handledBy?: Pick<User, "id" | "username"> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateContactInquiry {
+  fullname: string;
+  email: string;
+  phone?: string | null;
+  inquiryType: InquiryType;
+  otherDetail?: string | null;
+  message: string;
+}
+
+/** The only two fields an admin authors — the rest is the customer's record. */
+export interface UpdateContactInquiry {
+  status?: InquiryStatus;
+  handlingNote?: string | null;
+}
+
+/** The list also carries counts per status: the tab row and the sidebar badge. */
+export interface ContactInquiryListResponse extends ApiResponse<ContactInquiry[]> {
+  statusCounts: Record<InquiryStatus, number>;
 }
 
 // =============================================================================

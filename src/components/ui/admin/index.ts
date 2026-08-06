@@ -1,6 +1,7 @@
 export * from "./layout-dashboard";
 export * from "./login";
 export * from "./main-dashboard";
+export * from "./inbox-dashboard";
 
 export * from "./products-dashboard";
 export * from "./product-form";

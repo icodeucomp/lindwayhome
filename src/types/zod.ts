@@ -188,20 +188,39 @@ export const UpdateOrderSchema = OrderSchema.partial();
 // Content
 // =============================================================================
 
+/**
+ * Trimmed before validating, not after.
+ *
+ * This is the one schema fed directly by a public form, where a pasted email
+ * arrives as " name@example.com " often enough to matter. Validating first would
+ * reject that as malformed; trimming only in the handler would let a message of
+ * pure whitespace past `min(1)` and store it empty.
+ */
 export const ContactInquirySchema = z.object({
   id: z.string().optional(),
-  fullname: z.string().min(1, "Full name is required"),
-  email: z.string().email("A valid email is required"),
-  phone: z.string().nullish(),
+  fullname: z.string().trim().min(1, "Full name is required"),
+  email: z.string().trim().toLowerCase().pipe(z.email("A valid email is required")),
+  phone: z.string().trim().nullish(),
   inquiryType: InquiryTypeEnum,
-  otherDetail: z.string().nullish(), // only when inquiryType = OTHER
-  message: z.string().min(1, "Message is required"),
+  otherDetail: z.string().trim().nullish(), // only when inquiryType = OTHER
+  message: z.string().trim().min(1, "Message is required"),
   status: InquiryStatusEnum.optional(),
-  handlingNote: z.string().nullish(),
+  handlingNote: z.string().trim().nullish(),
 });
 
 export const CreateContactInquirySchema = ContactInquirySchema.omit({ id: true, status: true, handlingNote: true });
-export const UpdateContactInquirySchema = ContactInquirySchema.partial();
+
+/**
+ * Deliberately NOT `ContactInquirySchema.partial()`.
+ *
+ * An inquiry is a record of what somebody sent us. Letting an admin edit the name,
+ * email or message would rewrite that record while still looking like a support
+ * action — the two fields below are the only things the admin actually authors.
+ */
+export const UpdateContactInquirySchema = z.object({
+  status: InquiryStatusEnum.optional(),
+  handlingNote: z.string().nullish(),
+});
 
 export const FaqTranslationSchema = z.object({
   locale: LocaleEnum,
@@ -325,6 +344,12 @@ export const LocationQuerySchema = z.object({
   province: z.string().optional(),
   district: z.string().optional(),
   sub_district: z.string().optional(),
+});
+
+export const ContactInquiryQuerySchema = z.object({
+  ...baseQuery,
+  status: InquiryStatusEnum.optional(),
+  inquiryType: InquiryTypeEnum.optional(),
 });
 
 export const FaqQuerySchema = z.object({

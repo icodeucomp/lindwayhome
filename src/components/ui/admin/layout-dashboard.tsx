@@ -6,9 +6,13 @@ import Link from "next/link";
 
 import { usePathname, useRouter } from "next/navigation";
 
-import { PiSquaresFour, PiTShirt, PiRuler, PiTable, PiReceipt, PiNewspaper, PiTag, PiQuestion, PiSlidersHorizontal, PiMapPinLine, PiSignOut, PiList, PiX } from "react-icons/pi";
+import { PiSquaresFour, PiEnvelopeSimple, PiTShirt, PiRuler, PiTable, PiReceipt, PiNewspaper, PiTag, PiQuestion, PiSlidersHorizontal, PiMapPinLine, PiSignOut, PiList, PiX } from "react-icons/pi";
 
 import { useAuthStore } from "@/hooks";
+
+import { contactInquiriesApi } from "@/utils";
+
+import { ContactInquiryListResponse } from "@/types";
 
 import { Spinner } from "./slicing";
 
@@ -17,8 +21,6 @@ interface NavItem {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  /** Sidebar count, e.g. unhandled contact inquiries (F-47, phase 4). */
-  badge?: number;
 }
 
 // Grouped per §B2.3. Contact Inbox, Members, Articles and FAQ arrive with their
@@ -26,6 +28,8 @@ interface NavItem {
 // enums edited in code (D25).
 const NAV_ITEMS: NavItem[] = [
   { group: "Overview", href: "/admin/dashboard", label: "Dashboard", icon: PiSquaresFour },
+  // Standalone rather than under Content (D15): a daily work queue, not authored content.
+  { group: "Overview", href: "/admin/dashboard/inbox", label: "Contact Inbox", icon: PiEnvelopeSimple },
   { group: "Catalog", href: "/admin/dashboard/products", label: "Products", icon: PiTShirt },
   { group: "Catalog", href: "/admin/dashboard/sizes", label: "Sizes", icon: PiRuler },
   { group: "Catalog", href: "/admin/dashboard/size-guides", label: "Size Guides", icon: PiTable },
@@ -48,7 +52,7 @@ const PageLoader = ({ message }: { message: string }) => (
   </div>
 );
 
-const Sidebar = ({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) => (
+const Sidebar = ({ pathname, badges, onNavigate }: { pathname: string; badges: Record<string, number>; onNavigate?: () => void }) => (
   <>
     <div className="flex items-start justify-between h-24 px-6 pt-6 shrink-0">
       <Link href="/admin/dashboard" onClick={onNavigate} className="block group">
@@ -81,7 +85,9 @@ const Sidebar = ({ pathname, onNavigate }: { pathname: string; onNavigate?: () =
               >
                 <Icon className={`size-4.5 shrink-0 ${isActive ? "text-light" : "text-body/45"}`} />
                 <span className="flex-1 truncate">{item.label}</span>
-                {item.badge ? <span className="grid px-1.5 min-w-5 h-5 text-xxs rounded-full place-items-center bg-primary text-light">{item.badge}</span> : null}
+                {badges[item.href] ? (
+                  <span className={`grid px-1.5 min-w-5 h-5 text-xxs rounded-full place-items-center ${isActive ? "bg-light text-body" : "bg-primary text-light"}`}>{badges[item.href]}</span>
+                ) : null}
               </Link>
             );
           })}
@@ -97,6 +103,18 @@ export const LayoutDashboard = ({ children }: { children: React.ReactNode }) => 
   const pathname = usePathname();
 
   const [isSidebarOpen, setIsSidebarOpen] = React.useState<boolean>(false);
+
+  // The unread count for the sidebar badge (F-47). `limit: 1` because only
+  // `statusCounts` is wanted — and those are counted across the whole inbox on the
+  // server, so the badge means "this many are waiting" regardless of any filter.
+  const { data: inbox } = contactInquiriesApi.useGetContactInquiries<ContactInquiryListResponse>({
+    key: ["contact-inquiries", "badge"],
+    enabled: isAuthenticated,
+    params: { limit: 1 },
+    staleTime: 60_000,
+  });
+
+  const badges: Record<string, number> = { "/admin/dashboard/inbox": inbox?.statusCounts?.NEW ?? 0 };
 
   React.useEffect(() => {
     initialize();
@@ -119,7 +137,7 @@ export const LayoutDashboard = ({ children }: { children: React.ReactNode }) => 
       {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} aria-hidden className="fixed inset-0 bg-body/40 z-100 lg:hidden" />}
 
       <aside className={`fixed inset-y-0 left-0 flex flex-col w-64 duration-300 border-r bg-sidebar border-border z-100 lg:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <Sidebar pathname={pathname} onNavigate={() => setIsSidebarOpen(false)} />
+        <Sidebar pathname={pathname} badges={badges} onNavigate={() => setIsSidebarOpen(false)} />
       </aside>
 
       <div className="lg:pl-64">
