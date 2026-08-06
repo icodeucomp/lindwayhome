@@ -77,7 +77,6 @@ export const SizeGuideTranslationSchema = z.object({
 
 export const SizeGuideSchema = z.object({
   id: z.string().optional(),
-  order: z.number().int().nonnegative().optional(),
   publishedAt: z.coerce.date().nullish(), // null = draft; this IS the on/off switch (D1)
   rows: z.array(SizeGuideRowSchema).min(1, "A size guide needs at least one row"),
   translations: z.array(SizeGuideTranslationSchema).min(1, "An EN translation is required"),
@@ -213,7 +212,6 @@ export const FaqTranslationSchema = z.object({
 export const FaqSchema = z.object({
   id: z.string().optional(),
   topic: z.string().min(1, "Topic is required"),
-  order: z.number().int().nonnegative().optional(),
   isActive: z.boolean().optional(),
   translations: z.array(FaqTranslationSchema).min(1, "An EN translation is required"),
 });
@@ -227,7 +225,6 @@ export const ArticleCategoryTranslationSchema = z.object({
 export const ArticleCategorySchema = z.object({
   id: z.string().optional(),
   slug: z.string().min(1, "Slug is required"),
-  order: z.number().int().nonnegative().optional(),
   isActive: z.boolean().optional(),
   // The name lives here, not on the category, so an EN row is genuinely required —
   // unlike Product, which has its own `name` column (D26).

@@ -21,7 +21,9 @@ export async function GET(request: NextRequest) {
     const categories = await prisma.articleCategory.findMany({
       where: activeOnly ? { isActive: true } : {},
       include: articleCategoryInclude,
-      orderBy: { order: "asc" },
+      // Creation sequence, not alphabetical — the name is translated, so alphabetical
+      // would reorder the Journal menu per locale.
+      orderBy: { createdAt: "asc" },
     });
 
     const data = categories.map(({ _count, ...category }) => ({ ...category, ...resolveTranslation(category.translations, locale), articleCount: _count.articles }));
@@ -62,7 +64,6 @@ export async function POST(request: NextRequest) {
     const category = await prisma.articleCategory.create({
       data: {
         slug: data.slug,
-        order: data.order,
         isActive: data.isActive,
         translations: {
           create: data.translations.map((translation) => ({ locale: translation.locale, name: translation.name, description: translation.description ?? undefined })),

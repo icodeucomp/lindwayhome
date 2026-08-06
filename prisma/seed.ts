@@ -334,7 +334,9 @@ async function seedSizeGuides() {
   const sizes = await prisma.size.findMany({ select: { id: true, code: true } });
   const sizeIdByCode = new Map(sizes.map((size) => [size.code, size.id]));
 
-  for (const [index, guide] of SIZE_GUIDES.entries()) {
+  // Insertion order is the display order now that SizeGuide has no `order` column,
+  // so this loop stays sequential rather than becoming a Promise.all.
+  for (const guide of SIZE_GUIDES) {
     const missing = guide.rows.filter((row) => !sizeIdByCode.has(row.size));
     if (missing.length > 0) {
       throw new Error(`Size guide "${guide.title}" references sizes with no Size row: ${missing.map((row) => row.size).join(", ")}`);
@@ -342,7 +344,6 @@ async function seedSizeGuides() {
 
     await prisma.sizeGuide.create({
       data: {
-        order: index + 1,
         publishedAt: new Date(),
         translations: {
           create: [
@@ -527,9 +528,9 @@ async function seedProducts() {
 // =============================================================================
 
 const ARTICLE_CATEGORIES = [
-  { slug: "craft-and-process", order: 1, en: { name: "Craft & Process", description: "How the pieces are made." }, id: { name: "Kriya & Proses", description: "Bagaimana setiap karya dibuat." } },
-  { slug: "our-people", order: 2, en: { name: "Our People", description: "The artisans behind the label." }, id: { name: "Orang-Orang Kami", description: "Para perajin di balik label ini." } },
-  { slug: "sustainability", order: 3, en: { name: "Sustainability", description: null }, id: null },
+  { slug: "craft-and-process", en: { name: "Craft & Process", description: "How the pieces are made." }, id: { name: "Kriya & Proses", description: "Bagaimana setiap karya dibuat." } },
+  { slug: "our-people", en: { name: "Our People", description: "The artisans behind the label." }, id: { name: "Orang-Orang Kami", description: "Para perajin di balik label ini." } },
+  { slug: "sustainability", en: { name: "Sustainability", description: null }, id: null },
 ];
 
 const ARTICLES = [
@@ -576,7 +577,6 @@ async function seedJournal() {
     const created = await prisma.articleCategory.create({
       data: {
         slug: category.slug,
-        order: category.order,
         translations: {
           create: [
             { locale: "EN", name: category.en.name, description: category.en.description ?? undefined },

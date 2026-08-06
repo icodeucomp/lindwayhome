@@ -10,7 +10,9 @@ import { ApiResponse, CreateSize, Size } from "@/types";
 
 import { AdminButton, Badge, ConfirmDialog, EmptyState, ErrorState, Field, LoadingState, PageHeader, Panel, RowAction, TableShell, Td, Th, TextInput } from "./slicing";
 
-const EMPTY: CreateSize = { code: "", label: "", order: 0, isActive: true };
+// `order` is absent, not 0: the server assigns max+1 when it is omitted, so a new
+// size lands last instead of tying with everything else on the column default.
+const EMPTY: CreateSize = { code: "", label: "", isActive: true };
 
 export const SizesDashboard = () => {
   const [form, setForm] = React.useState<CreateSize>(EMPTY);
@@ -36,6 +38,10 @@ export const SizesDashboard = () => {
 
   const sizes = data?.data ?? [];
   const isPending = createSize.isPending || updateSize.isPending;
+
+  // Mirrors what the server assigns when `order` is omitted, so the prefilled value
+  // matches what actually gets saved.
+  const nextOrder = sizes.reduce((highest, size) => Math.max(highest, size.order), 0) + 1;
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -75,8 +81,10 @@ export const SizesDashboard = () => {
             <TextInput id="label" value={form.label} onChange={(event) => setForm((previous) => ({ ...previous, label: event.target.value }))} placeholder="Extra Small" required />
           </Field>
 
-          <Field label="Order" htmlFor="order" hint="Sorts pickers and guide rows">
-            <TextInput id="order" type="number" value={form.order ?? 0} onChange={(event) => setForm((previous) => ({ ...previous, order: Number(event.target.value) }))} />
+          <Field label="Order" htmlFor="order" hint={editingId ? "Sorts pickers and guide rows" : `Leave as ${nextOrder} to add it last`}>
+            {/* Prefilled with the next position rather than left blank: the admin can
+                still place a size mid-sequence, but never has to invent a number. */}
+            <TextInput id="order" type="number" value={form.order ?? nextOrder} onChange={(event) => setForm((previous) => ({ ...previous, order: Number(event.target.value) }))} />
           </Field>
 
           <div className="flex items-start gap-2 sm:pt-6">

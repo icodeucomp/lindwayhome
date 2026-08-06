@@ -189,7 +189,6 @@ export interface SizeGuideTranslation {
 
 export interface SizeGuide {
   id: string;
-  order: number;
   publishedAt: string | null;
   rows: SizeGuideRow[];
   translations: SizeGuideTranslation[];
@@ -209,7 +208,6 @@ export interface CreateSize {
 export type UpdateSize = Partial<CreateSize>;
 
 export interface CreateSizeGuide {
-  order?: number;
   /** null keeps it a draft — this is the on/off switch (D1). */
   publishedAt?: string | null;
   rows: { sizeId: string; measurements: Record<string, number> }[];
@@ -324,7 +322,6 @@ export interface ArticleCategoryTranslation {
 export interface ArticleCategory {
   id: string;
   slug: string;
-  order: number;
   isActive: boolean;
   translations: ArticleCategoryTranslation[];
   /** Resolved for the requested locale (§B3.2). The name lives only here. */
@@ -338,7 +335,6 @@ export interface ArticleCategory {
 
 export interface CreateArticleCategory {
   slug: string;
-  order?: number;
   isActive?: boolean;
   translations: ArticleCategoryTranslation[];
 }

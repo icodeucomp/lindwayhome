@@ -387,7 +387,7 @@ model Size {
   id        String           @id @default(cuid())
   code      String           @unique  // XS, S, M … MUST match a package_dimensions config key
   label     String
-  order     Int              @default(0)
+  order     Int              @default(0)  // assigned max+1 on create (D27)
   isActive  Boolean          @default(true)
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
@@ -400,7 +400,6 @@ model Size {
 
 model SizeGuide {
   id           String                 @id @default(cuid())
-  order        Int                    @default(0)
   publishedAt  DateTime?              // null = draft; this IS the on/off switch
   createdAt    DateTime               @default(now())
   updatedAt    DateTime               @updatedAt
@@ -443,6 +442,7 @@ model SizeGuideTranslation {
 
 - `publishedAt = null` means draft; the public Size Guide page lists only published guides (D1). **There is no `isActive` beside it** — "inactive but published" would have no defined meaning (D21).
 - **Rows have no `order` column.** They are ordered by `size.order`, so there is only ever one ordering source (D21).
+- **`SizeGuide` itself has no `order` column either** (D27) — the public page lists guides by `createdAt`.
 - **No grouping field.** The public page renders published guides as a flat list ordered by `order`. v1's hardcoded Women / Men / Baby split with Kebaya / Batik tabs is not reproduced — the translated `title` carries that meaning instead (e.g. "Women — Batik"), so admins can introduce new groupings without a schema change (D1).
 - **Title and description live only in the translation**, matching the Article and FAQ pattern. Admin lists join the EN row.
 - `measurements` keys are stable identifiers; their **display labels** are per-locale in `SizeGuideTranslation.parameterLabels`. Translating JSON keys directly would be unworkable.
@@ -550,7 +550,6 @@ model ProductTranslation {
 model ArticleCategory {
   id           String                       @id @default(cuid())
   slug         String                       @unique
-  order        Int                          @default(0)
   isActive     Boolean                      @default(true)
   createdAt    DateTime                     @default(now())
   updatedAt    DateTime                     @updatedAt
@@ -611,7 +610,6 @@ model ArticleTranslation {
 model Faq {
   id           String           @id @default(cuid())
   topic        String           // groups FAQs so one component serves several pages
-  order        Int              @default(0)
   isActive     Boolean          @default(true)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
@@ -1131,6 +1129,7 @@ Agreed in discussion. Do not reopen without a new decision recorded here.
 | **D22** | **No `Discount` entity.** Discounting is `Product.discount` → `discountedPrice`, plus the v1 config groups `promotions` (store-wide) and `members` (member rate). Targeted and scheduled campaigns are out of scope | The tables bought targeting and validity windows that Lindway does not run, and cost three real risks: the effective price had to be resolved at read time in two places, so the price shown could differ from the price charged; the token carried only aggregates, so per-line snapshots could contradict the signed total; and layered `FIXED` discounts could drive a line negative, surfacing as a meaningless validation error after the buyer had already uploaded a receipt. Keeping `discountedPrice` a stored column also keeps price sorting and filtering in SQL |
 | **D23** | `Order` gains `status` (`OrderStatus`), `trackingNumber` and `cancelledAt`. `isPurchased` stays beside `status`. `ContactInquiry` gains `handlingNote`; `Article` gains `authorId` | v1 expressed the whole order lifecycle as one boolean — no way to say cancelled or shipped, and nowhere to put the tracking number the storefront already promises buyers. `isPurchased` is kept because it is what triggers the stock and `soldCount` transaction, and moving that would touch the frozen zone. `handlingNote` records *how* an inquiry was resolved, which `HANDLED` alone does not |
 | **D25** | Branding, audience and garment are **Prisma enums**, not tables. Display data (label, slug, description, hero image, order, `isActive`) lives in `src/static/taxonomy.ts`. `ProductAudience` is replaced by an `AudienceType[]` array on `Product` | Removes three tables, one join table, and three admin CRUD screens. The cost is real and accepted: adding a value needs a migration plus a deploy, and per-branding hero copy is no longer editable by an admin. Justified because the axes are stable — the two brandings still to come are already in the enum, and Lindway does not add garment types often |
+| **D27** | **Only `Size`, `ConfigParameter` and `ConfigParameterGroup` keep an explicit `order` column.** `SizeGuide`, `ArticleCategory` and `Faq` lose theirs and sort by `createdAt`. `Size.order` is assigned `max(order) + 1` on create when the payload omits it | An `order` column earns its place only where nothing else encodes the sequence. For sizes nothing does — `code` sorts into nonsense (`L, M, S, XL, XS`; `0-6-12M` before `1Y`) — and D21 already removed `SizeGuideRow.order` so `size.order` is the single source; removing it would mean either wrong ordering everywhere or two competing sources again. For the other three, creation order is a faithful stand-in and the admin sets it by adding things in the order they want. Deliberately **not** alphabetical: the title/name of all three is translated, so alphabetical sorting is locale-dependent and the list would reshuffle when a visitor switches language. The auto-assign fixes a real latent bug rather than being convenience only — every row defaulted to `0`, so rows created without an explicit position all tied, and `ORDER BY "order"` with ties returns an arbitrary and unstable sequence |
 | **D26** | **`Product.name` is a plain column, not translated.** One name in both languages, like the slug. `ProductTranslation` keeps only the five rich-text fields, all nullable, so a product may have no translation rows at all. `Article`, `FAQ` and `SizeGuide` are unaffected — their title *is* the translation | Product names are brand and garment language ("Melati Embroidered Kebaya"), which reads the same in both locales, so translating them bought nothing and cost everywhere: `Product` had no name column, which made a nameless product possible, forced search to join the translation table on the active locale *plus* EN, put the name behind a locale tab in the admin form, and — because the API required a `name` on every translation row — made an ID row carrying only a description impossible to submit. All four problems are structural consequences of that one field, and all four disappear with it. Superseding consequence: **an EN translation row is no longer required for products**; requiring one would only force an all-null row, since the four defaulted fields fall back to config with or without it. ID-without-EN is still refused, because the per-field fallback runs ID → EN |
 | **D24** | `Product.stock` is maintained by a Postgres trigger (`prisma/triggers/product-stock.sql`), not by application code | It is the number that gates overselling. A trigger makes drift structurally impossible rather than merely unlikely — any write path that forgot to recompute would otherwise let the store sell stock it does not have, silently. Consequence: application code must never write `stock` |
 | **D21** | Field audit removed seven columns that produced nothing: `code` on the three taxonomy tables *(since superseded — the tables themselves are gone, D25)*, `SizeGuide.isActive`, `SizeGuideRow.order`, `Product.productionNotes`, `Member.joinedAt`. Ruling principle: **`isActive` is a manual switch, `publishedAt` / date windows are a schedule** — a model needs both only when it needs both behaviours | Each removal deleted a second source of truth: `code` duplicated `slug`, `isActive` beside `publishedAt` had no defined combination, a row `order` could contradict `size.order`, `productionNotes` duplicated the translated `notes`, and `joinedAt` duplicated `createdAt` |

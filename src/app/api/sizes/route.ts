@@ -47,7 +47,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: `Size "${code}" already exists` }, { status: 400 });
     }
 
-    const size = await prisma.size.create({ data: { ...data, code } });
+    // Assigned server-side unless the admin named a position. The column default is
+    // 0, so without this every new size would tie on 0 — and `ORDER BY "order"` with
+    // ties returns rows in whatever order Postgres feels like, so the size list would
+    // reshuffle between refreshes. max+1 also puts new sizes last, which is where a
+    // size added after XS…XXXL almost always belongs.
+    const order = data.order ?? ((await prisma.size.aggregate({ _max: { order: true } }))._max.order ?? 0) + 1;
+
+    const size = await prisma.size.create({ data: { ...data, code, order } });
 
     // Not an error, but the admin needs to know: without a matching
     // package_dimensions key, checkout 404s for this size (§B4.2). Warning here

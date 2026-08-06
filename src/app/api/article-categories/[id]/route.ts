@@ -76,7 +76,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         where: { id },
         data: {
           ...(data.slug !== undefined ? { slug: data.slug } : {}),
-          ...(data.order !== undefined ? { order: data.order } : {}),
           ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
           ...(data.translations
             ? { translations: { create: data.translations.map((translation) => ({ locale: translation.locale, name: translation.name, description: translation.description ?? undefined })) } }

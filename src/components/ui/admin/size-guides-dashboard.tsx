@@ -43,7 +43,7 @@ export const SizeGuidesDashboard = () => {
       <PageHeader
         eyebrow="Catalog"
         title="Size Guides"
-        description="Body measurements shared by every product that uses a guide. Published guides appear on the public Size Guide page as a flat list, ordered by the number below; the rest are drafts, still assignable to products."
+        description="Body measurements shared by every product that uses a guide. Published guides appear on the public Size Guide page as a flat list, listed in the order they were created; the rest are drafts, still assignable to products."
         actions={<AdminLinkButton href="/admin/dashboard/size-guides/create" variant="solid">New size guide</AdminLinkButton>}
       />
 
@@ -65,7 +65,6 @@ export const SizeGuidesDashboard = () => {
               <tr>
                 <Th>Title</Th>
                 <Th>Rows</Th>
-                <Th>Order</Th>
                 <Th>Status</Th>
                 <Th className="text-right">Actions</Th>
               </tr>
@@ -79,7 +78,6 @@ export const SizeGuidesDashboard = () => {
                     <tr className="duration-200 hover:bg-muted/40">
                       <Td className="text-body">{guide.title ?? "(untitled)"}</Td>
                       <Td className="tabular-nums">{guide.rows.length}</Td>
-                      <Td className="tabular-nums">{guide.order}</Td>
                       <Td>
                         <Badge className={guide.publishedAt ? "bg-emerald-500/15 text-emerald-700" : "bg-body/6 text-body/50"}>
                           {guide.publishedAt ? `Published ${convertDate(guide.publishedAt)}` : "Draft"}
@@ -103,7 +101,7 @@ export const SizeGuidesDashboard = () => {
 
                     {expanded === guide.id && (
                       <tr>
-                        <Td className="bg-muted/50" colSpan={5}>
+                        <Td className="bg-muted/50" colSpan={4}>
                           <div className="overflow-x-auto scrollbar">
                             <table className="w-full text-sm">
                               <thead>

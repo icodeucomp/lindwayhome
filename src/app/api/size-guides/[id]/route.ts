@@ -64,9 +64,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
       await tx.sizeGuide.update({
         where: { id },
-        data: {
-          ...(data.order !== undefined ? { order: data.order } : {}),
-          ...(data.publishedAt !== undefined ? { publishedAt: data.publishedAt } : {}),
+        data: {          ...(data.publishedAt !== undefined ? { publishedAt: data.publishedAt } : {}),
           ...(data.rows ? { rows: { create: data.rows.map((row) => ({ sizeId: row.sizeId, measurements: row.measurements })) } } : {}),
           ...(data.translations
             ? {

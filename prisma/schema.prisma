@@ -72,6 +72,9 @@ model Size {
   id        String   @id @default(cuid())
   code      String   @unique // XS, S, M … MUST match a package_dimensions config key
   label     String
+  // The one ordering source for sizes everywhere (D21) — nothing else encodes the
+  // sequence, since `code` sorts alphabetically into nonsense (L, M, S, XL, XS).
+  // Assigned as max+1 on create, so new rows land last and never tie on the default.
   order     Int      @default(0)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -83,9 +86,13 @@ model Size {
   @@map("sizes")
 }
 
+// No `order` column: the public page lists guides by `createdAt`, so the sequence is
+// the sequence they were added in. Deliberately not alphabetical by title — the title
+// is translated, so alphabetical would reshuffle the page when a visitor switches
+// language. Only `Size`, `ConfigParameter` and `ConfigParameterGroup` keep an explicit
+// order, because theirs cannot be derived from anything else.
 model SizeGuide {
   id          String    @id @default(cuid())
-  order       Int       @default(0)
   // publishedAt IS the on/off switch — null means draft. No isActive alongside it,
   // or "inactive but published" would have no defined meaning.
   publishedAt DateTime?
@@ -326,10 +333,11 @@ model Member {
 // CONTENT  (§B4.5)
 // =============================================================================
 
+// Ordered by `createdAt` — the name is translated, so alphabetical would reorder the
+// Journal menu when a visitor switches language.
 model ArticleCategory {
   id        String   @id @default(cuid())
   slug      String   @unique
-  order     Int      @default(0)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -389,10 +397,10 @@ model ArticleTranslation {
   @@map("article_translations")
 }
 
+// Ordered by `createdAt` within a topic — write them in the order you want them read.
 model Faq {
   id        String   @id @default(cuid())
   topic     String // groups FAQs so one component serves several pages
-  order     Int      @default(0)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

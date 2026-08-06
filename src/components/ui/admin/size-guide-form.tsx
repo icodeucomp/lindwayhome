@@ -12,7 +12,7 @@ import { sizeGuidesApi, sizesApi } from "@/utils";
 
 import { ApiResponse, CreateSizeGuide, Locale, Size, SizeGuide, UpdateSizeGuide } from "@/types";
 
-import { AdminButton, CheckboxItem, ErrorState, Field, FieldRow, FormActions, FormLayout, FormSection, LoadingState, LocaleTabs, PageHeader, TextArea, TextInput, Toggle } from "./slicing";
+import { AdminButton, CheckboxItem, ErrorState, Field, FormActions, FormLayout, FormSection, LoadingState, LocaleTabs, PageHeader, TextArea, TextInput, Toggle } from "./slicing";
 
 const LIST_HREF = "/admin/dashboard/size-guides";
 
@@ -25,7 +25,6 @@ interface ParameterDraft {
 }
 
 interface FormState {
-  order: string;
   isPublished: boolean;
   title: Record<Locale, string>;
   description: Record<Locale, string>;
@@ -36,7 +35,6 @@ interface FormState {
 }
 
 const EMPTY: FormState = {
-  order: "0",
   isPublished: false,
   title: { EN: "", ID: "" },
   description: { EN: "", ID: "" },
@@ -114,7 +112,6 @@ export const SizeGuideForm = ({ guideId, duplicateFromId }: { guideId?: string; 
     }
 
     setForm({
-      order: String(record.order ?? 0),
       // A duplicate always starts as a draft: publishing a copy the moment it is
       // created would put an unedited twin on the public page.
       isPublished: isEdit ? Boolean(record.publishedAt) : false,
@@ -172,7 +169,6 @@ export const SizeGuideForm = ({ guideId, duplicateFromId }: { guideId?: string; 
     const orderedSizeIds = sizes.filter((size) => form.sizeIds.includes(size.id)).map((size) => size.id);
 
     const payload: CreateSizeGuide = {
-      order: Number(form.order) || 0,
       publishedAt: form.isPublished ? new Date().toISOString() : null,
       rows: orderedSizeIds.map((sizeId) => ({
         sizeId,
@@ -255,12 +251,9 @@ export const SizeGuideForm = ({ guideId, duplicateFromId }: { guideId?: string; 
             />
           </Field>
 
-          <FieldRow>
-            <Field label="Order" htmlFor="order" hint="Position on the public Size Guide page">
-              <TextInput id="order" type="number" value={form.order} onChange={(event) => patch({ order: event.target.value })} />
-            </Field>
-
-            <div className="sm:pt-6">
+          <div>
+            {/* No order field: the public page lists guides by creation date. */}
+            <div>
               <Toggle
                 id="isPublished"
                 label="Published"
@@ -269,7 +262,7 @@ export const SizeGuideForm = ({ guideId, duplicateFromId }: { guideId?: string; 
                 onChange={(isPublished) => patch({ isPublished })}
               />
             </div>
-          </FieldRow>
+          </div>
         </FormSection>
 
         <FormSection

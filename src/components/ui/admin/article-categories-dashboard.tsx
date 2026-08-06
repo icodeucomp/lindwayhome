@@ -16,13 +16,12 @@ const LOCALES = ["EN", "ID"] as const;
 
 interface FormState {
   slug: string;
-  order: string;
   isActive: boolean;
   name: Record<Locale, string>;
   description: Record<Locale, string>;
 }
 
-const EMPTY: FormState = { slug: "", order: "0", isActive: true, name: { EN: "", ID: "" }, description: { EN: "", ID: "" } };
+const EMPTY: FormState = { slug: "", isActive: true, name: { EN: "", ID: "" }, description: { EN: "", ID: "" } };
 
 const slugify = (value: string) =>
   value
@@ -98,7 +97,6 @@ export const ArticleCategoriesDashboard = () => {
 
     const payload: CreateArticleCategory = {
       slug: form.slug.trim(),
-      order: Number(form.order) || 0,
       isActive: form.isActive,
       translations: [
         { locale: "EN", name: form.name.EN.trim(), description: form.description.EN.trim() || null },
@@ -125,7 +123,7 @@ export const ArticleCategoriesDashboard = () => {
     setIsSlugTouched(true);
     setActiveLocale("EN");
     setError("");
-    setForm({ slug: category.slug, order: String(category.order), isActive: category.isActive, name, description });
+    setForm({ slug: category.slug, isActive: category.isActive, name, description });
   };
 
   return (
@@ -175,11 +173,8 @@ export const ArticleCategoriesDashboard = () => {
           </Field>
 
           <div className="flex flex-wrap items-end gap-5">
-            <Field label="Order" htmlFor="order" className="w-32" hint="Menu position">
-              <TextInput id="order" type="number" value={form.order} onChange={(event) => setForm((previous) => ({ ...previous, order: event.target.value }))} />
-            </Field>
-
-            <label className="flex items-center gap-2.5 pb-2.5 cursor-pointer">
+            {/* No order field: the Journal menu follows creation order. */}
+            <label className="flex items-center gap-2.5 cursor-pointer">
               <input type="checkbox" checked={form.isActive} onChange={(event) => setForm((previous) => ({ ...previous, isActive: event.target.checked }))} className="checkbox-form" />
               <span className="text-sm text-body/70">Active</span>
             </label>
@@ -213,7 +208,6 @@ export const ArticleCategoriesDashboard = () => {
                 <Th>Slug</Th>
                 <Th>Locales</Th>
                 <Th className="text-right">Articles</Th>
-                <Th>Order</Th>
                 <Th>Status</Th>
                 <Th className="text-right">Actions</Th>
               </tr>
@@ -236,7 +230,6 @@ export const ArticleCategoriesDashboard = () => {
                       </span>
                     </Td>
                     <Td className="text-right tabular-nums">{category.articleCount ?? 0}</Td>
-                    <Td className="tabular-nums">{category.order}</Td>
                     <Td>
                       <Badge className={category.isActive ? "bg-primary/12 text-primary" : "bg-body/6 text-body/50"}>{category.isActive ? "Active" : "Inactive"}</Badge>
                     </Td>

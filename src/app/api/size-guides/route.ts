@@ -21,7 +21,9 @@ export async function GET(request: NextRequest) {
     const guides = await prisma.sizeGuide.findMany({
       where: publishedOnly ? { publishedAt: { not: null } } : {},
       include: sizeGuideInclude,
-      orderBy: { order: "asc" },
+      // No `order` column: creation sequence is the sequence. Not alphabetical by the
+      // translated title, which would reshuffle the page when a visitor switches language.
+      orderBy: { createdAt: "asc" },
     });
 
     const data = guides.map((guide) => ({ ...guide, ...resolveTranslation(guide.translations, locale) }));
@@ -53,7 +55,6 @@ export async function POST(request: NextRequest) {
 
     const guide = await prisma.sizeGuide.create({
       data: {
-        order: data.order,
         publishedAt: data.publishedAt ?? undefined,
         rows: { create: data.rows.map((row) => ({ sizeId: row.sizeId, measurements: row.measurements })) },
         translations: {
