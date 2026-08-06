@@ -27,13 +27,14 @@ export async function GET(request: NextRequest) {
       order: searchParams.get("order") || "asc",
       isPurchased: searchParams.get("isPurchased") || undefined,
       status: searchParams.get("status") || undefined,
+      paymentMethod: searchParams.get("paymentMethod") || undefined,
       year: searchParams.get("year") || undefined,
       month: searchParams.get("month") || undefined,
       dateFrom: searchParams.get("dateFrom") || undefined,
       dateTo: searchParams.get("dateTo") || undefined,
     });
 
-    const { search, order, isPurchased, status, year, month, dateFrom, dateTo } = queryParams;
+    const { search, order, isPurchased, status, paymentMethod, year, month, dateFrom, dateTo } = queryParams;
 
     const page = parseInt(queryParams.page);
     const limit = parseInt(queryParams.limit);
@@ -54,6 +55,7 @@ export async function GET(request: NextRequest) {
     // whenever both were supplied. They are separate conditions.
     if (isPurchased === "true" || isPurchased === "false") where.isPurchased = isPurchased === "true";
     if (status) where.status = status;
+    if (paymentMethod) where.paymentMethod = paymentMethod;
 
     const dateFilter = buildDateFilter({ year, month, dateFrom, dateTo });
     if (dateFilter) where.createdAt = dateFilter;

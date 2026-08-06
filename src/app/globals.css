@@ -106,15 +106,66 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 .scrollbar::-webkit-scrollbar-track {
   border-radius: 100vh;
-  background: #f3f4f6;
+  background: #f7f3f0;
 }
 .scrollbar::-webkit-scrollbar-thumb {
-  background: #6b7280;
+  background: #d2d2ca;
   border-radius: 100vh;
-  border: 3px solid #f3f4f6;
+  border: 3px solid #f7f3f0;
 }
 .scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #0e2d65;
+  background: #ba8164;
+}
+
+/* Tiptap editing surface. The same rules render the stored JSON on the admin side;
+   public pages must still sanitize before rendering it (CLAUDE.md §E6). */
+.prose-editor :where(p) {
+  margin-block: 0.5rem;
+}
+.prose-editor :where(h2) {
+  font-family: var(--font-raleway), sans-serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-block: 1rem 0.5rem;
+}
+.prose-editor :where(h3) {
+  font-family: var(--font-raleway), sans-serif;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  margin-block: 0.875rem 0.5rem;
+}
+.prose-editor :where(ul, ol) {
+  padding-left: 1.5rem;
+  margin-block: 0.5rem;
+}
+.prose-editor :where(ul) {
+  list-style: disc;
+}
+.prose-editor :where(ol) {
+  list-style: decimal;
+}
+.prose-editor :where(blockquote) {
+  border-left: 2px solid #ba8164;
+  padding-left: 0.875rem;
+  color: #39322ccc;
+  margin-block: 0.75rem;
+}
+.prose-editor :where(a) {
+  color: #ba8164;
+  text-decoration: underline;
+}
+.prose-editor :where(hr) {
+  border-top: 1px solid #d2d2ca;
+  margin-block: 1rem;
+}
+/* Placeholder for an empty document — Tiptap leaves a single empty paragraph. */
+.prose-editor.ProseMirror p.is-editor-empty:first-child::before,
+.prose-editor[data-placeholder]:has(> p:only-child:empty)::before {
+  content: attr(data-placeholder);
+  color: #39322c59;
+  pointer-events: none;
+  float: left;
+  height: 0;
 }
 
 /* Custom React-Select Styles */
@@ -152,12 +203,18 @@ input[type="number"]::-webkit-outer-spin-button {
   /* ===============================
      COLORS — v2 palette (D14)
   =============================== */
-  --color-primary: #ba8164; /* headline, buttons, eyebrow, active states */
-  --color-body: #39322c; /* body copy, captions */
+  --color-primary: #ba8164; /* accent — eyebrow, links, active marks, chart series */
+  --color-body: #39322c; /* body copy, captions, and the solid button / active nav fill */
   --color-light: #faf6f5; /* main background */
   --color-muted: #f7f3f0; /* muted background */
   --color-footer: #d2d2ca; /* footer background */
   --color-border: #d2d2ca; /* hairlines, dividers */
+
+  /* Admin chrome. Both are blends of two locked tokens (footer greige toward the
+     page background), not new brand hues — the sidebar needs to read as a distinct
+     surface, and #f7f3f0 against #faf6f5 is too close to see. */
+  --color-sidebar: #ece8e2;
+  --color-sidebar-hover: #e3ded6;
 
   /* Legacy aliases — v1 components still reference these. Remove each one as its
      component is rewritten in phases 2-4; do not introduce new usages. */
@@ -195,70 +252,105 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 @layer components {
+  /* Legacy button aliases, re-themed onto the v2 palette (D14). Blue and slate were
+     never in the palette; every remaining caller is scheduled for rewrite, so these
+     keep working while looking like the rest of v2. Do not add new usages. */
   .btn-blue {
-    @apply text-light bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-blue-200;
+    @apply text-light bg-body rounded-sm hover:bg-body/90 disabled:bg-body/25;
   }
   .btn-red {
-    @apply text-light bg-red-600 rounded-lg hover:bg-red-700 disabled:bg-red-200;
+    @apply text-light bg-red-700 rounded-sm hover:bg-red-800 disabled:bg-red-200;
   }
   .btn-gray {
-    @apply text-light bg-gray rounded-lg hover:bg-darker-gray disabled:bg-gray/20;
+    @apply text-light bg-body rounded-sm hover:bg-body/90 disabled:bg-body/25;
   }
   .btn-green {
-    @apply text-light bg-green-600 rounded-lg hover:bg-green-600 disabled:bg-green-200;
+    @apply text-light bg-primary rounded-sm hover:bg-primary/90 disabled:bg-primary/30;
   }
   .btn-outline {
-    @apply text-gray bg-light border border-gray/30 rounded-lg shadow-sm hover:bg-gray/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500;
+    @apply text-body bg-light border border-border rounded-sm hover:bg-body/5 focus:outline-none focus:border-primary;
+  }
+
+  /* ===============================
+     ADMIN DESIGN LAYER
+     Editorial chrome: uppercase letterspaced micro-labels, hairline rules instead
+     of card borders, square corners, and the terracotta accent used sparingly.
+  =============================== */
+  .admin-eyebrow {
+    @apply font-heading text-xxs font-semibold uppercase tracking-[0.18em] text-primary;
+  }
+  .admin-title {
+    @apply font-heading text-3xl font-normal tracking-tight text-body;
+  }
+  .admin-section-label {
+    @apply font-heading text-xs font-semibold uppercase tracking-[0.16em] text-body/55;
+  }
+  .admin-field-label {
+    @apply font-heading text-xxs font-semibold uppercase tracking-[0.14em] text-body/70;
+  }
+  .admin-panel {
+    @apply border border-border rounded-sm bg-light;
+  }
+
+  /* Form controls. Square, hairline-bordered, no shadow — the border does the work. */
+  .input-form {
+    @apply block w-full px-3.5 py-2.5 text-sm bg-light border border-border rounded-sm text-body placeholder:text-body/35 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:bg-muted disabled:text-body/50;
+  }
+  .select-form {
+    /* Spelled out rather than `@apply input-form` — Tailwind v4 cannot apply another
+       custom component class. Native arrow removed so the chevron can be positioned
+       and coloured to match. */
+    @apply block w-full py-2.5 pl-3.5 pr-10 text-sm bg-light border border-border rounded-sm text-body appearance-none cursor-pointer focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:bg-muted disabled:text-body/50;
+  }
+  .checkbox-form {
+    @apply rounded-xs cursor-pointer accent-primary size-4 shrink-0;
   }
   .bg-filter {
     @apply bg-linear-to-tl from-[#2A5F7A]/40 to-[#4F2E52]/40;
   }
   .file-label {
-    @apply block px-4 py-2 mr-4 text-sm font-semibold border-0 cursor-pointer rounded-s-lg whitespace-nowrap bg-blue-600 text-light hover:bg-blue-700;
+    @apply block px-4 py-2 mr-4 text-sm font-semibold border-0 cursor-pointer rounded-s-sm whitespace-nowrap bg-body text-light hover:bg-body/90;
   }
   .heading {
-    @apply text-xl sm:text-2xl font-bold sm:font-semibold md:text-3xl text-gray;
+    @apply text-xl sm:text-2xl font-bold sm:font-semibold md:text-3xl text-body;
   }
   .product-container {
     @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-x-6 sm:gap-y-10 min-h-100;
   }
   .popover {
-    @apply absolute py-2 -translate-x-1/2 border border-gray rounded-lg shadow-lg left-1/2 w-full bg-light text-dark z-100;
-  }
-  .input-form {
-    @apply block w-full px-3 py-2 border border-gray/30 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:ring-2 focus:border-blue-500;
+    @apply absolute py-2 -translate-x-1/2 border border-border rounded-sm shadow-lg left-1/2 w-full bg-light text-body z-100;
   }
   .dropdown {
-    @apply relative flex items-center gap-2 p-2 text-sm text-gray font-semibold rounded-lg cursor-pointer sm:px-4 sm:gap-8 border;
+    @apply relative flex items-center gap-2 p-2 text-sm text-body font-semibold rounded-sm cursor-pointer sm:px-4 sm:gap-8 border border-border;
   }
   .pagination-root {
-    @apply flex items-center justify-center gap-1.5 sm:gap-2;
+    @apply flex items-center justify-center gap-1;
   }
   .pagination-numbers {
-    @apply flex items-center gap-1 sm:gap-1.5;
+    @apply flex items-center gap-1;
   }
   .pagination-arrow {
-    @apply size-8 sm:size-10 flex items-center justify-center rounded-xl border transition-all duration-200 ease-out select-none outline-none;
+    @apply size-9 flex items-center justify-center rounded-sm border transition-colors duration-200 select-none outline-none;
   }
   .pagination-arrow--active {
-    @apply border-blue-500/60 bg-white text-blue-600 shadow-sm shadow-blue-100 hover:border-blue-600 hover:bg-blue-600 hover:text-white hover:shadow-md hover:shadow-blue-200 hover:-translate-y-px active:translate-y-0 active:shadow-sm;
+    @apply border-border bg-light text-body hover:border-primary hover:text-primary cursor-pointer;
   }
   .pagination-arrow--disabled {
-    @apply border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed shadow-none;
+    @apply border-border/60 bg-muted text-body/25 cursor-not-allowed;
   }
   .pagination-pill {
-    @apply size-8 sm:size-10 flex items-center justify-center rounded-xl border text-sm font-medium transition-all duration-200 ease-out select-none outline-none;
+    @apply size-9 flex items-center justify-center rounded-sm border text-sm transition-colors duration-200 select-none outline-none;
   }
   .pagination-pill--idle {
-    @apply border-gray-200 bg-white text-gray-500 shadow-sm hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 hover:-translate-y-px hover:shadow-md hover:shadow-blue-100 active:translate-y-0;
+    @apply border-border bg-light text-body/70 hover:border-primary hover:text-primary cursor-pointer;
   }
   .pagination-pill--active {
-    @apply border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-300/50 scale-105 cursor-default;
+    @apply border-body bg-body text-light cursor-default;
   }
   .pagination-ellipsis {
-    @apply size-8 sm:size-10 flex items-end justify-center pb-1 text-base tracking-widest text-gray-400 select-none;
+    @apply size-9 flex items-end justify-center pb-1.5 text-base tracking-widest text-body/35 select-none;
   }
   .btn-cross-border {
-    @apply absolute duration-300 right-4 sm:right-6 md:right-10 top-4 flex justify-center items-center rounded-full border-gray border-2 size-8 hover:bg-gray;
+    @apply absolute duration-300 right-4 sm:right-6 md:right-10 top-4 flex justify-center items-center rounded-full border-body border-2 size-8 hover:bg-body;
   }
 }

@@ -287,6 +287,7 @@ export const OrderQuerySchema = z.object({
   ...baseQuery,
   isPurchased: z.string().optional(),
   status: OrderStatusEnum.optional(),
+  paymentMethod: PaymentMethodEnum.optional(),
 });
 
 export const LocationQuerySchema = z.object({

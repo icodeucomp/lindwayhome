@@ -199,7 +199,9 @@ export const ordersApi = {
         const searchParams = new URLSearchParams();
         if (params.search) searchParams.append("search", params.search);
         if (params.order) searchParams.append("order", params.order);
-        if (params.isPurchased !== undefined) searchParams.append("isPurchased", params.isPurchased.toString());
+        if (params.isPurchased) searchParams.append("isPurchased", params.isPurchased.toString());
+        if (params.status) searchParams.append("status", params.status.toString());
+        if (params.paymentMethod) searchParams.append("paymentMethod", params.paymentMethod.toString());
         if (params.limit) searchParams.append("limit", params.limit.toString());
         if (params.page) searchParams.append("page", params.page.toString());
         if (params.month) searchParams.append("month", params.month.toString());

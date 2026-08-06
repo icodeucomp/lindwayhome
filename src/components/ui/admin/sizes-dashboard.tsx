@@ -2,18 +2,18 @@
 
 import * as React from "react";
 
-import { Button } from "@/components";
+import { PiRuler } from "react-icons/pi";
 
 import { sizesApi } from "@/utils";
 
 import { ApiResponse, CreateSize, Size } from "@/types";
 
-import { Badge, ConfirmDialog, EmptyState, ErrorState, Field, LoadingState, Panel, TableShell, Td, Th } from "./slicing";
+import { AdminButton, Badge, ConfirmDialog, EmptyState, ErrorState, Field, LoadingState, PageHeader, Panel, RowAction, TableShell, Td, Th, TextInput } from "./slicing";
 
-const emptyForm: CreateSize = { code: "", label: "", order: 0, isActive: true };
+const EMPTY: CreateSize = { code: "", label: "", order: 0, isActive: true };
 
 export const SizesDashboard = () => {
-  const [form, setForm] = React.useState<CreateSize>(emptyForm);
+  const [form, setForm] = React.useState<CreateSize>(EMPTY);
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [toDelete, setToDelete] = React.useState<Size | null>(null);
 
@@ -21,7 +21,7 @@ export const SizesDashboard = () => {
 
   const onSettled = () => {
     refetch();
-    setForm(emptyForm);
+    setForm(EMPTY);
     setEditingId(null);
   };
 
@@ -50,67 +50,58 @@ export const SizesDashboard = () => {
     setForm({ code: size.code, label: size.label, order: size.order, isActive: size.isActive });
   };
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold font-heading text-body">Sizes</h1>
-        <p className="mt-1 text-sm text-body/70">
-          The master list every product variant and size guide row points at. A size <strong>code</strong> must match a <code>package_dimensions</code> key exactly, or checkout returns 404 for
-          it.
-        </p>
-      </div>
+  const cancelEdit = () => {
+    setEditingId(null);
+    setForm(EMPTY);
+  };
 
-      <Panel className="p-5">
-        <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-4">
+  return (
+    <>
+      <PageHeader
+        eyebrow="Catalog"
+        title="Sizes"
+        description="The master list every product variant and size guide row points at. A size code must match a package_dimensions key exactly, or checkout returns 404 for it."
+      />
+
+      <Panel className="p-5 mb-8 sm:p-6">
+        <p className="mb-5 admin-section-label">{editingId ? "Edit size" : "Add a size"}</p>
+
+        <form onSubmit={handleSubmit} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Code" htmlFor="code" required hint="XS, S, 2Y — uppercase">
-            <input
-              id="code"
-              value={form.code}
-              onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value.toUpperCase() }))}
-              className="input-form"
-              placeholder="XS"
-              required
-            />
+            <TextInput id="code" value={form.code} onChange={(event) => setForm((previous) => ({ ...previous, code: event.target.value.toUpperCase() }))} placeholder="XS" required />
           </Field>
 
           <Field label="Label" htmlFor="label" required>
-            <input id="label" value={form.label} onChange={(event) => setForm((prev) => ({ ...prev, label: event.target.value }))} className="input-form" placeholder="Extra Small" required />
+            <TextInput id="label" value={form.label} onChange={(event) => setForm((previous) => ({ ...previous, label: event.target.value }))} placeholder="Extra Small" required />
           </Field>
 
           <Field label="Order" htmlFor="order" hint="Sorts pickers and guide rows">
-            <input id="order" type="number" value={form.order ?? 0} onChange={(event) => setForm((prev) => ({ ...prev, order: Number(event.target.value) }))} className="input-form" />
+            <TextInput id="order" type="number" value={form.order ?? 0} onChange={(event) => setForm((previous) => ({ ...previous, order: Number(event.target.value) }))} />
           </Field>
 
-          <div className="flex items-end gap-2">
-            <Button type="submit" disabled={isPending} className="btn-blue">
+          <div className="flex items-start gap-2 sm:pt-6">
+            <AdminButton type="submit" variant="solid" disabled={isPending}>
               {isPending ? "Saving…" : editingId ? "Update" : "Add size"}
-            </Button>
+            </AdminButton>
             {editingId && (
-              <Button
-                type="button"
-                onClick={() => {
-                  setEditingId(null);
-                  setForm(emptyForm);
-                }}
-                className="btn-outline"
-              >
+              <AdminButton type="button" onClick={cancelEdit}>
                 Cancel
-              </Button>
+              </AdminButton>
             )}
           </div>
         </form>
       </Panel>
 
       {isLoading ? (
-        <LoadingState message="Loading sizes…" />
+        <LoadingState message="Loading sizes" />
       ) : isError ? (
         <ErrorState onRetry={refetch} />
       ) : sizes.length === 0 ? (
-        <EmptyState icon={<span className="text-2xl">📏</span>} title="No sizes yet" description="Add the sizes your products come in." />
+        <EmptyState icon={<PiRuler className="size-6" />} title="No sizes yet" description="Add the sizes your products come in." />
       ) : (
-        <Panel>
+        <Panel className="overflow-hidden">
           <TableShell>
-            <thead>
+            <thead className="border-b bg-muted/60 border-border">
               <tr>
                 <Th>Code</Th>
                 <Th>Label</Th>
@@ -119,23 +110,21 @@ export const SizesDashboard = () => {
                 <Th className="text-right">Actions</Th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border/70">
               {sizes.map((size) => (
-                <tr key={size.id}>
-                  <Td className="font-mono font-medium">{size.code}</Td>
+                <tr key={size.id} className="duration-200 hover:bg-muted/40">
+                  <Td className="font-mono text-body">{size.code}</Td>
                   <Td>{size.label}</Td>
-                  <Td>{size.order}</Td>
+                  <Td className="tabular-nums">{size.order}</Td>
                   <Td>
-                    <Badge className={size.isActive ? "bg-primary/10 text-primary" : "bg-body/10 text-body/60"}>{size.isActive ? "Active" : "Inactive"}</Badge>
+                    <Badge className={size.isActive ? "bg-primary/12 text-primary" : "bg-body/6 text-body/50"}>{size.isActive ? "Active" : "Inactive"}</Badge>
                   </Td>
                   <Td className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <button onClick={() => startEdit(size)} className="text-sm underline text-primary">
-                        Edit
-                      </button>
-                      <button onClick={() => setToDelete(size)} className="text-sm underline text-red-600">
+                    <div className="flex justify-end gap-4">
+                      <RowAction onClick={() => startEdit(size)}>Edit</RowAction>
+                      <RowAction tone="danger" onClick={() => setToDelete(size)}>
                         Delete
-                      </button>
+                      </RowAction>
                     </div>
                   </Td>
                 </tr>
@@ -154,6 +143,6 @@ export const SizesDashboard = () => {
         onConfirm={() => toDelete && deleteSize.mutate(toDelete.id)}
         onClose={() => setToDelete(null)}
       />
-    </div>
+    </>
   );
 };

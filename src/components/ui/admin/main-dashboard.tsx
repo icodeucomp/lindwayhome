@@ -1,346 +1,275 @@
 "use client";
 
-import { brandingByKey } from "@/static/taxonomy";
-
 import * as React from "react";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+import { PiArrowUpRight } from "react-icons/pi";
 
 import { useAuthStore } from "@/hooks";
 
-import { Button } from "@/components";
+import { brandingByKey } from "@/static/taxonomy";
+
+import { orderStatusBars, orderStatusLabels } from "@/static/order";
+
+import { paymentMethodLabels } from "@/static/payment";
 
 import { formatIDR, dashboardApi } from "@/utils";
 
 import { ApiResponse, DashboardData } from "@/types";
 
-// Constants
+import { AdminButton, Badge, BlockHeading, ErrorState, FilterDropdown, LoadingState, PageHeader, Panel, Stat, StatGrid, TableShell, Td, Th } from "./slicing";
+
 const MONTHS = [
-  { value: "all", label: "All Months" },
-  { value: "1", label: "January" },
-  { value: "2", label: "February" },
-  { value: "3", label: "March" },
-  { value: "4", label: "April" },
-  { value: "5", label: "May" },
-  { value: "6", label: "June" },
-  { value: "7", label: "July" },
-  { value: "8", label: "August" },
-  { value: "9", label: "September" },
-  { value: "10", label: "October" },
-  { value: "11", label: "November" },
-  { value: "12", label: "December" },
-] as const;
+  { value: "", label: "All Months" },
+  ...["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map((label, index) => ({ value: String(index + 1), label })),
+];
 
-const YEARS = [
-  { value: "all", label: "All Years" },
-  { value: "2025", label: "2025" },
-  { value: "2026", label: "2026" },
-  { value: "2027", label: "2027" },
-  { value: "2028", label: "2028" },
-  { value: "2029", label: "2029" },
-  { value: "2030", label: "2030" },
-] as const;
+// A fixed list beats new Date().getFullYear() here: the store has orders seeded in
+// past years, and a window that silently starts "this year" hides them.
+const YEARS = [{ value: "", label: "All Years" }, ...[2025, 2026, 2027, 2028, 2029, 2030].map((year) => ({ value: String(year), label: String(year) }))];
 
-interface SelectOption {
-  value: string;
-  label: string;
-}
+/**
+ * The trend buckets arrive as bare "YYYY-MM-DD" local days. `new Date("2026-08-06")`
+ * would parse that as UTC midnight and render the day before in any western zone, so
+ * the time is appended to force local parsing. Full timestamps pass through unchanged.
+ */
+const shortDate = (value: string) => new Date(value.length === 10 ? `${value}T00:00:00` : value).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
-interface DashboardCard {
-  title: string;
-  value: string | number;
-  icon: React.ReactNode;
-  bgColor: string;
-}
+/* -------------------------------------------------------------------------- */
+/*                              Orders trend chart                            */
+/*                                                                            */
+/* Hand-drawn with divs rather than a charting dependency: it is 30 stacked    */
+/* columns, and no library earns its bundle size for that.                     */
+/* -------------------------------------------------------------------------- */
 
-const RefreshIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-  </svg>
-);
-
-const ClockIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-  </svg>
-);
-
-const CheckIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2l4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-  </svg>
-);
-
-const UsersIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-    />
-  </svg>
-);
-
-const CurrencyIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
-    />
-  </svg>
-);
-
-const BoxIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-    />
-  </svg>
-);
-
-const TrendingUpIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-  </svg>
-);
-
-const StockIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-  </svg>
-);
-
-const SelectField = ({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: readonly SelectOption[] }) => (
-  <div className="flex items-center gap-2">
-    <label className="text-sm font-medium text-gray">{label}:</label>
-    <select value={value} onChange={(e) => onChange(e.target.value)} className="w-auto cursor-pointer input-form">
-      {options.map((option) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
-  </div>
-);
-
-const DashboardCard = ({ card }: { card: DashboardCard }) => (
-  <div className="p-5 overflow-hidden duration-300 border rounded-lg shadow-sm border-gray/15 bg-light hover:shadow-md">
-    <div className="flex items-center gap-4">
-      <div className={`flex items-center justify-center rounded-lg shrink-0 size-12 ${card.bgColor}`}>{card.icon}</div>
-      <dl className="flex-1 w-0">
-        <dt className="text-xs font-semibold tracking-wide uppercase truncate text-gray/70">{card.title}</dt>
-        <dd className="text-xl font-bold truncate text-darker-gray">{card.value}</dd>
-      </dl>
-    </div>
-  </div>
-);
-
-const FilterSection = ({
-  selectedMonth,
-  selectedYear,
-  onMonthChange,
-  onYearChange,
-  onClearFilters,
-  onRefresh,
-  getDateRangeText,
-  isRefreshing,
-}: {
-  selectedMonth: string;
-  selectedYear: string;
-  onMonthChange: (month: string) => void;
-  onYearChange: (year: string) => void;
-  onClearFilters: () => void;
-  onRefresh: () => void;
-  getDateRangeText: () => string;
-  isRefreshing: boolean;
-}) => (
-  <div className="space-y-3">
-    <div className="flex flex-wrap items-center gap-3">
-      <SelectField label="Month" value={selectedMonth} onChange={onMonthChange} options={MONTHS} />
-      <SelectField label="Year" value={selectedYear} onChange={onYearChange} options={YEARS} />
-      <Button onClick={onRefresh} className="flex items-center gap-2 disabled:opacity-50 btn-blue" disabled={isRefreshing}>
-        <RefreshIcon className={`size-4 ${isRefreshing ? "animate-spin" : ""}`} />
-        {isRefreshing ? "Refreshing..." : "Refresh"}
-      </Button>
-    </div>
-
-    <div className="flex items-center gap-2 py-1.5 text-sm text-gray">
-      <span className="font-medium">Current Period:</span>
-      <span>{getDateRangeText()}</span>
-      {(selectedMonth !== "all" || selectedYear !== "all") && (
-        <button onClick={onClearFilters} className="ml-2 text-xs text-blue-600 underline hover:text-blue-800 transition-colors">
-          Clear Filters
-        </button>
-      )}
-    </div>
-  </div>
-);
-
-const QuickActions = ({ router }: { router: ReturnType<typeof useRouter> }) => (
-  <div className="p-5 border rounded-lg shadow-sm border-gray/15 bg-light sm:p-6">
-    <h3 className="mb-1 text-lg font-semibold text-darker-gray">Quick Actions</h3>
-    <p className="mb-4 text-sm text-gray/70">Jump straight into the tasks you use most.</p>
-    <div className="flex flex-wrap gap-3">
-      <Button onClick={() => router.push("/admin/dashboard/products")} className="btn-blue">
-        Manage Products
-      </Button>
-      <Button onClick={() => router.push("/admin/dashboard/orders")} className="btn-outline">
-        View Guests
-      </Button>
-    </div>
-  </div>
-);
-
-const useDashboard = () => {
-  const [selectedMonth, setSelectedMonth] = React.useState<string>("all");
-  const [selectedYear, setSelectedYear] = React.useState<string>("all");
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
-
-  const router = useRouter();
-  const { isAuthenticated, user } = useAuthStore();
-
-  const { data: dashboards, refetch } = dashboardApi.useGetDashboard<ApiResponse<DashboardData>>({
-    key: ["dashboards", selectedMonth, selectedYear],
-    enabled: isAuthenticated,
-    params: { month: selectedMonth, year: selectedYear },
-  });
-
-  const getDateRangeText = React.useCallback((): string => {
-    if (selectedMonth === "all" && selectedYear === "all") return "All Time";
-    if (selectedMonth === "all") return selectedYear;
-    if (selectedYear === "all") {
-      return MONTHS.find((m) => m.value === selectedMonth)?.label || "";
-    }
-    const monthLabel = MONTHS.find((m) => m.value === selectedMonth)?.label || "";
-    return `${monthLabel} ${selectedYear}`;
-  }, [selectedMonth, selectedYear]);
-
-  const handleClearFilters = React.useCallback(() => {
-    setSelectedMonth("all");
-    setSelectedYear("all");
-  }, []);
-
-  const handleRefresh = React.useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      await refetch();
-    } finally {
-      setTimeout(() => setIsRefreshing(false), 500);
-    }
-  }, [refetch]);
-
-  const getDashboardCards = React.useCallback(
-    (): DashboardCard[] => [
-      {
-        title: "Pending Orders",
-        value: dashboards?.data.totalPendingOrders ?? "...",
-        icon: <ClockIcon className="size-8 text-light" />,
-        bgColor: "bg-orange-500",
-      },
-      {
-        title: "Purchased Orders",
-        value: dashboards?.data.totalPurchasedOrders ?? "...",
-        icon: <CheckIcon className="size-8 text-light" />,
-        bgColor: "bg-green-500",
-      },
-      {
-        title: "Total Orders",
-        value: dashboards?.data.totalOrders ?? "...",
-        icon: <UsersIcon className="size-8 text-light" />,
-        bgColor: "bg-pink-500",
-      },
-      {
-        title: "Members",
-        value: dashboards?.data.totalMembers ?? "...",
-        icon: <UsersIcon className="size-8 text-light" />,
-        bgColor: "bg-rose-500",
-      },
-      {
-        title: "Total Revenue",
-        value: formatIDR(dashboards?.data.totalPurchasedAmount || 0) ?? "...",
-        icon: <CurrencyIcon className="size-8 text-light" />,
-        bgColor: "bg-green-500",
-      },
-      {
-        title: "Total Products",
-        value: dashboards?.data.totalProducts ?? "...",
-        icon: <BoxIcon className="size-8 text-light" />,
-        bgColor: "bg-purple-500",
-      },
-      {
-        title: "Items Sold",
-        value: dashboards?.data.totalItemsSold ?? "...",
-        icon: <TrendingUpIcon className="size-8 text-light" />,
-        bgColor: "bg-yellow-500",
-      },
-      // One card per branding that actually has products, rather than three fixed
-      // fields that needed a code change whenever a brand line was added (D25).
-      ...(dashboards?.data.stockByBranding ?? []).map((row) => ({
-        title: `${brandingByKey(row.branding)?.label ?? row.branding} Stock`,
-        value: row.stock,
-        icon: <StockIcon className="size-8 text-light" />,
-        bgColor: "bg-cyan-500",
-      })),
-    ],
-    [dashboards],
-  );
-
-  return {
-    selectedMonth,
-    selectedYear,
-    isRefreshing,
-    router,
-    user,
-    dashboards,
-    setSelectedMonth,
-    setSelectedYear,
-    getDateRangeText,
-    handleClearFilters,
-    handleRefresh,
-    getDashboardCards,
-  };
-};
-
-export const MainDashboard = () => {
-  const { selectedMonth, selectedYear, isRefreshing, router, user, setSelectedMonth, setSelectedYear, getDateRangeText, handleClearFilters, handleRefresh, getDashboardCards } = useDashboard();
-
-  const cards = getDashboardCards();
+const TrendChart = ({ days }: { days: DashboardData["ordersByDay"] }) => {
+  const peak = Math.max(1, ...days.map((day) => day.bankTransfer + day.qris));
+  const ticks = [...new Set([0, Math.ceil(peak / 2), peak])].sort((a, b) => a - b);
+  const total = days.reduce((sum, day) => sum + day.bankTransfer + day.qris, 0);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col px-5 py-5 overflow-hidden border rounded-lg shadow-sm border-gray/15 bg-light sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-        <div className="mb-4 space-y-1 lg:mb-0">
-          <h2 className="text-2xl font-bold text-darker-gray">Welcome back, {user?.username}!</h2>
-          <p className="text-sm text-gray">Here&apos;s an overview dashboard of Lindway.</p>
-        </div>
+    <div>
+      <BlockHeading title="Orders · last 30 days" aside={`${total} total`} />
 
-        <div className="lg:ml-6">
-          <FilterSection
-            selectedMonth={selectedMonth}
-            selectedYear={selectedYear}
-            onMonthChange={setSelectedMonth}
-            onYearChange={setSelectedYear}
-            onClearFilters={handleClearFilters}
-            onRefresh={handleRefresh}
-            getDateRangeText={getDateRangeText}
-            isRefreshing={isRefreshing}
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {cards.map((card, index) => (
-          <DashboardCard key={`${card.title}-${index}`} card={card} />
+      <div className="flex flex-wrap items-center gap-5 mb-5">
+        {[
+          { label: paymentMethodLabels.BANK_TRANSFER, dot: "bg-primary", count: days.reduce((sum, day) => sum + day.bankTransfer, 0) },
+          { label: paymentMethodLabels.QRIS, dot: "bg-body", count: days.reduce((sum, day) => sum + day.qris, 0) },
+        ].map((series) => (
+          <span key={series.label} className="flex items-center gap-2 text-xs text-body/60">
+            <span className={`rounded-full size-2 ${series.dot}`} />
+            {series.label}
+            <span className="text-body">{series.count}</span>
+          </span>
         ))}
       </div>
 
-      <QuickActions router={router} />
+      <div className="flex gap-3">
+        <div className="flex flex-col justify-between h-40 text-xxs text-body/40 tabular-nums">
+          {[...ticks].reverse().map((tick) => (
+            <span key={tick}>{tick}</span>
+          ))}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="relative h-40">
+            {ticks.map((tick) => (
+              <span key={tick} aria-hidden className="absolute inset-x-0 border-t border-border/70" style={{ bottom: `${(tick / peak) * 100}%` }} />
+            ))}
+
+            <div className="relative flex items-end h-full gap-px">
+              {days.map((day) => {
+                const dayTotal = day.bankTransfer + day.qris;
+                return (
+                  <div key={day.date} title={`${shortDate(day.date)} — ${dayTotal} order${dayTotal === 1 ? "" : "s"}`} className="flex flex-col justify-end flex-1 h-full">
+                    {day.qris > 0 && <div className="bg-body" style={{ height: `${(day.qris / peak) * 100}%` }} />}
+                    {day.bankTransfer > 0 && <div className="bg-primary" style={{ height: `${(day.bankTransfer / peak) * 100}%` }} />}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex justify-between pt-2 mt-1 border-t text-xxs border-border text-body/40">
+            <span>{days.length > 0 && shortDate(days[0].date)}</span>
+            <span>{days.length > 0 && shortDate(days[Math.floor(days.length / 2)].date)}</span>
+            <span>{days.length > 0 && shortDate(days[days.length - 1].date)}</span>
+          </div>
+        </div>
+      </div>
     </div>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/*                              Status pipeline                               */
+/* -------------------------------------------------------------------------- */
+
+const StatusPipeline = ({ pipeline }: { pipeline: DashboardData["statusPipeline"] }) => {
+  const peak = Math.max(1, ...pipeline.map((stage) => stage.count));
+
+  return (
+    <div>
+      <BlockHeading title="Pipeline by status" aside="D23 lifecycle" />
+
+      <div className="space-y-3">
+        {pipeline.map((stage) => (
+          <div key={stage.status} className="flex items-center gap-4">
+            <span className="w-32 font-heading text-xxs font-semibold uppercase tracking-[0.14em] text-body/55 shrink-0">{orderStatusLabels[stage.status]}</span>
+            <span className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+              <span className={`block h-full rounded-full duration-500 ${orderStatusBars[stage.status]}`} style={{ width: `${(stage.count / peak) * 100}%` }} />
+            </span>
+            <span className="w-8 text-sm text-right text-body tabular-nums shrink-0">{stage.count}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/*                                  Dashboard                                 */
+/* -------------------------------------------------------------------------- */
+
+export const MainDashboard = () => {
+  const { isAuthenticated } = useAuthStore();
+
+  const [month, setMonth] = React.useState<string>("");
+  const [year, setYear] = React.useState<string>("");
+
+  const { data, isLoading, isError, refetch, isFetching } = dashboardApi.useGetDashboard<ApiResponse<DashboardData>>({
+    key: ["dashboards", month, year],
+    enabled: isAuthenticated,
+    params: { month: month || undefined, year: year || undefined },
+  });
+
+  const metrics = data?.data;
+
+  const periodLabel = !month && !year ? "All time" : [MONTHS.find((entry) => entry.value === month)?.label, year].filter(Boolean).join(" ") || "All time";
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Overview"
+        title="Dashboard"
+        description="Activity across the store — orders awaiting verification, catalog depth and the member registry."
+        actions={
+          <>
+            <FilterDropdown label="Month" value={month} options={MONTHS} onChange={setMonth} />
+            <FilterDropdown label="Year" value={year} options={YEARS} onChange={setYear} />
+            <AdminButton size="sm" onClick={() => refetch()} disabled={isFetching}>
+              {isFetching ? "Refreshing…" : "Refresh"}
+            </AdminButton>
+          </>
+        }
+      />
+
+      {isLoading ? (
+        <LoadingState message="Loading metrics" />
+      ) : isError || !metrics ? (
+        <ErrorState onRetry={refetch} />
+      ) : (
+        <div className="space-y-12">
+          <StatGrid>
+            <Stat label="Orders" value={metrics.totalOrders} caption={periodLabel} />
+            <Stat
+              label="Awaiting verification"
+              value={metrics.totalPendingOrders}
+              caption={metrics.totalPendingOrders > 0 ? "Receipts to check" : "Nothing waiting"}
+              footnote={
+                metrics.totalPendingOrders > 0 ? (
+                  <Link href="/admin/dashboard/orders?isPurchased=false" className="inline-flex items-center gap-1 duration-200 text-primary hover:text-body">
+                    Review now <PiArrowUpRight className="size-3" />
+                  </Link>
+                ) : undefined
+              }
+            />
+            <Stat label="Revenue" value={formatIDR(metrics.totalPurchasedAmount)} caption={`${metrics.totalItemsSold} items sold`} />
+            <Stat label="Members" value={metrics.totalMembers} caption="Registered for the member rate" />
+          </StatGrid>
+
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-12">
+            <TrendChart days={metrics.ordersByDay} />
+            <StatusPipeline pipeline={metrics.statusPipeline} />
+          </div>
+
+          <div>
+            <BlockHeading
+              title="Latest orders"
+              aside={
+                <Link href="/admin/dashboard/orders" className="inline-flex items-center gap-1 duration-200 hover:text-primary">
+                  View all <PiArrowUpRight className="size-3" />
+                </Link>
+              }
+            />
+
+            {metrics.latestOrders.length === 0 ? (
+              <Panel className="px-6 py-10 text-sm text-center text-body/50">No orders in this period.</Panel>
+            ) : (
+              <Panel className="overflow-hidden">
+                <TableShell>
+                  <thead className="border-b bg-muted/60 border-border">
+                    <tr>
+                      <Th>Status</Th>
+                      <Th>Customer</Th>
+                      <Th>Payment</Th>
+                      <Th className="text-right">Total</Th>
+                      <Th className="text-right">Received</Th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/70">
+                    {metrics.latestOrders.map((order) => (
+                      <tr key={order.id} className="duration-200 hover:bg-muted/40">
+                        <Td>
+                          <span className="flex items-center gap-2">
+                            <span className={`rounded-full size-1.5 ${orderStatusBars[order.status]}`} />
+                            <span className="font-heading text-xxs font-semibold uppercase tracking-[0.12em] text-body/70">{orderStatusLabels[order.status]}</span>
+                          </span>
+                        </Td>
+                        <Td>
+                          <span className="block text-body">{order.fullname}</span>
+                          <span className="block text-xs text-body/50">{order.email}</span>
+                        </Td>
+                        <Td>{paymentMethodLabels[order.paymentMethod]}</Td>
+                        <Td className="text-right text-body tabular-nums">{formatIDR(order.totalPurchased)}</Td>
+                        <Td className="text-right whitespace-nowrap text-body/50">{shortDate(order.createdAt)}</Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </TableShell>
+              </Panel>
+            )}
+          </div>
+
+          <div>
+            <BlockHeading title="Catalog" aside={`${metrics.totalProducts} products · ${metrics.inactiveProducts} inactive`} />
+
+            {metrics.stockByBranding.length === 0 ? (
+              <Panel className="px-6 py-10 text-sm text-center text-body/50">No products yet.</Panel>
+            ) : (
+              <StatGrid columns={3}>
+                {metrics.stockByBranding.map((row) => (
+                  <Stat
+                    key={row.branding}
+                    // A branding present in the database but missing from taxonomy.ts cannot
+                    // happen — the drift guard makes it a compile error — but the fallback
+                    // keeps the panel readable rather than blank if it ever did.
+                    label={brandingByKey(row.branding)?.label ?? row.branding}
+                    value={row.stock}
+                    caption={`in stock · ${row.products} product${row.products === 1 ? "" : "s"}`}
+                    footnote={
+                      brandingByKey(row.branding)?.isActive === false ? (
+                        <Badge className="bg-body/6 text-body/50">Hidden from storefront</Badge>
+                      ) : undefined
+                    }
+                  />
+                ))}
+              </StatGrid>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 };

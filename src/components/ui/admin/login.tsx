@@ -8,25 +8,24 @@ import { useRouter } from "next/navigation";
 
 import { useMutation } from "@tanstack/react-query";
 
-import { FaCheckCircle, FaExclamationCircle, FaEye, FaEyeSlash, FaLock, FaUser } from "react-icons/fa";
+import { PiEye, PiEyeSlash, PiWarningCircle, PiCheckCircle } from "react-icons/pi";
 
 import { useAuthStore, useForm } from "@/hooks";
-
-import { Button, Img } from "@/components";
 
 import { authApi } from "@/utils";
 
 import { LoginRequest } from "@/types";
 
+import { AdminButton, Field, Spinner, TextInput } from "./slicing";
+
 export const Login = () => {
   const [values, handleChange] = useForm<LoginRequest>({ username: "", password: "" });
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
   const router = useRouter();
-
   const { login } = useAuthStore();
 
   const loginMutation = useMutation({
@@ -34,88 +33,55 @@ export const Login = () => {
     onSuccess: (data) => {
       login(data.data.user, data.data.token);
       setSuccess(data.message);
-      setTimeout(() => {
-        router.push("/admin/dashboard");
-      }, 2000);
+      setTimeout(() => router.push("/admin/dashboard"), 1200);
     },
-    onError: (error: AxiosError<{ message: string }>) => {
-      setErrors({
-        general: error.response?.data.message || "Login failed. Please try again.",
-      });
-    },
+    onError: (axiosError: AxiosError<{ message: string }>) => setError(axiosError.response?.data.message || "Login failed. Please try again."),
   });
 
-  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setErrors({});
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
 
     if (!values.username || !values.password) {
-      setErrors({ general: "Username or password cannot be empty" });
+      setError("Username or password cannot be empty");
       return;
     }
 
     loginMutation.mutate(values);
   };
 
-  const isLoading = loginMutation.isPending || !!success;
+  const isLoading = loginMutation.isPending || Boolean(success);
 
   return (
-    <div className="flex items-center justify-center min-h-screen px-4 py-12 bg-gray/10">
-      <div className="w-full max-w-md">
-        {/* Brand */}
-        <div className="flex flex-col items-center gap-3 mb-8">
-          <Img src="/icons/dark-logo.png" alt="lindway logo" className="w-32 h-12" cover />
-          <span className="text-xs font-semibold tracking-[0.2em] uppercase text-gray/70">Admin Panel</span>
+    <div className="flex items-center justify-center min-h-screen px-4 py-12 bg-sidebar">
+      <div className="w-full max-w-sm">
+        <div className="mb-10 text-center">
+          <p className="admin-eyebrow">Dashboard</p>
+          <h1 className="mt-2 text-3xl font-normal font-heading text-body">Lindway Home</h1>
         </div>
 
-        {/* Card */}
-        <div className="p-6 border shadow-lg rounded-2xl border-gray/15 bg-light sm:p-8">
-          <div className="mb-6 space-y-1 text-center">
-            <h1 className="text-2xl font-bold text-darker-gray">Welcome back</h1>
-            <p className="text-sm text-gray">Sign in to continue managing your store.</p>
-          </div>
-
-          <form className="space-y-5" onSubmit={handleSubmit}>
-            {errors.general && (
-              <div className="flex items-start gap-2 px-4 py-3 text-sm text-red-600 border border-red-200 rounded-lg bg-red-50">
-                <FaExclamationCircle className="mt-0.5 shrink-0" />
-                <span>{errors.general}</span>
-              </div>
+        <div className="p-8 border rounded-sm bg-light border-border">
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            {error && (
+              <p className="flex items-start gap-2 px-3 py-2.5 text-sm text-red-700 border rounded-sm border-red-700/25 bg-red-700/5">
+                <PiWarningCircle className="mt-0.5 size-4 shrink-0" />
+                {error}
+              </p>
             )}
             {success && (
-              <div className="flex items-start gap-2 px-4 py-3 text-sm text-green-600 border border-green-200 rounded-lg bg-green-50">
-                <FaCheckCircle className="mt-0.5 shrink-0" />
-                <span>{success}</span>
-              </div>
+              <p className="flex items-start gap-2 px-3 py-2.5 text-sm border rounded-sm text-emerald-700 border-emerald-700/25 bg-emerald-700/5">
+                <PiCheckCircle className="mt-0.5 size-4 shrink-0" />
+                {success}
+              </p>
             )}
 
-            <div className="space-y-1.5">
-              <label htmlFor="username" className="block text-sm font-medium text-darker-gray">
-                Username
-              </label>
-              <div className="relative">
-                <FaUser className="absolute -translate-y-1/2 pointer-events-none left-3 top-1/2 text-gray/50" />
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  autoComplete="username"
-                  disabled={isLoading}
-                  value={values.username}
-                  onChange={handleChange}
-                  className="pl-10 input-form disabled:bg-gray/5"
-                  placeholder="Enter your username"
-                />
-              </div>
-            </div>
+            <Field label="Username" htmlFor="username" required>
+              <TextInput id="username" name="username" type="text" autoComplete="username" disabled={isLoading} value={values.username} onChange={handleChange} placeholder="Your username or email" />
+            </Field>
 
-            <div className="space-y-1.5">
-              <label htmlFor="password" className="block text-sm font-medium text-darker-gray">
-                Password
-              </label>
+            <Field label="Password" htmlFor="password" required>
               <div className="relative">
-                <FaLock className="absolute -translate-y-1/2 pointer-events-none left-3 top-1/2 text-gray/50" />
-                <input
+                <TextInput
                   id="password"
                   name="password"
                   type={showPassword ? "text" : "password"}
@@ -123,28 +89,28 @@ export const Login = () => {
                   disabled={isLoading}
                   value={values.password}
                   onChange={handleChange}
-                  className="px-10 input-form disabled:bg-gray/5"
-                  placeholder="Enter your password"
+                  className="pr-10"
+                  placeholder="••••••••"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
+                  onClick={() => setShowPassword((previous) => !previous)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
-                  className="absolute -translate-y-1/2 cursor-pointer right-3 top-1/2 text-gray/50 hover:text-gray"
+                  className="absolute -translate-y-1/2 cursor-pointer right-3 top-1/2 text-body/40 hover:text-body"
                 >
-                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                  {showPassword ? <PiEyeSlash className="size-4" /> : <PiEye className="size-4" />}
                 </button>
               </div>
-            </div>
+            </Field>
 
-            <Button type="submit" disabled={isLoading} className="flex items-center justify-center w-full gap-2 py-2.5 btn-gray">
-              {loginMutation.isPending && <span className="inline-block border-2 rounded-full size-4 border-light/40 border-t-light animate-spin" />}
-              {loginMutation.isPending ? "Signing in..." : success ? "Redirecting..." : "Sign in"}
-            </Button>
+            <AdminButton type="submit" variant="solid" disabled={isLoading} className="w-full">
+              {loginMutation.isPending && <Spinner />}
+              {loginMutation.isPending ? "Signing in…" : success ? "Redirecting…" : "Sign in"}
+            </AdminButton>
           </form>
         </div>
 
-        <p className="mt-6 text-xs text-center text-gray/70">Authorized access only. Contact your administrator if you need an account.</p>
+        <p className="mt-6 text-xs text-center text-body/45">Authorized access only. Contact your administrator if you need an account.</p>
       </div>
     </div>
   );

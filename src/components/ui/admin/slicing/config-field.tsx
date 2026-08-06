@@ -76,10 +76,10 @@ export const BooleanField = ({ value, onChange }: { value: ConfigValue; onChange
       onClick={() => onChange(!isEnabled)}
       className="flex items-center gap-3 cursor-pointer group"
     >
-      <span className={`relative inline-flex items-center rounded-full h-6 w-11 duration-300 ${isEnabled ? "bg-green-500" : "bg-gray/30"}`}>
+      <span className={`relative inline-flex items-center rounded-full h-6 w-11 duration-300 ${isEnabled ? "bg-primary" : "bg-border"}`}>
         <span className={`inline-block rounded-full size-4 bg-light shadow duration-300 ${isEnabled ? "translate-x-6" : "translate-x-1"}`} />
       </span>
-      <span className={`text-sm font-medium ${isEnabled ? "text-darker-gray" : "text-gray/60"}`}>{isEnabled ? "Enabled" : "Disabled"}</span>
+      <span className={`text-sm font-medium ${isEnabled ? "text-body" : "text-body/50"}`}>{isEnabled ? "Enabled" : "Disabled"}</span>
     </button>
   );
 };
@@ -102,11 +102,29 @@ export const TextareaField = ({ config, value, onChange }: { config: Config; val
 export const JsonField = ({ value, onChange }: { value: ConfigValue; onChange: (value: ConfigValue) => void }) => {
   const [error, setError] = React.useState<string | null>(null);
   const [rawMode, setRawMode] = React.useState(false);
-  const [rawText, setRawText] = React.useState(() => JSON.stringify(value, null, 2));
 
-  React.useEffect(() => {
-    setRawText(JSON.stringify(value, null, 2));
-  }, [value]);
+  const serialized = JSON.stringify(value, null, 2);
+
+  const [rawText, setRawText] = React.useState(serialized);
+  const [syncedValue, setSyncedValue] = React.useState(serialized);
+
+  // Resynced during render rather than in an effect (which also cleared this file's
+  // share of the lint baseline). The comparison is semantic, not textual: after the
+  // admin types, `value` comes back as OUR OWN edit re-serialized, and overwriting the
+  // textarea with the pretty-printed form would reformat it under their cursor. Only a
+  // value that the current text does not already mean is treated as external.
+  if (serialized !== syncedValue) {
+    setSyncedValue(serialized);
+
+    let alreadyEquivalent = false;
+    try {
+      alreadyEquivalent = JSON.stringify(JSON.parse(rawText), null, 2) === serialized;
+    } catch {
+      alreadyEquivalent = false;
+    }
+
+    if (!alreadyEquivalent) setRawText(serialized);
+  }
 
   const handleRawChange = (text: string) => {
     setRawText(text);
@@ -156,18 +174,18 @@ export const JsonField = ({ value, onChange }: { value: ConfigValue; onChange: (
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-gray/60 font-mono">Array · {rows.length} rows</span>
-          <button type="button" onClick={() => setRawMode(true)} className="text-xs text-blue-500 hover:underline">
+          <span className="text-xs text-body/50 font-mono">Array · {rows.length} rows</span>
+          <button type="button" onClick={() => setRawMode(true)} className="text-xs text-primary hover:text-body">
             Edit as JSON
           </button>
         </div>
 
-        <div className="overflow-x-auto border border-gray/30 rounded-lg">
+        <div className="overflow-x-auto border border-border rounded-sm">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray/10 border-b border-gray/30">
+              <tr className="bg-muted border-b border-border">
                 {keys.map((k) => (
-                  <th key={k} className="px-3 py-2 text-left font-medium text-gray capitalize">
+                  <th key={k} className="px-3 py-2 text-left font-medium text-body capitalize">
                     {k.replace(/_/g, " ")}
                   </th>
                 ))}
@@ -176,7 +194,7 @@ export const JsonField = ({ value, onChange }: { value: ConfigValue; onChange: (
             </thead>
             <tbody>
               {rows.map((row, rowIndex) => (
-                <tr key={rowIndex} className="border-b border-gray/20 last:border-0 hover:bg-gray/5">
+                <tr key={rowIndex} className="border-b border-border/70 last:border-0 hover:bg-muted/60">
                   {keys.map((k) => (
                     <td key={k} className="px-3 py-2">
                       <input
@@ -184,12 +202,12 @@ export const JsonField = ({ value, onChange }: { value: ConfigValue; onChange: (
                         value={row[k] === null ? "" : String(row[k])}
                         placeholder={row[k] === null ? "null" : ""}
                         onChange={(e) => updateCell(rowIndex, k, e.target.value)}
-                        className="w-full bg-transparent border-b border-gray/30 focus:border-blue-500 outline-none py-0.5 text-gray placeholder:text-gray/30 min-w-20"
+                        className="w-full bg-transparent border-b border-border focus:border-primary outline-none py-0.5 text-body placeholder:text-body/30 min-w-20"
                       />
                     </td>
                   ))}
                   <td className="px-3 py-2">
-                    <button type="button" onClick={() => removeRow(rowIndex)} className="text-red-400 hover:text-red-600" aria-label="Remove row">
+                    <button type="button" onClick={() => removeRow(rowIndex)} className="text-body/40 hover:text-red-700" aria-label="Remove row">
                       ✕
                     </button>
                   </td>
@@ -199,7 +217,7 @@ export const JsonField = ({ value, onChange }: { value: ConfigValue; onChange: (
           </table>
         </div>
 
-        <button type="button" onClick={addRow} className="text-xs text-blue-600 hover:underline">
+        <button type="button" onClick={addRow} className="text-xs text-primary hover:text-body">
           + Add row
         </button>
       </div>
@@ -227,21 +245,21 @@ export const JsonField = ({ value, onChange }: { value: ConfigValue; onChange: (
     return (
       <div className="space-y-3">
         <div className="flex justify-end">
-          <button type="button" onClick={() => setRawMode(true)} className="text-xs text-blue-500 hover:underline">
+          <button type="button" onClick={() => setRawMode(true)} className="text-xs text-primary hover:text-body">
             Edit as JSON
           </button>
         </div>
 
-        <div className="border border-gray/30 rounded-lg overflow-hidden">
+        <div className="border border-border rounded-sm overflow-hidden">
           {keys.map((k, i) => (
-            <div key={k} className={`flex items-center gap-3 px-3 py-2 ${i !== keys.length - 1 ? "border-b border-gray/20" : ""} hover:bg-gray/5`}>
-              <span className="text-xs font-mono text-gray/60 w-28 shrink-0 capitalize">{k.replace(/_/g, " ")}</span>
+            <div key={k} className={`flex items-center gap-3 px-3 py-2 ${i !== keys.length - 1 ? "border-b border-border/70" : ""} hover:bg-muted/60`}>
+              <span className="text-xs font-mono text-body/50 w-28 shrink-0 capitalize">{k.replace(/_/g, " ")}</span>
               <input
                 type="text"
                 value={obj[k] === null ? "" : String(obj[k])}
                 placeholder={obj[k] === null ? "null" : ""}
                 onChange={(e) => updateKey(k, e.target.value)}
-                className="flex-1 bg-transparent border-b border-gray/30 focus:border-blue-500 outline-none py-0.5 text-gray placeholder:text-gray/30"
+                className="flex-1 bg-transparent border-b border-border focus:border-primary outline-none py-0.5 text-body placeholder:text-body/30"
               />
             </div>
           ))}
@@ -260,14 +278,14 @@ export const JsonField = ({ value, onChange }: { value: ConfigValue; onChange: (
               setRawMode(false);
               setError(null);
             }}
-            className="text-xs text-blue-500 hover:underline"
+            className="text-xs text-primary hover:text-body"
           >
             Back to editor
           </button>
         </div>
       )}
-      <textarea value={rawText} onChange={(e) => handleRawChange(e.target.value)} rows={8} spellCheck={false} className={`input-form font-mono text-xs ${error ? "border-red-400" : ""}`} />
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      <textarea value={rawText} onChange={(e) => handleRawChange(e.target.value)} rows={8} spellCheck={false} className={`input-form font-mono text-xs ${error ? "border-red-700" : ""}`} />
+      {error && <p className="text-xs text-red-700">{error}</p>}
     </div>
   );
 };
@@ -313,26 +331,26 @@ export const ImageField = ({ configKey, value, onChange }: { configKey: string; 
   return (
     <div className="space-y-4">
       <div className="space-y-1">
-        <div className="relative flex flex-row items-center overflow-hidden border rounded-lg border-gray/50">
+        <div className="relative flex flex-row items-center overflow-hidden border rounded-sm border-border">
           <input type="file" id={`image-${configKey}`} ref={inputRef} onChange={handleUpload} hidden accept="image/*" />
           <label htmlFor={`image-${configKey}`} className="file-label">
             Choose Image
           </label>
-          <span className="text-sm text-slate-500 whitespace-nowrap">{imageValue?.originalName}</span>
-          <small className="pr-2 ms-auto text-gray/70">Max 5mb. (1:1)</small>
+          <span className="text-sm text-body/60 whitespace-nowrap">{imageValue?.originalName}</span>
+          <small className="pr-2 ms-auto text-body/50">Max 5mb. (1:1)</small>
         </div>
         {uploading && <ProgressBar uploadProgress={uploadProgress} />}
       </div>
 
       {imageValue && (
         <div className="relative w-80">
-          <button onClick={handleDelete} type="button" className="absolute flex items-center justify-center w-5 h-5 rounded-full -top-2 -right-2 z-10 bg-secondary cursor-pointer">
+          <button onClick={handleDelete} type="button" className="absolute flex items-center justify-center w-5 h-5 rounded-full -top-2 -right-2 z-10 bg-primary cursor-pointer">
             <svg className="size-4 text-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
-          <div className="relative overflow-hidden rounded-lg">
-            <Img src={imageValue.url} alt={imageValue.alt} className="rounded-lg aspect-square w-full" cover />
+          <div className="relative overflow-hidden rounded-sm">
+            <Img src={imageValue.url} alt={imageValue.alt} className="rounded-sm aspect-square w-full" cover />
             {deleting && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                 <div className="flex flex-col items-center gap-3">
@@ -388,13 +406,13 @@ export const ImagesField = ({ configKey, value, onChange }: { configKey: string;
   return (
     <div className="space-y-4">
       <div className="space-y-1">
-        <div className="relative flex flex-row items-center overflow-hidden border rounded-lg border-gray/50">
+        <div className="relative flex flex-row items-center overflow-hidden border rounded-sm border-border">
           <input type="file" id={`images-${configKey}`} ref={inputRef} onChange={handleUpload} hidden multiple accept="image/*" />
           <label htmlFor={`images-${configKey}`} className="file-label">
             Choose Images
           </label>
-          <span className="text-sm text-slate-500 whitespace-nowrap">{images.length} Images</span>
-          <small className="pr-2 ms-auto text-gray/70">Max 5mb. (1:1)</small>
+          <span className="text-sm text-body/60 whitespace-nowrap">{images.length} Images</span>
+          <small className="pr-2 ms-auto text-body/50">Max 5mb. (1:1)</small>
         </div>
         {uploading && <ProgressBar uploadProgress={uploadProgress} />}
       </div>
@@ -402,18 +420,18 @@ export const ImagesField = ({ configKey, value, onChange }: { configKey: string;
       {images.length > 0 && (
         <div className="grid grid-cols-3 gap-2">
           {images.map((image, index) => (
-            <div key={index} className="relative rounded-lg">
+            <div key={index} className="relative rounded-sm">
               <button
                 onClick={() => handleDelete(image.path)}
                 type="button"
-                className="absolute flex items-center justify-center w-5 h-5 rounded-full -top-2 -right-2 z-10 bg-secondary cursor-pointer"
+                className="absolute flex items-center justify-center w-5 h-5 rounded-full -top-2 -right-2 z-10 bg-primary cursor-pointer"
               >
                 <svg className="size-4 text-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
-              <div className="relative overflow-hidden rounded-lg shadow-lg">
-                <Img src={image.url} alt={`Image ${index + 1}`} className="w-full rounded-lg aspect-square" cover />
+              <div className="relative overflow-hidden rounded-sm shadow-lg">
+                <Img src={image.url} alt={`Image ${index + 1}`} className="w-full rounded-sm aspect-square" cover />
                 {deletingPath === image.path && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                     <div className="flex flex-col items-center gap-3">
@@ -472,26 +490,26 @@ export const VideoField = ({ value, onChange }: { value: ConfigValue; onChange: 
   return (
     <div className="space-y-4">
       <div className="space-y-1">
-        <div className="relative flex flex-row items-center overflow-hidden border rounded-lg border-gray/50">
+        <div className="relative flex flex-row items-center overflow-hidden border rounded-sm border-border">
           <input type="file" id="video-single" ref={inputRef} onChange={handleUpload} hidden accept="video/mp4,video/x-m4v,video/*" />
           <label htmlFor="video-single" className="file-label">
             Choose Video
           </label>
-          <span className="text-sm text-slate-500 whitespace-nowrap">{videoValue?.originalName}</span>
-          <small className="pr-2 ms-auto text-gray/70">Max 15mb. (16:9)</small>
+          <span className="text-sm text-body/60 whitespace-nowrap">{videoValue?.originalName}</span>
+          <small className="pr-2 ms-auto text-body/50">Max 15mb. (16:9)</small>
         </div>
         {uploading && <ProgressBar uploadProgress={uploadProgress} />}
       </div>
 
       {videoValue && (
         <div className="relative w-96">
-          <button onClick={handleDelete} type="button" className="absolute flex items-center justify-center w-5 h-5 rounded-full -top-2 -right-2 z-10 bg-secondary cursor-pointer">
+          <button onClick={handleDelete} type="button" className="absolute flex items-center justify-center w-5 h-5 rounded-full -top-2 -right-2 z-10 bg-primary cursor-pointer">
             <svg className="size-4 text-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
-          <div className="relative overflow-hidden rounded-lg">
-            <video src={videoValue.url} aria-label={videoValue.originalName} className="w-full h-auto rounded-lg shadow-md" autoPlay muted loop controls />
+          <div className="relative overflow-hidden rounded-sm">
+            <video src={videoValue.url} aria-label={videoValue.originalName} className="w-full h-auto rounded-sm shadow-md" autoPlay muted loop controls />
             {deleting && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                 <div className="flex flex-col items-center gap-3">
@@ -546,13 +564,13 @@ export const VideosField = ({ value, onChange }: { value: ConfigValue; onChange:
   return (
     <div className="space-y-4">
       <div className="space-y-1">
-        <div className="relative flex flex-row items-center overflow-hidden border rounded-lg border-gray/50">
+        <div className="relative flex flex-row items-center overflow-hidden border rounded-sm border-border">
           <input type="file" id="videos-multiple" ref={inputRef} onChange={handleUpload} hidden multiple accept="video/mp4,video/x-m4v,video/*" />
           <label htmlFor="videos-multiple" className="file-label">
             Choose Videos
           </label>
-          <span className="text-sm text-slate-500 whitespace-nowrap">{videos.length} Videos</span>
-          <small className="pr-2 ms-auto text-gray/70">Max 15mb. (16:9)</small>
+          <span className="text-sm text-body/60 whitespace-nowrap">{videos.length} Videos</span>
+          <small className="pr-2 ms-auto text-body/50">Max 15mb. (16:9)</small>
         </div>
         {uploading && <ProgressBar uploadProgress={uploadProgress} />}
       </div>
@@ -560,18 +578,18 @@ export const VideosField = ({ value, onChange }: { value: ConfigValue; onChange:
       {videos.length > 0 && (
         <div className="grid grid-cols-3 gap-2">
           {videos.map((video, index) => (
-            <div key={index} className="relative rounded-lg">
+            <div key={index} className="relative rounded-sm">
               <button
                 onClick={() => handleDelete(video.path)}
                 type="button"
-                className="absolute flex items-center justify-center w-5 h-5 rounded-full -top-2 -right-2 z-10 bg-secondary cursor-pointer"
+                className="absolute flex items-center justify-center w-5 h-5 rounded-full -top-2 -right-2 z-10 bg-primary cursor-pointer"
               >
                 <svg className="size-4 text-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
-              <div className="relative overflow-hidden rounded-lg shadow-lg">
-                <video src={video.url} aria-label={video.originalName} className="w-full h-auto rounded-lg" autoPlay muted loop controls />
+              <div className="relative overflow-hidden rounded-sm shadow-lg">
+                <video src={video.url} aria-label={video.originalName} className="w-full h-auto rounded-sm" autoPlay muted loop controls />
                 {deletingPath === video.path && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                     <div className="flex flex-col items-center gap-3">

@@ -105,7 +105,8 @@ export interface QueryParams {
   isActive?: boolean;
   isFavorite?: boolean;
   isPurchased?: string;
-  status?: OrderStatus;
+  status?: OrderStatus | string;
+  paymentMethod?: PaymentMethods | string;
   year?: string;
   month?: string;
   dateFrom?: string;
@@ -570,8 +571,23 @@ export interface DashboardData {
   totalOrders: number;
   totalProducts: number;
   totalMembers: number;
+  inactiveProducts: number;
   /** One entry per BrandingType present in the catalog — no longer three fixed fields. */
   stockByBranding: { branding: BrandingType; stock: number; products: number }[];
+  /** Every OrderStatus, lifecycle-ordered, including the stages sitting at zero. */
+  statusPipeline: { status: OrderStatus; count: number }[];
+  /** Fixed 30-day window — independent of the month/year filter. */
+  ordersByDay: { date: string; bankTransfer: number; qris: number }[];
+  latestOrders: {
+    id: string;
+    fullname: string;
+    email: string;
+    totalPurchased: number;
+    status: OrderStatus;
+    isPurchased: boolean;
+    paymentMethod: PaymentMethods;
+    createdAt: string;
+  }[];
 }
 
 // =============================================================================

@@ -2,12 +2,13 @@
 
 import * as React from "react";
 
+import { PiTable } from "react-icons/pi";
 
 import { convertDate, sizeGuidesApi } from "@/utils";
 
 import { ApiResponse, SizeGuide } from "@/types";
 
-import { Badge, ConfirmDialog, EmptyState, ErrorState, LoadingState, Panel, TableShell, Td, Th } from "./slicing";
+import { Badge, ConfirmDialog, EmptyState, ErrorState, LoadingState, PageHeader, Panel, RowAction, TableShell, Td, Th } from "./slicing";
 
 /**
  * Read-and-publish screen. Creating a guide from scratch belongs on the product
@@ -31,28 +32,27 @@ export const SizeGuidesDashboard = () => {
 
   const guides = data?.data ?? [];
 
-  const togglePublished = (guide: SizeGuide) => {
-    // publishedAt IS the on/off switch — there is no isActive beside it (D1).
-    updateGuide.mutate({ id: guide.id, guide: { publishedAt: guide.publishedAt ? null : new Date().toISOString() } });
-  };
+  // publishedAt IS the on/off switch — there is no isActive beside it (D1).
+  const togglePublished = (guide: SizeGuide) => updateGuide.mutate({ id: guide.id, guide: { publishedAt: guide.publishedAt ? null : new Date().toISOString() } });
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold font-heading text-body">Size Guides</h1>
-        <p className="mt-1 text-sm text-body/70">Published guides appear on the public Size Guide page as a flat list, ordered by the number below. Unpublished ones are drafts.</p>
-      </div>
+    <>
+      <PageHeader
+        eyebrow="Catalog"
+        title="Size Guides"
+        description="Published guides appear on the public Size Guide page as a flat list, ordered by the number below. Unpublished ones are drafts. Authoring happens on the product form (F-38), so this screen lists and publishes rather than duplicating that editor."
+      />
 
       {isLoading ? (
-        <LoadingState message="Loading size guides…" />
+        <LoadingState message="Loading size guides" />
       ) : isError ? (
         <ErrorState onRetry={refetch} />
       ) : guides.length === 0 ? (
-        <EmptyState icon={<span className="text-2xl">📐</span>} title="No size guides yet" description="Create one from a product's size guide picker." />
+        <EmptyState icon={<PiTable className="size-6" />} title="No size guides yet" description="Create one from a product's size guide picker." />
       ) : (
-        <Panel>
+        <Panel className="overflow-hidden">
           <TableShell>
-            <thead>
+            <thead className="border-b bg-muted/60 border-border">
               <tr>
                 <Th>Title</Th>
                 <Th>Rows</Th>
@@ -61,67 +61,70 @@ export const SizeGuidesDashboard = () => {
                 <Th className="text-right">Actions</Th>
               </tr>
             </thead>
-            <tbody>
-              {guides.map((guide) => (
-                <React.Fragment key={guide.id}>
-                  <tr>
-                    <Td className="font-medium">{guide.title ?? "(untitled)"}</Td>
-                    <Td>{guide.rows.length}</Td>
-                    <Td>{guide.order}</Td>
-                    <Td>
-                      <Badge className={guide.publishedAt ? "bg-primary/10 text-primary" : "bg-body/10 text-body/60"}>
-                        {guide.publishedAt ? `Published ${convertDate(guide.publishedAt)}` : "Draft"}
-                      </Badge>
-                    </Td>
-                    <Td className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <button onClick={() => setExpanded(expanded === guide.id ? null : guide.id)} className="text-sm underline text-primary">
-                          {expanded === guide.id ? "Hide" : "View"}
-                        </button>
-                        <button onClick={() => togglePublished(guide)} disabled={updateGuide.isPending} className="text-sm underline text-primary disabled:opacity-50">
-                          {guide.publishedAt ? "Unpublish" : "Publish"}
-                        </button>
-                        <button onClick={() => setToDelete(guide)} className="text-sm underline text-red-600">
-                          Delete
-                        </button>
-                      </div>
-                    </Td>
-                  </tr>
+            <tbody className="divide-y divide-border/70">
+              {guides.map((guide) => {
+                const columns = Object.keys(guide.rows[0]?.measurements ?? {});
 
-                  {expanded === guide.id && (
-                    <tr>
-                      <Td className="bg-muted/50" colSpan={5}>
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm">
-                            <thead>
-                              <tr className="text-left text-body/60">
-                                <th className="px-3 py-2">Size</th>
-                                {Object.keys(guide.rows[0]?.measurements ?? {}).map((key) => (
-                                  <th key={key} className="px-3 py-2">
-                                    {guide.parameterLabels?.[key] ?? key}
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {guide.rows.map((row) => (
-                                <tr key={row.id}>
-                                  <td className="px-3 py-2 font-mono">{row.size?.code ?? row.sizeId}</td>
-                                  {Object.keys(guide.rows[0]?.measurements ?? {}).map((key) => (
-                                    <td key={key} className="px-3 py-2">
-                                      {row.measurements[key] ?? "—"}
-                                    </td>
-                                  ))}
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                return (
+                  <React.Fragment key={guide.id}>
+                    <tr className="duration-200 hover:bg-muted/40">
+                      <Td className="text-body">{guide.title ?? "(untitled)"}</Td>
+                      <Td className="tabular-nums">{guide.rows.length}</Td>
+                      <Td className="tabular-nums">{guide.order}</Td>
+                      <Td>
+                        <Badge className={guide.publishedAt ? "bg-emerald-500/15 text-emerald-700" : "bg-body/6 text-body/50"}>
+                          {guide.publishedAt ? `Published ${convertDate(guide.publishedAt)}` : "Draft"}
+                        </Badge>
+                      </Td>
+                      <Td className="text-right">
+                        <div className="flex justify-end gap-4">
+                          <RowAction onClick={() => setExpanded(expanded === guide.id ? null : guide.id)}>{expanded === guide.id ? "Hide" : "View"}</RowAction>
+                          <RowAction onClick={() => togglePublished(guide)} disabled={updateGuide.isPending}>
+                            {guide.publishedAt ? "Unpublish" : "Publish"}
+                          </RowAction>
+                          <RowAction tone="danger" onClick={() => setToDelete(guide)}>
+                            Delete
+                          </RowAction>
                         </div>
                       </Td>
                     </tr>
-                  )}
-                </React.Fragment>
-              ))}
+
+                    {expanded === guide.id && (
+                      <tr>
+                        <Td className="bg-muted/50" colSpan={5}>
+                          <div className="overflow-x-auto scrollbar">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr>
+                                  <th className="px-3 py-2 font-heading text-xxs font-semibold tracking-[0.14em] text-left uppercase text-body/50">Size</th>
+                                  {columns.map((key) => (
+                                    <th key={key} className="px-3 py-2 font-heading text-xxs font-semibold tracking-[0.14em] text-left uppercase text-body/50">
+                                      {/* Labels are per-locale on the translation; the key is only the fallback. */}
+                                      {guide.parameterLabels?.[key] ?? key.replace(/_/g, " ")}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {guide.rows.map((row) => (
+                                  <tr key={row.id}>
+                                    <td className="px-3 py-2 font-mono text-xs text-body">{row.size?.code ?? row.sizeId}</td>
+                                    {columns.map((key) => (
+                                      <td key={key} className="px-3 py-2 text-body/70 tabular-nums">
+                                        {row.measurements[key] ?? "—"}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </Td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </TableShell>
         </Panel>
@@ -136,12 +139,6 @@ export const SizeGuidesDashboard = () => {
         onConfirm={() => toDelete && deleteGuide.mutate(toDelete.id)}
         onClose={() => setToDelete(null)}
       />
-
-      <Panel className="p-4">
-        <p className="text-sm text-body/70">
-          <strong>Creating a guide</strong> happens on the product form: pick an existing guide, adjust the measurements, and save it as a new one (F-38). That screen arrives in phase 2.
-        </p>
-      </Panel>
-    </div>
+    </>
   );
 };
