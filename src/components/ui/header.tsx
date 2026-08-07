@@ -10,7 +10,7 @@ import { PiCaretDown, PiHandbagSimple, PiHeartStraight, PiList, PiX } from "reac
 
 import { Container, Img, LocaleLink } from "@/components";
 
-import { useCartStore, useIsHydrated, useScrolled, useWishlistStore } from "@/hooks";
+import { useCartStore, useIsHydrated, useWishlistStore } from "@/hooks";
 
 import { aboutNav, audienceNav, brandingNav, customerCareNav, garmentNav, type NavItem } from "@/static/navigation";
 
@@ -120,10 +120,6 @@ export const Header = ({ labels }: { labels: HeaderLabels }) => {
   // better — see useIsHydrated for why this is not an effect.
   const isHydrated = useIsHydrated();
 
-  // Past this point the header tightens its padding. Held expanded while the mobile
-  // drawer is open, since condensing under an open menu just makes the page jump.
-  const isCondensed = useScrolled(24) && !isDrawerOpen;
-
   const bagCount = isHydrated ? getCartItemByProduct() : 0;
   const wishlistCount = isHydrated ? wishlist.count() : 0;
 
@@ -145,17 +141,16 @@ export const Header = ({ labels }: { labels: HeaderLabels }) => {
             grid rather than flex justify-between, so the wordmark stays optically centred no
             matter how wide the two sides get: with justify-between the middle item drifts
             off-centre the moment the counts go from (0) to (12). */}
-        <div className={`grid items-center grid-cols-[1fr_auto_1fr] gap-4 duration-300 ${isCondensed ? "py-3" : "py-5 lg:py-6"}`}>
+        <div className="grid items-center grid-cols-[1fr_auto_1fr] gap-4 py-3">
           <div className="justify-self-start">
             <LanguageSwitch />
           </div>
 
           {/* The box keeps the wordmark's own 3:2 — the file is 662×437. `Img` fills its
               box, so a wider box crops the top and bottom off the mark rather than
-              letterboxing it, which is what was slicing the W and the tail of "Way".
-              Size is the same in both states; scrolling only tightens the padding. */}
+              letterboxing it, which is what was slicing the W and the tail of "Way". */}
           <LocaleLink href="/" aria-label="Lindway home" className="justify-self-center">
-            <Img src="/icons/dark-logo.png" alt="Lindway" className="w-[84px] h-14 lg:w-24 lg:h-16" cover />
+            <Img src="/icons/dark-logo.png" alt="Lindway" className="w-24 h-16 lg:w-31.5 lg:h-21" cover />
           </LocaleLink>
 
           <div className="flex items-center gap-5 lg:gap-7 justify-self-end">
