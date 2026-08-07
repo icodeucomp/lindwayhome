@@ -1,68 +1,120 @@
+import { PiEnvelopeSimple, PiFacebookLogo, PiInstagramLogo, PiWhatsappLogo } from "react-icons/pi";
+
 import { Container, Img, LocaleLink } from "@/components";
 
-import { aboutNav, brandingNav, customerCareNav, shopNav, socialLinks } from "@/static/navigation";
+import { aboutNav, brandingNav, customerCareNav, legalNav, localizeNav, shopNav, socialLinks } from "@/static/navigation";
 
-const columns = [
-  { title: "Collections", items: brandingNav },
-  { title: "Shop", items: shopNav },
-  { title: "Customer Care", items: customerCareNav },
-  { title: "About", items: aboutNav },
-];
+/**
+ * Decorative still life on the right edge. One constant because it is the only piece of
+ * the footer the client will want to swap — replace the path, nothing else.
+ */
+const DECOR_IMAGE = "/images/our-fabric-thoughtfully-image-1.webp";
 
-export const Footer = () => {
-  return (
-    <footer className="mt-8 bg-footer text-body">
-      <Container className="grid grid-cols-1 gap-10 py-12 lg:grid-cols-5">
-        <div className="flex flex-col justify-between gap-8 lg:col-span-1">
-          <LocaleLink href="/" className="mx-auto w-max lg:mx-0">
-            <Img src="/icons/dark-logo.png" alt="lindway logo" className="h-14 min-w-36 max-w-36" cover />
+/** Labels the layout hands down, so the footer speaks the reader's language (F-30). */
+export interface FooterLabels {
+  tagline: string;
+  description: string;
+  address: string;
+  email: string;
+  collections: string;
+  shop: string;
+  customerCare: string;
+  about: string;
+  /** Link labels keyed the way `localizeNav` expects — see navigation.ts. */
+  aboutLinks: Record<string, string>;
+  careLinks: Record<string, string>;
+  shopLinks: Record<string, string>;
+  legalLinks: Record<string, string>;
+}
+
+const LinkColumn = ({ title, items }: { title: string; items: { name: string; href: string }[] }) => (
+  <div>
+    <p className="font-heading text-sm font-semibold tracking-[0.14em] uppercase text-body">{title}</p>
+    <ul className="mt-5 space-y-3 list-none">
+      {items.map((item) => (
+        <li key={`${title}-${item.href}`}>
+          <LocaleLink href={item.href} className="text-sm duration-200 text-body/80 hover:text-primary">
+            {item.name}
           </LocaleLink>
-          <div className="space-y-4">
-            <p className="text-sm text-center lg:text-start">Jalan Hayam Wuruk Gang XVII No. 36 Denpasar Timur, Bali 80239, Indonesia</p>
-            <menu className="flex items-center justify-center gap-4 list-none lg:justify-start">
-              <li>
-                <a href={socialLinks.maps} target="_blank" rel="noopener noreferrer">
-                  <Img src="/icons/location-grey.svg" alt="location icons" className="size-6" />
-                </a>
-              </li>
-              <li>
-                <a href={socialLinks.whatsapp} target="_blank" rel="noopener noreferrer">
-                  <Img src="/icons/whatsapp-grey.svg" alt="whatsapp icons" className="size-6" />
-                </a>
-              </li>
-              <li>
-                <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer">
-                  <Img src="/icons/instagram-grey.svg" alt="instagram icons" className="size-6" />
-                </a>
-              </li>
-              <li>
-                <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer">
-                  <Img src="/icons/facebook-grey.svg" alt="facebook icons" className="size-6" />
-                </a>
-              </li>
-            </menu>
-          </div>
+        </li>
+      ))}
+    </ul>
+  </div>
+);
+
+const SocialLink = ({ href, label, icon }: { href: string; label: string; icon: React.ReactNode }) => (
+  <li>
+    <a href={href} target="_blank" rel="noopener noreferrer" aria-label={label} title={label} className="block duration-200 text-body hover:text-primary">
+      {icon}
+    </a>
+  </li>
+);
+
+export const Footer = ({ labels }: { labels: FooterLabels }) => {
+  const columns = [
+    { title: labels.collections, items: brandingNav },
+    { title: labels.shop, items: localizeNav(shopNav, labels.shopLinks) },
+    { title: labels.customerCare, items: localizeNav(customerCareNav, labels.careLinks) },
+    { title: labels.about, items: localizeNav(aboutNav, labels.aboutLinks) },
+  ];
+
+  return (
+    <footer className="bg-footer text-body">
+      {/* Only this section is a positioning context, so the still life stops above the
+          bottom bar rather than showing through behind the copyright line. */}
+      <div className="relative overflow-hidden">
+        {/* The photo bleeds to the viewport edge, so it sits outside Container. It is
+            decorative — aria-hidden, and gone below xl, where there is no room for it
+            beside four link columns. */}
+        <div aria-hidden className="absolute inset-y-0 right-0 hidden w-2/5 xl:block">
+          <Img src={DECOR_IMAGE} alt="" className="w-full h-full" cover />
+          {/* Fades the photo into the footer colour rather than butting against it. */}
+          <div className="absolute inset-0 bg-linear-to-r from-footer via-footer/70 to-transparent" />
         </div>
 
-        {columns.map((column) => (
-          <div key={column.title} className="space-y-3">
-            <p className="text-xs tracking-[0.2em] uppercase font-heading text-primary">{column.title}</p>
-            <ul className="space-y-2 list-none">
-              {column.items.map((item) => (
-                <li key={`${column.title}-${item.href}`}>
-                  <LocaleLink href={item.href} className="text-sm hover:text-primary">
-                    {item.name}
-                  </LocaleLink>
-                </li>
-              ))}
+        <Container className="grid grid-cols-1 gap-10 py-14 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.3fr)_repeat(4,minmax(0,1fr))] lg:gap-8">
+          <div className="max-w-sm">
+            <LocaleLink href="/" aria-label="Lindway home" className="block w-max">
+              <Img src="/icons/dark-logo.png" alt="Lindway" className="w-31.5 h-21" cover />
+            </LocaleLink>
+
+            <p className="mt-8 font-heading text-lg font-semibold text-body">{labels.tagline}</p>
+            <p className="mt-3 text-sm leading-relaxed text-body/80">{labels.description}</p>
+
+            <ul className="flex items-center gap-5 mt-8 list-none">
+              {/* The envelope points at the contact form rather than a mailto: — the form
+                  records an inquiry the admin inbox can track (F-47); a raw address does not. */}
+              <li>
+                <LocaleLink href="/customer-care/contact-us" aria-label={labels.email} title={labels.email} className="block duration-200 text-body hover:text-primary">
+                  <PiEnvelopeSimple className="size-6" />
+                </LocaleLink>
+              </li>
+              <SocialLink href={socialLinks.whatsapp} label="WhatsApp" icon={<PiWhatsappLogo className="size-6" />} />
+              <SocialLink href={socialLinks.facebook} label="Facebook" icon={<PiFacebookLogo className="size-6" />} />
+              <SocialLink href={socialLinks.instagram} label="Instagram" icon={<PiInstagramLogo className="size-6" />} />
             </ul>
           </div>
-        ))}
-      </Container>
+
+          {columns.map((column) => (
+            <LinkColumn key={column.title} title={column.title} items={column.items} />
+          ))}
+        </Container>
+      </div>
 
       <div className="border-t border-body/10">
-        <Container className="py-4">
-          <p className="text-xs text-center">© {new Date().getFullYear()} Lindway. All rights reserved.</p>
+        <Container className="flex flex-col items-center gap-3 py-5 text-xs sm:flex-row sm:justify-between text-body/80">
+          <p className="text-center sm:text-start">
+            © {new Date().getFullYear()} Lindway. {labels.address}
+          </p>
+          <ul className="flex items-center gap-8 list-none">
+            {localizeNav(legalNav, labels.legalLinks).map((item) => (
+              <li key={item.href}>
+                <LocaleLink href={item.href} className="duration-200 hover:text-primary">
+                  {item.name}
+                </LocaleLink>
+              </li>
+            ))}
+          </ul>
         </Container>
       </div>
     </footer>

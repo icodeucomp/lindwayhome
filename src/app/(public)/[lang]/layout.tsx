@@ -51,7 +51,21 @@ export default async function PublicLayout({ children, params }: Readonly<{ chil
               so that arrangement is gone and one placement serves every route. */}
           <Header labels={dictionary.nav} />
           <main className="flex-1">{children}</main>
-          <Footer />
+          <Footer
+            labels={{
+              ...dictionary.footer,
+              collections: dictionary.nav.collections,
+              shop: dictionary.nav.shop,
+              customerCare: dictionary.nav.customerCare,
+              about: dictionary.nav.about,
+              // Journal lives under nav rather than about, but appears in the About
+              // column (D13), so it is merged in here rather than duplicated in the file.
+              aboutLinks: { ...dictionary.about, journal: dictionary.nav.journal },
+              careLinks: dictionary.customerCare,
+              shopLinks: dictionary.nav,
+              legalLinks: dictionary.footer,
+            }}
+          />
         </QueryClientWrapper>
         <ScrollToTop />
       </body>
