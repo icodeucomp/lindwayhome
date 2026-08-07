@@ -34,14 +34,15 @@ export const audienceNav: NavItem[] = activeAudience().map((entry) => ({ name: e
 export const clothingNav: NavItem[] = activeClothing().map((entry) => ({ name: entry.label, href: `/shop/${entry.slug}` }));
 
 /**
- * The Collections menu's second column: clothing, then Best Sellers, then audience.
+ * The Collections menu's second column: Best Sellers, then clothing, then audience.
  *
  * Audience and clothing used to be two columns of their own. They are one list because
  * a reader picking their way into the catalogue is answering a single question — what
  * am I shopping for — and splitting it across two headed columns made them read the
- * headings before the links. Best Sellers sits between the two halves as the divider.
+ * headings before the links. Best Sellers leads, since it is the one entry that needs
+ * no decision from the reader.
  */
-export const shopByNav: NavItem[] = [...clothingNav, { key: "bestSellers", name: "Best Sellers", href: "/best-sellers" }, ...audienceNav];
+export const shopByNav: NavItem[] = [{ key: "bestSellers", name: "Best Sellers", href: "/best-sellers" }, ...clothingNav, ...audienceNav];
 
 export const aboutNav: NavItem[] = [
   { key: "ourStory", name: "Our Story", href: "/about/our-story" },
