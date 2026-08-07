@@ -66,7 +66,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       await tx.faq.update({
         where: { id },
         data: {
-          ...(data.topic !== undefined ? { topic: data.topic.trim() } : {}),
+          ...(data.topic !== undefined ? { topic: data.topic } : {}),
           ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
           ...(data.translations
             ? {

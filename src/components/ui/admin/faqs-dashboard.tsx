@@ -38,6 +38,13 @@ const STATUS_OPTIONS = [ALL, { value: "true", label: "Active" }, { value: "false
 
 const FILTER_KEYS = ["topic", "isActive"] as const;
 
+/**
+ * Topics are stored lowercase so that "Shipping" and "shipping" cannot become two
+ * groups. That makes them canonical but ugly to read, so every place the admin sees
+ * one puts the capitals back — "shipping cost" reads as "Shipping Cost".
+ */
+const titleCase = (topic: string) => topic.replace(/\b\w/g, (letter) => letter.toUpperCase());
+
 /** Renders the stored Tiptap answer as plain text — enough for a one-line preview. */
 const plainText = (node: unknown): string => {
   if (!node || typeof node !== "object") return "";
@@ -75,7 +82,7 @@ export const FaqsDashboard = () => {
 
   const faqs = data?.data ?? [];
   const pagination = data?.pagination;
-  const topicOptions = [ALL, ...(data?.topics ?? []).map((topic) => ({ value: topic, label: topic }))];
+  const topicOptions = [ALL, ...(data?.topics ?? []).map((topic) => ({ value: topic, label: titleCase(topic) }))];
 
   // Grouped for display, but the server already sorted by topic then creation order —
   // this only inserts the headings.
@@ -128,7 +135,7 @@ export const FaqsDashboard = () => {
           {Object.entries(groups).map(([topic, entries]) => (
             <div key={topic}>
               <div className="flex items-baseline justify-between gap-4 pb-3 mb-3 border-b border-border">
-                <h2 className="admin-section-label">{topic}</h2>
+                <h2 className="admin-section-label">{titleCase(topic)}</h2>
                 <span className="text-xs text-body/45">
                   {entries.length} entr{entries.length === 1 ? "y" : "ies"}
                 </span>

@@ -252,9 +252,16 @@ export const FaqTranslationSchema = z.object({
 
 export const FaqSchema = z.object({
   id: z.string().optional(),
-  // A free-text grouping key, so one component can serve several pages. Not a
-  // relation: topics have no attributes of their own beyond their name.
-  topic: z.string().min(1, "Topic is required"),
+  /**
+   * A free-text grouping key, so one component can serve several pages. Not a
+   * relation: topics have no attributes of their own beyond their name.
+   *
+   * Stored lowercase. Grouping and filtering both match the string exactly, so
+   * without this "Shipping" and "shipping" become two separate topics — two
+   * headings on the page, and a filter that finds only half the entries. Screens
+   * capitalise it for display; the stored form stays canonical.
+   */
+  topic: z.string().trim().min(1, "Topic is required").toLowerCase(),
   isActive: z.boolean().optional(),
   // The question lives here, not on the FAQ, so an EN row is genuinely required.
   translations: z.array(FaqTranslationSchema).min(1, "An EN translation is required"),
@@ -384,7 +391,9 @@ export const ContactInquiryQuerySchema = z.object({
 export const FaqQuerySchema = z.object({
   ...baseQuery,
   locale: LocaleEnum.optional().default("EN"),
-  topic: z.string().optional(),
+  // Lowercased to match how topics are stored, so a shared or bookmarked URL with
+  // "?topic=Shipping" still finds the entries.
+  topic: z.string().trim().toLowerCase().optional(),
   // Absent means both — the admin list must show inactive entries, or they cannot be
   // brought back. The public page passes isActive=true.
   isActive: z.string().optional(),

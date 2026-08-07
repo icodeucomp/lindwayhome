@@ -93,7 +93,8 @@ export async function POST(request: NextRequest) {
 
     const faq = await prisma.faq.create({
       data: {
-        topic: data.topic.trim(),
+        // Already trimmed and lowercased by the schema.
+        topic: data.topic,
         isActive: data.isActive,
         translations: {
           create: data.translations.map((translation) => ({ locale: translation.locale, question: translation.question, answer: translation.answer as Prisma.InputJsonValue })),
