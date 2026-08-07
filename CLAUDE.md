@@ -1149,7 +1149,9 @@ Three rows: wordmark centred and alone · language, tagline and the two counters
 - **The language switch is a dropdown, not "EN / ID" side by side.** With two languages the pair never makes it obvious which one you are in; showing the active one alone does.
 - **Counts are guarded by `useIsHydrated`.** The cart and wishlist live in `localStorage`, so the server cannot know them — it renders `(0)` and the browser corrects it during hydration.
 
-Two things deliberately not done, because the mockup does not show them: the header is **not sticky**, and there is **no condensed-on-scroll state**. Both are worth having on a shop where the bag should stay reachable; raise them when the design covers it.
+**The header is sticky, and that forced a fix one layer up.** `body` carried `overflow-x: hidden`, which makes the element a scroll container — a sticky descendant then sticks to *it* rather than to the viewport, and the header would have scrolled away regardless of the `sticky` class. It is now `overflow-x: clip`, which stops sideways scrolling without creating a scroll container. Keep it that way; swapping it back would break the header silently, with nothing in the markup to explain why.
+
+Still not done: there is **no condensed-on-scroll state**, so all three rows stay pinned — roughly 200px of viewport on desktop. Worth revisiting when a design for the compact form exists.
 
 ---
 

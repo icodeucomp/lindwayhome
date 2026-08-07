@@ -136,10 +136,7 @@ export const Header = ({ labels }: { labels: HeaderLabels }) => {
   ];
 
   return (
-    <header className="relative w-full border-b bg-light border-border" onMouseLeave={() => setOpenMenu(null)}>
-      {/* Thin accent rule across the top edge. */}
-      <div aria-hidden className="w-full h-2 bg-body" />
-
+    <header className="sticky top-0 z-50 w-full border-b bg-light border-border" onMouseLeave={() => setOpenMenu(null)}>
       <Container>
         {/* Row 1 — the wordmark, centred and alone. */}
         <div className="flex justify-center pt-7 pb-4 lg:pt-9 lg:pb-5">
@@ -156,7 +153,7 @@ export const Header = ({ labels }: { labels: HeaderLabels }) => {
             <LanguageSwitch />
           </div>
 
-          <p className="hidden font-heading text-base lg:text-xl tracking-[0.12em] uppercase text-primary justify-self-center whitespace-nowrap md:block">{labels.tagline}</p>
+          <p className="hidden font-heading text-base lg:text-xl font-bold tracking-[0.12em] uppercase text-primary justify-self-center whitespace-nowrap md:block">{labels.tagline}</p>
 
           <div className="flex items-center gap-5 lg:gap-7 justify-self-end">
             <span className="hidden sm:block">
@@ -170,11 +167,11 @@ export const Header = ({ labels }: { labels: HeaderLabels }) => {
             <span className="flex items-center gap-4 sm:hidden">
               <LocaleLink href="/wishlist" aria-label={labels.wishlist} className="relative text-primary">
                 <PiHeartStraight className="size-6" />
-                {wishlistCount > 0 && <span className="absolute grid rounded-full -top-1.5 -right-2 size-4 place-items-center bg-primary text-light text-[10px]">{wishlistCount}</span>}
+                {wishlistCount > 0 && <span className="absolute grid rounded-full -top-1.5 -right-2 size-4 place-items-center bg-primary text-light text-xxs">{wishlistCount}</span>}
               </LocaleLink>
               <LocaleLink href="/cart" aria-label={labels.bag} className="relative text-primary">
                 <PiHandbagSimple className="size-6" />
-                {bagCount > 0 && <span className="absolute grid rounded-full -top-1.5 -right-2 size-4 place-items-center bg-primary text-light text-[10px]">{bagCount}</span>}
+                {bagCount > 0 && <span className="absolute grid rounded-full -top-1.5 -right-2 size-4 place-items-center bg-primary text-light text-xxs">{bagCount}</span>}
               </LocaleLink>
             </span>
 

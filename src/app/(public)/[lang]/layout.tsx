@@ -38,7 +38,11 @@ export default async function PublicLayout({ children, params }: Readonly<{ chil
 
   return (
     <html lang={lang} className={`${raleway.variable} ${inter.variable}`}>
-      <body className="flex flex-col min-h-screen overflow-x-hidden">
+      {/* `overflow-x: clip`, not `hidden`. Both stop sideways scrolling, but `hidden`
+          makes this element a scroll container, and a sticky descendant then sticks to
+          it instead of to the viewport — which would leave the header pinned somewhere
+          off-screen. `clip` has no such side effect. */}
+      <body className="flex flex-col min-h-screen overflow-x-clip">
         <Toaster position="bottom-center" reverseOrder={false} toastOptions={{ duration: 5000 }} />
         <QueryClientWrapper>
           {/* Header and footer live here rather than in each page. They used to be
