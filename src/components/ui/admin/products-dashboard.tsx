@@ -6,7 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { useAuthStore, useSearchPagination } from "@/hooks";
 
-import { AUDIENCE, BRANDING, GARMENT } from "@/static/taxonomy";
+import { AUDIENCE, BRANDING, CLOTHING } from "@/static/taxonomy";
 
 import { productsApi } from "@/utils";
 
@@ -19,7 +19,7 @@ const ALL = { value: "", label: "All" };
 // Inactive brandings are still offered as filters: products tagged with one are not
 // orphaned when it is hidden from the storefront, and the admin needs to find them.
 const BRANDING_OPTIONS = [ALL, ...BRANDING.map((entry) => ({ value: entry.key, label: entry.label }))];
-const GARMENT_OPTIONS = [ALL, ...GARMENT.map((entry) => ({ value: entry.key, label: entry.label }))];
+const CLOTHING_OPTIONS = [ALL, ...CLOTHING.map((entry) => ({ value: entry.key, label: entry.label }))];
 const AUDIENCE_OPTIONS = [ALL, ...AUDIENCE.map((entry) => ({ value: entry.key, label: entry.label }))];
 
 const STATUS_OPTIONS = [ALL, { value: "true", label: "Active" }, { value: "false", label: "Inactive" }];
@@ -32,7 +32,7 @@ const SORT_OPTIONS = [
   { value: "price-desc", label: "Price high–low" },
 ];
 
-const FILTER_KEYS = ["branding", "garment", "audience", "isActive", "sort"] as const;
+const FILTER_KEYS = ["branding", "clothing", "audience", "isActive", "sort"] as const;
 
 export const ProductsDashboard = () => {
   const queryClient = useQueryClient();
@@ -47,14 +47,14 @@ export const ProductsDashboard = () => {
   const [toDelete, setToDelete] = React.useState<Product | null>(null);
 
   const { data, isLoading, isError } = productsApi.useGetProducts<ApiResponse<Product[]>>({
-    key: ["products", searchQuery, page, limit, filters.branding, filters.garment, filters.audience, filters.isActive, filters.sort],
+    key: ["products", searchQuery, page, limit, filters.branding, filters.clothing, filters.audience, filters.isActive, filters.sort],
     enabled: isAuthenticated,
     params: {
       search: searchQuery,
       page,
       limit,
       branding: filters.branding,
-      garment: filters.garment,
+      clothing: filters.clothing,
       audience: filters.audience,
       // The admin list must show inactive products too, so isActive is only sent when
       // the admin actually filters on it — an unfiltered list is the whole catalog.
@@ -88,7 +88,7 @@ export const ProductsDashboard = () => {
         <ToolbarRow>
           <FilterRow>
             <FilterDropdown label="Branding" value={filters.branding} options={BRANDING_OPTIONS} onChange={(value) => setFilter("branding", value)} />
-            <FilterDropdown label="Garment" value={filters.garment} options={GARMENT_OPTIONS} onChange={(value) => setFilter("garment", value)} />
+            <FilterDropdown label="Clothing" value={filters.clothing} options={CLOTHING_OPTIONS} onChange={(value) => setFilter("clothing", value)} />
             <FilterDropdown label="Audience" value={filters.audience} options={AUDIENCE_OPTIONS} onChange={(value) => setFilter("audience", value)} />
             <FilterDropdown label="Status" value={filters.isActive} options={STATUS_OPTIONS} onChange={(value) => setFilter("isActive", value)} />
             <FilterDropdown label="Sort" value={filters.sort} options={SORT_OPTIONS} onChange={(value) => setFilter("sort", value)} />

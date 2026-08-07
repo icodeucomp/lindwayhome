@@ -220,7 +220,7 @@ Two further defects were found by `smoke:checkout` during the phase, both invisi
 Five shifts, in order of blast radius:
 
 1. **Bilingual (EN/ID)** — every public route moves under `/[lang]/`, and translatable content moves into per-entity translation tables.
-2. **Taxonomy replaces the category enum** — three independent admin-managed axes (branding, audience, garment) instead of one enum.
+2. **Taxonomy replaces the category enum** — three independent admin-managed axes (branding, audience, clothing) instead of one enum.
 3. **Sizes become relational** — a `Size` master plus `ProductVariant` per product×size, with reusable size guides.
 4. **Orders gain a real lifecycle** — `Order` replaces `Guest`, `OrderItem` replaces `Cart`, an `OrderStatus` enum replaces a lone boolean, and each line snapshots the price it sold at (D17, D23). Discounting itself is unchanged from v1 (D22).
 5. **New content subsystems** — Journal, FAQ, Contact inquiries, plus richer product content via Tiptap.
@@ -238,7 +238,7 @@ All public routes are prefixed with `/[lang]` where lang ∈ `en` | `id`. `/admi
 /[lang]/new-arrivals                       Sorted by releasedAt
 /[lang]/best-sellers                       Sorted by bestSellerRank, then soldCount
 /[lang]/collections/[brandingSlug]         Branding landing + listing + its favorite products
-/[lang]/shop/[garmentSlug]                 Garment listing (Dresses, Tops, Skirts …)
+/[lang]/shop/[clothingSlug]                 Clothing listing (Dresses, Tops, Skirts …)
 /[lang]/shop/for/[audienceSlug]            Audience listing (Women, Men, Kids)
 /[lang]/product/[slug]                     Product detail
 /[lang]/cart                               Cart + checkout wizard
@@ -270,7 +270,7 @@ Product and article URLs use `slug`, not `id`. **Slug is single, not per-locale*
 
 ```
 Collections ▾
-  Branding              Audience              Garment
+  Branding              Audience              Clothing
   My Lindway            Women                 Dresses
   Simply Lindway        Men                   Tops
   Lure by Lindway       Kids                  Skirts
@@ -279,7 +279,7 @@ Collections ▾
   → /collections/[slug]  → /shop/for/[slug]    → /shop/[slug]
 ```
 
-Each column renders the `isActive` entries ordered by `order`. Since the taxonomy is enums (D25), a new branding or garment reaches the menu through a deploy, not a database row — `isActive` is what an admin-free change can toggle in the meantime. This is also how garment and audience listings become reachable from the header, not just the footer.
+Each column renders the `isActive` entries ordered by `order`. Since the taxonomy is enums (D25), a new branding or clothing reaches the menu through a deploy, not a database row — `isActive` is what an admin-free change can toggle in the meantime. This is also how clothing and audience listings become reachable from the header, not just the footer.
 
 **Footer** — four columns: Collections (5 brandings) · Shop (New Arrivals, Best Sellers, Dresses, Tops, Skirts, Kids, Men) · Customer Care (Size Guide, How to Shop, Shipping & Delivery, Return & Exchanges, Care Instructions, Contact Us, FAQ) · About (Our Story, Our Production, Our Artisan, Sustainability, Our Fabrics, Journal).
 
@@ -301,7 +301,7 @@ Settings   Parameters · Locations
 
 Articles and Article Categories are live; the rest arrive with their phases.
 
-There is no Taxonomy section: branding, audience and garment are enums edited in code (D25). There are no Promotions or Member Discounts sections either — discounting is `Product.discount` plus two config values (D22), so it lives on the product form and the Parameters page.
+There is no Taxonomy section: branding, audience and clothing are enums edited in code (D25). There are no Promotions or Member Discounts sections either — discounting is `Product.discount` plus two config values (D22), so it lives on the product form and the Parameters page.
 
 Contact Inbox is a menu of its own rather than a Content sub-item (D15) — it is a work queue an admin returns to daily, not content to author.
 
@@ -316,7 +316,7 @@ Contact Inbox is a menu of its own rather than a Content sub-item (D15) — it i
 | FAQ | Yes | `FaqTranslation` |
 | Product **name** | **No** | plain `Product.name` column (D26) |
 | Product (5 rich-text fields) | Yes, **ID optional** | `ProductTranslation` |
-| Branding / Audience / Garment labels | **No** | single label column |
+| Branding / Audience / Clothing labels | **No** | single label column |
 | Size guide title, description, measurement labels | Yes | `SizeGuideTranslation` |
 | Public-facing config values (`product_defaults`, media alt) | Yes | value shape `{ en, id }` |
 | Server-side config values (rates, coordinates, zones) | No | scalar as today |
@@ -369,12 +369,12 @@ All ids are `cuid()` (D7). All tables follow the existing `@@map("snake_case")` 
 ```prisma
 enum BrandingType { MY_LINDWAY  SIMPLY_LINDWAY  LURE_BY_LINDWAY  STUDIO_BY_LINDWAY  LINDWAY_AWP }
 enum AudienceType { WOMEN  MEN  KIDS }
-enum GarmentType  { DRESSES  TOPS  SKIRTS }
+enum ClothingType  { DRESSES  TOPS  SKIRTS }
 ```
 
 The database stores only the key. Everything a page needs to render it — label, URL slug, hero copy, hero image, menu order, and an `isActive` flag — lives in [`src/static/taxonomy.ts`](src/static/taxonomy.ts), which is the single source for all three axes. Labels are not translated (D2).
 
-**What this costs.** Adding a branding, audience or garment means editing the Prisma enum, running a migration, editing `taxonomy.ts`, and deploying. There is no admin screen, and no `[OPEN]` about it — the trade was made deliberately in exchange for three tables, one join table, and three CRUD screens.
+**What this costs.** Adding a branding, audience or clothing means editing the Prisma enum, running a migration, editing `taxonomy.ts`, and deploying. There is no admin screen, and no `[OPEN]` about it — the trade was made deliberately in exchange for three tables, one join table, and three CRUD screens.
 
 `isActive: false` hides an entry from the navigation and its listing without removing the enum value, so products already tagged with it are never orphaned. `STUDIO_BY_LINDWAY` and `LINDWAY_AWP` ship inactive until their copy and artwork arrive.
 
@@ -459,7 +459,7 @@ model Product {
   name            String                        // NOT translated (D26)
 
   branding        BrandingType                  // required (D5)
-  garment         GarmentType?                  // single
+  clothing         ClothingType?                  // single
   audiences       AudienceType[]                // many, so a product can be unisex
   sizeGuideId     String?
 
@@ -487,7 +487,7 @@ model Product {
   orderItems      OrderItem[]
 
   @@index([branding])
-  @@index([garment])
+  @@index([clothing])
   @@index([audiences], type: Gin)      // array containment: "products for Women"
   @@index([releasedAt])
   @@index([soldCount])
@@ -531,7 +531,7 @@ model ProductTranslation {
 }
 ```
 
-- **One branding (required), one garment, many audiences** (D5) — so a product can be unisex.
+- **One branding (required), one clothing, many audiences** (D5) — so a product can be unisex.
 - `Product` keeps `name` but loses `description`, `notes`, `category`, `sizes` and `productionNotes`. Content moved to `ProductTranslation`; category became three enums; sizes became `ProductVariant`. `productionNotes` held the customer-facing "made-to-order, allow 21-25 days" line in v1 — untranslatable and duplicating what `notes` now covers with a global default (D9, D21).
 - **`name` is not translated (D26)** — one name in both languages, like the slug. It never passes through the fallback chain, and a product with no translation rows at all is valid and renders.
 - `isFavorite` keeps its v1 meaning: an admin flag for featured products, now surfaced on that product's branding page (D11). It is **not** the wishlist.
@@ -851,8 +851,8 @@ Numbering continues from v1. F-1…F-29 remain unless superseded.
 
 ### B5.1 Catalog & discovery
 - **F-30 Localized routing** — `/[lang]/…`, dictionary-driven static copy, language switch preserving the current path.
-- **F-31 Taxonomy filtering** — branding, audience and garment come from enums and `taxonomy.ts`; there is no admin CRUD for them (D25).
-- **F-32 Multi-axis product filtering** — listings filter by branding, audience, garment, and combinations.
+- **F-31 Taxonomy filtering** — branding, audience and clothing come from enums and `taxonomy.ts`; there is no admin CRUD for them (D25).
+- **F-32 Multi-axis product filtering** — listings filter by branding, audience, clothing, and combinations.
 - **F-33 New Arrivals** — `releasedAt` descending, distinct from `createdAt`.
 - **F-34 Best Sellers** — `bestSellerRank` ascending, then `soldCount` descending.
 - **F-35 Wishlist** — `localStorage` only, mirroring the `useCart` store; header counter; no backend (D11).
@@ -996,7 +996,7 @@ Translation coverage is deliberately uneven so the per-field fallback chain (§B
 
 | File | Change |
 | --- | --- |
-| `types/zod.ts` | Drop `CategoriesEnum`. `ProductSchema` loses `name`/`description`/`notes`/`sizes`/`category`/`productionNotes`, gains `branding`/`garment`/`audiences`/`slug`/`releasedAt`/variants/translations. `GuestSchema` → `OrderSchema` + `status`/`trackingNumber`. `ShippingCalculateSchema` stops accepting `purchased` and `totalItemsSold` (F-51). New: `SizeSchema`, `SizeGuideSchema`, `ArticleSchema`, `FaqSchema`, `ContactInquirySchema` |
+| `types/zod.ts` | Drop `CategoriesEnum`. `ProductSchema` loses `name`/`description`/`notes`/`sizes`/`category`/`productionNotes`, gains `branding`/`clothing`/`audiences`/`slug`/`releasedAt`/variants/translations. `GuestSchema` → `OrderSchema` + `status`/`trackingNumber`. `ShippingCalculateSchema` stops accepting `purchased` and `totalItemsSold` (F-51). New: `SizeSchema`, `SizeGuideSchema`, `ArticleSchema`, `FaqSchema`, `ContactInquirySchema` |
 | `types/api.ts` | Drop the `Categories` enum. `Product` carries translations + variants. `Guest`/`CreateGuest`/`EditGuest` → `Order`/`CreateOrder`/`EditOrder`. `DashboardData` becomes per-branding instead of three hardcoded fields |
 | `utils/api.ts` | `guestsApi` → `ordersApi`, `guestCheckoutApi` → `orderCheckoutApi`, paths `/guests/*` → `/orders/*` |
 
@@ -1004,7 +1004,7 @@ Translation coverage is deliberately uneven so the per-field fallback chain (§B
 
 | File | Change |
 | --- | --- |
-| `api/products/route.ts`, `[id]/route.ts` | Filter by `branding`/`garment`/`audiences`; search joins `ProductTranslation` on the active locale **plus EN** (§B3.3); write variants + translations; never write `stock` (D24) |
+| `api/products/route.ts`, `[id]/route.ts` | Filter by `branding`/`clothing`/`audiences`; search joins `ProductTranslation` on the active locale **plus EN** (§B3.3); write variants + translations; never write `stock` (D24) |
 | `api/dashboard/route.ts` | Delete `$queryRawUnsafe`; Prisma `groupBy` over variants by branding (closes A9.5) |
 | `api/guests/*` → `api/orders/*` | Rename. Stock check and decrement read `ProductVariant`. `soldCount` increments in the same transaction. `OrderItem` gets `unitPrice`/`lineTotal`. Checkout GET derives the subtotal server-side |
 | `services/shipping.ts` | `getProductDimensionsBySize(size)` → `getPackageDimensions(productId, sizeCode)` (§B6.2) |
@@ -1076,7 +1076,7 @@ Every admin screen composes from one kit rather than inventing its own chrome. B
 
 The admin catalog, built on §C2. Verified by driving the real API: create → read back → edit → delete, with the image moving out of temp, the stock trigger recomputing after a variant was dropped, `discountedPrice` recomputed server-side, and the ID locale falling back to EN field by field.
 
-- **Product list** — search over name/SKU/slug, filters for branding, garment, audience, status and sort, grid/list, paging. `isActive` is only sent when the admin filters on it: the admin list must show inactive products, so an unfiltered list is the whole catalog.
+- **Product list** — search over name/SKU/slug, filters for branding, clothing, audience, status and sort, grid/list, paging. `isActive` is only sent when the admin filters on it: the admin list must show inactive products, so an unfiltered list is the whole catalog.
 - **Product form** — `ProductImages` (temp upload, reorder, first is primary), `ProductVariants` (size guide → offered sizes → quantity + optional per-variant packaging), `ProductContent` (EN\|ID tabs over the 5 Tiptap fields; the name sits in Details, D26).
 - **Size guide form** (`SizeGuideForm`) — title and description behind EN\|ID tabs, a measurement table where each column is a stable key plus per-locale labels, and a size × measurement grid. The key follows the English label until edited by hand, so an admin never types an identifier. Rows are submitted in `size.order`, never selection order (D21). Duplicating always lands as a draft — publishing an unedited twin onto the public page is not a useful default.
 - **The size guide constrains the variant list.** With a guide selected, only its rows' sizes are offered, which is how the §B4 invariant is enforced — by not offering anything else. Changing the guide drops variants the new one does not contain. Without a guide the invariant does not apply and the full active size list is offered.
@@ -1164,10 +1164,10 @@ Agreed in discussion. Do not reopen without a new decision recorded here.
 | # | Decision | Rationale |
 | --- | --- | --- |
 | **D1** | Size guide is one model with title, description, per-size rows, flexible JSON parameters, and draft/publish via `publishedAt`. The public page is a **flat list** — no grouping field | Same entity serves the public page and per-product assignment. A flat list keeps grouping a matter of naming and ordering, so new categories need no schema change |
-| **D2** | i18n covers static UI, Article, FAQ, Product, and size guides. Branding/audience/garment labels are **not** translated | Brand and category names read the same in both languages |
+| **D2** | i18n covers static UI, Article, FAQ, Product, and size guides. Branding/audience/clothing labels are **not** translated | Brand and category names read the same in both languages |
 | **D3** | Product ID translations are optional with **per-field** fallback to EN. Admin UI is EN-only and outside `[lang]`. Order emails are EN-only | Admin can publish in EN and translate later without blocking |
 | **D4** | Public URLs use a single non-localized `slug`; admin URLs use `id` | Better SEO, and the URL survives a language switch |
-| **D5** | One branding (required), one garment, many audiences | Supports unisex products without over-modeling |
+| **D5** | One branding (required), one clothing, many audiences | Supports unisex products without over-modeling |
 | **D6** | `product_dimensions` → `package_dimensions`. Body measurements live on `SizeGuideRow`; package dimensions live on `ProductVariant`, defaulting to config | Measurements belong to the pattern and are shared; packing belongs to the individual product. Storing packing on the guide would force a fork of the whole guide on every dimension tweak and fill the database with near-duplicates |
 | **D7** | All models use `cuid()` | Matches the existing codebase; overrides the `uuid()` in the source notes |
 | **D8** | Checkout token, shipping/zone calculation, order lifecycle, upload pipeline, config parameters, guest checkout, membership, logging, auth, and handler conventions are preserved — except the two exceptions in §B6.3 | The pricing path is the most delicate code in the repo |
@@ -1178,16 +1178,16 @@ Agreed in discussion. Do not reopen without a new decision recorded here.
 | **D13** | Journal appears both as a top-level menu and under About (intentional). `/our-world` is a placeholder. New Arrivals uses `releasedAt`; Best Sellers uses automatic `soldCount` plus a manual `bestSellerRank` | Confirmed with the client |
 | **D14** | Raleway + Inter via `next/font/google`; the full palette is replaced. Alethia Next OTF files stay in `public/fonts` but are unused | v2 is an intentional visual overhaul; keeping the old font files is cheaper than restoring them |
 | **D15** | Contact Inbox is a standalone top-level admin menu with full inquiry management (filter, search, detail, status transitions), not an email relay and not a Content sub-item | It is a daily work queue, not authored content; status tracking is what makes an inquiry not get dropped |
-| **D16** | The Collections header menu is a three-column mega-menu over branding, audience and garment. Curated Collections is deleted — page, component, home-page section, and the `videos_curated_collection` config key | It gives garment and audience listings a header entry point instead of footer-only. *(The original rationale — "a new branding appears without a deploy" — no longer holds: D25 made the taxonomy static.)* |
+| **D16** | The Collections header menu is a three-column mega-menu over branding, audience and clothing. Curated Collections is deleted — page, component, home-page section, and the `videos_curated_collection` config key | It gives clothing and audience listings a header entry point instead of footer-only. *(The original rationale — "a new branding appears without a deploy" — no longer holds: D25 made the taxonomy static.)* |
 | **D17** | `Guest` → `Order`, `Cart` → `OrderItem`, and the endpoints follow (`/api/guests/*` → `/api/orders/*`) | Neither name described its table. The real shopping cart is `localStorage` and never reaches the database, so a table called `Cart` holding order lines actively misleads. Renaming is safe because D8 protects behaviour, not identifiers — and doing it during the phase-1 rewrite costs nothing extra |
 | ~~**D18**~~ | ~~`Promotion` and `MemberDiscount` collapse into one `Discount` table~~ | **Superseded by D22** — the tables themselves were dropped |
 | **D19** | `Member` is kept alongside `Order.isMember`, linked by `Order.memberId` | They answer different questions. Revoking membership by flipping `isMember` across past orders would rewrite history — orders genuinely charged the member price would start claiming otherwise while their stored totals said the opposite. Current state and historical record must never share a column |
 | ~~**D20**~~ | ~~Discounts layer, with clamps and a ceiling~~ | **Superseded by D22.** The layering it guarded against no longer exists. The `OrderItem` price snapshot survives, simplified to `unitPrice` + `lineTotal` |
 | **D22** | **No `Discount` entity.** Discounting is `Product.discount` → `discountedPrice`, plus the v1 config groups `promotions` (store-wide) and `members` (member rate). Targeted and scheduled campaigns are out of scope | The tables bought targeting and validity windows that Lindway does not run, and cost three real risks: the effective price had to be resolved at read time in two places, so the price shown could differ from the price charged; the token carried only aggregates, so per-line snapshots could contradict the signed total; and layered `FIXED` discounts could drive a line negative, surfacing as a meaningless validation error after the buyer had already uploaded a receipt. Keeping `discountedPrice` a stored column also keeps price sorting and filtering in SQL |
 | **D23** | `Order` gains `status` (`OrderStatus`), `trackingNumber` and `cancelledAt`. `isPurchased` stays beside `status`. `ContactInquiry` gains `handlingNote`; `Article` gains `authorId` | v1 expressed the whole order lifecycle as one boolean — no way to say cancelled or shipped, and nowhere to put the tracking number the storefront already promises buyers. `isPurchased` is kept because it is what triggers the stock and `soldCount` transaction, and moving that would touch the frozen zone. `handlingNote` records *how* an inquiry was resolved, which `HANDLED` alone does not |
-| **D25** | Branding, audience and garment are **Prisma enums**, not tables. Display data (label, slug, description, hero image, order, `isActive`) lives in `src/static/taxonomy.ts`. `ProductAudience` is replaced by an `AudienceType[]` array on `Product` | Removes three tables, one join table, and three admin CRUD screens. The cost is real and accepted: adding a value needs a migration plus a deploy, and per-branding hero copy is no longer editable by an admin. Justified because the axes are stable — the two brandings still to come are already in the enum, and Lindway does not add garment types often |
+| **D25** | Branding, audience and clothing are **Prisma enums**, not tables. Display data (label, slug, description, hero image, order, `isActive`) lives in `src/static/taxonomy.ts`. `ProductAudience` is replaced by an `AudienceType[]` array on `Product` | Removes three tables, one join table, and three admin CRUD screens. The cost is real and accepted: adding a value needs a migration plus a deploy, and per-branding hero copy is no longer editable by an admin. Justified because the axes are stable — the two brandings still to come are already in the enum, and Lindway does not add clothing types often |
 | **D27** | **Only `Size`, `ConfigParameter` and `ConfigParameterGroup` keep an explicit `order` column.** `SizeGuide`, `ArticleCategory` and `Faq` lose theirs and sort by `createdAt`. `Size.order` is assigned `max(order) + 1` on create when the payload omits it | An `order` column earns its place only where nothing else encodes the sequence. For sizes nothing does — `code` sorts into nonsense (`L, M, S, XL, XS`; `0-6-12M` before `1Y`) — and D21 already removed `SizeGuideRow.order` so `size.order` is the single source; removing it would mean either wrong ordering everywhere or two competing sources again. For the other three, creation order is a faithful stand-in and the admin sets it by adding things in the order they want. Deliberately **not** alphabetical: the title/name of all three is translated, so alphabetical sorting is locale-dependent and the list would reshuffle when a visitor switches language. The auto-assign fixes a real latent bug rather than being convenience only — every row defaulted to `0`, so rows created without an explicit position all tied, and `ORDER BY "order"` with ties returns an arbitrary and unstable sequence |
-| **D26** | **`Product.name` is a plain column, not translated.** One name in both languages, like the slug. `ProductTranslation` keeps only the five rich-text fields, all nullable, so a product may have no translation rows at all. `Article`, `FAQ` and `SizeGuide` are unaffected — their title *is* the translation | Product names are brand and garment language ("Melati Embroidered Kebaya"), which reads the same in both locales, so translating them bought nothing and cost everywhere: `Product` had no name column, which made a nameless product possible, forced search to join the translation table on the active locale *plus* EN, put the name behind a locale tab in the admin form, and — because the API required a `name` on every translation row — made an ID row carrying only a description impossible to submit. All four problems are structural consequences of that one field, and all four disappear with it. Superseding consequence: **an EN translation row is no longer required for products**; requiring one would only force an all-null row, since the four defaulted fields fall back to config with or without it. ID-without-EN is still refused, because the per-field fallback runs ID → EN |
+| **D26** | **`Product.name` is a plain column, not translated.** One name in both languages, like the slug. `ProductTranslation` keeps only the five rich-text fields, all nullable, so a product may have no translation rows at all. `Article`, `FAQ` and `SizeGuide` are unaffected — their title *is* the translation | Product names are brand and clothing language ("Melati Embroidered Kebaya"), which reads the same in both locales, so translating them bought nothing and cost everywhere: `Product` had no name column, which made a nameless product possible, forced search to join the translation table on the active locale *plus* EN, put the name behind a locale tab in the admin form, and — because the API required a `name` on every translation row — made an ID row carrying only a description impossible to submit. All four problems are structural consequences of that one field, and all four disappear with it. Superseding consequence: **an EN translation row is no longer required for products**; requiring one would only force an all-null row, since the four defaulted fields fall back to config with or without it. ID-without-EN is still refused, because the per-field fallback runs ID → EN |
 | **D24** | `Product.stock` is maintained by a Postgres trigger (`prisma/triggers/product-stock.sql`), not by application code | It is the number that gates overselling. A trigger makes drift structurally impossible rather than merely unlikely — any write path that forgot to recompute would otherwise let the store sell stock it does not have, silently. Consequence: application code must never write `stock` |
 | **D21** | Field audit removed seven columns that produced nothing: `code` on the three taxonomy tables *(since superseded — the tables themselves are gone, D25)*, `SizeGuide.isActive`, `SizeGuideRow.order`, `Product.productionNotes`, `Member.joinedAt`. Ruling principle: **`isActive` is a manual switch, `publishedAt` / date windows are a schedule** — a model needs both only when it needs both behaviours | Each removal deleted a second source of truth: `code` duplicated `slug`, `isActive` beside `publishedAt` had no defined combination, a row `order` could contradict `size.order`, `productionNotes` duplicated the translated `notes`, and `joinedAt` duplicated `createdAt` |
 

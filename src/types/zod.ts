@@ -7,7 +7,7 @@ import { z } from "zod";
 export const LocaleEnum = z.enum(["EN", "ID"]);
 export const BrandingEnum = z.enum(["MY_LINDWAY", "SIMPLY_LINDWAY", "LURE_BY_LINDWAY", "STUDIO_BY_LINDWAY", "LINDWAY_AWP"]);
 export const AudienceEnum = z.enum(["WOMEN", "MEN", "KIDS"]);
-export const GarmentEnum = z.enum(["DRESSES", "TOPS", "SKIRTS"]);
+export const ClothingEnum = z.enum(["DRESSES", "TOPS", "SKIRTS"]);
 export const PaymentMethodEnum = z.enum(["BANK_TRANSFER", "QRIS"]);
 export const DiscountEnum = z.enum(["PERCENTAGE", "FIXED"]);
 export const OrderStatusEnum = z.enum(["AWAITING_PAYMENT", "PAID", "SHIPPED", "COMPLETED", "CANCELLED"]);
@@ -120,7 +120,7 @@ export const ProductSchema = z.object({
   name: z.string().min(1, "Product name is required"),
 
   branding: BrandingEnum,
-  garment: GarmentEnum.nullish(),
+  clothing: ClothingEnum.nullish(),
   audiences: z.array(AudienceEnum).optional(),
   sizeGuideId: z.string().nullish(),
 
@@ -351,9 +351,11 @@ const baseQuery = {
 export const ProductQuerySchema = z.object({
   ...baseQuery,
   locale: LocaleEnum.optional().default("EN"),
-  branding: z.string().optional(),
-  garment: z.string().optional(),
-  audience: z.string().optional(),
+  // Typed rather than `z.string()`: an unknown value used to reach Prisma and come
+  // back as a 500 quoting the generated query, file path included. Now it is a 400.
+  branding: BrandingEnum.optional(),
+  clothing: ClothingEnum.optional(),
+  audience: AudienceEnum.optional(),
   isActive: z.string().optional(),
   isFavorite: z.string().optional(),
   sort: z.enum(["latest", "new-arrivals", "best-sellers", "price-asc", "price-desc"]).optional().default("latest"),

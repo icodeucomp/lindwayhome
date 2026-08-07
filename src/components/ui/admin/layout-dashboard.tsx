@@ -24,7 +24,7 @@ interface NavItem {
 }
 
 // Grouped per §B2.3. Contact Inbox, Members, Articles and FAQ arrive with their
-// phases; there is no Taxonomy section because branding, audience and garment are
+// phases; there is no Taxonomy section because branding, audience and clothing are
 // enums edited in code (D25).
 const NAV_ITEMS: NavItem[] = [
   { group: "Overview", href: "/admin/dashboard", label: "Dashboard", icon: PiSquaresFour },

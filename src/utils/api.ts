@@ -89,7 +89,7 @@ export const productsApi = {
         const searchParams = new URLSearchParams();
         if (params.locale) searchParams.append("locale", params.locale);
         if (params.branding) searchParams.append("branding", params.branding);
-        if (params.garment) searchParams.append("garment", params.garment);
+        if (params.clothing) searchParams.append("clothing", params.clothing);
         if (params.audience) searchParams.append("audience", params.audience);
         if (params.sort) searchParams.append("sort", params.sort);
         if (params.search) searchParams.append("search", params.search);

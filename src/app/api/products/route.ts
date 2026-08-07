@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       limit: searchParams.get("limit") || "10",
       locale: searchParams.get("locale") || "EN",
       branding: searchParams.get("branding") || undefined,
-      garment: searchParams.get("garment") || undefined,
+      clothing: searchParams.get("clothing") || undefined,
       audience: searchParams.get("audience") || undefined,
       search: searchParams.get("search") || undefined,
       order: searchParams.get("order") || "asc",
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       dateTo: searchParams.get("dateTo") || undefined,
     });
 
-    const { locale, branding, garment, audience, search, order, sort, isActive, isFavorite, year, month, dateFrom, dateTo } = queryParams;
+    const { locale, branding, clothing, audience, search, order, sort, isActive, isFavorite, year, month, dateFrom, dateTo } = queryParams;
 
     const page = parseInt(queryParams.page);
     const limit = parseInt(queryParams.limit);
@@ -48,9 +48,11 @@ export async function GET(request: NextRequest) {
 
     const where: Prisma.ProductWhereInput = {};
 
-    if (branding) where.branding = branding as Prisma.EnumBrandingTypeFilter["equals"];
-    if (garment) where.garment = garment as Prisma.EnumGarmentTypeNullableFilter["equals"];
-    if (audience) where.audiences = { has: audience as Prisma.EnumAudienceTypeNullableListFilter["has"] };
+    // No casts: the query schema validates these against the same enums Prisma expects,
+    // so an unknown value is a 400 from zod rather than a 500 from the database.
+    if (branding) where.branding = branding;
+    if (clothing) where.clothing = clothing;
+    if (audience) where.audiences = { has: audience };
     if (typeof isActive === "string") where.isActive = isActive === "true";
     if (typeof isFavorite === "string") where.isFavorite = isFavorite === "true";
 
@@ -161,7 +163,7 @@ export async function POST(request: NextRequest) {
 
     // `translations` is destructured out but not used — `translationRows` above is the
     // normalised copy, and leaving it in `product` would reach Prisma as a raw array.
-    const { variants, translations, sizeGuideId, garment, releasedAt, bestSellerRank, ...product } = createData;
+    const { variants, translations, sizeGuideId, clothing, releasedAt, bestSellerRank, ...product } = createData;
     void translations;
 
     await prisma.product.create({
@@ -169,7 +171,7 @@ export async function POST(request: NextRequest) {
         ...product,
         // Prisma wants `undefined` for an absent optional column, not `null`.
         sizeGuideId: nullToUndefined(sizeGuideId),
-        garment: nullToUndefined(garment),
+        clothing: nullToUndefined(clothing),
         releasedAt: nullToUndefined(releasedAt),
         bestSellerRank: nullToUndefined(bestSellerRank),
         images: resolvedImages as unknown as Prisma.InputJsonValue[],

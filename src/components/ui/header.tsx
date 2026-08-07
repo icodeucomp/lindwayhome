@@ -12,7 +12,7 @@ import { Container, Img, LocaleLink } from "@/components";
 
 import { useCartStore, useIsHydrated, useWishlistStore } from "@/hooks";
 
-import { aboutNav, audienceNav, brandingNav, customerCareNav, garmentNav, type NavItem } from "@/static/navigation";
+import { aboutNav, audienceNav, brandingNav, clothingNav, customerCareNav, type NavItem } from "@/static/navigation";
 
 import { stripLocale } from "@/utils/locale-path";
 
@@ -30,7 +30,7 @@ export interface HeaderLabels {
   bag: string;
   branding: string;
   audience: string;
-  garment: string;
+  clothing: string;
 }
 
 type MenuKey = "collections" | "customerCare" | "about";
@@ -131,7 +131,7 @@ export const Header = ({ labels }: { labels: HeaderLabels }) => {
   const columns = [
     { title: labels.branding, items: brandingNav },
     { title: labels.audience, items: audienceNav },
-    { title: labels.garment, items: garmentNav },
+    { title: labels.clothing, items: clothingNav },
   ];
 
   return (
@@ -189,7 +189,7 @@ export const Header = ({ labels }: { labels: HeaderLabels }) => {
               <NavTrigger
                 label={labels.collections}
                 isOpen={openMenu === "collections"}
-                isActive={isActive("/collections", [...audienceNav, ...garmentNav])}
+                isActive={isActive("/collections", [...audienceNav, ...clothingNav])}
                 onOpen={() => setOpenMenu("collections")}
               />
             </li>
@@ -256,7 +256,7 @@ export const Header = ({ labels }: { labels: HeaderLabels }) => {
                   { name: labels.newArrivals, href: "/new-arrivals" },
                   ...brandingNav,
                   ...audienceNav,
-                  ...garmentNav,
+                  ...clothingNav,
                   { name: labels.ourWorld, href: "/our-world" },
                   { name: labels.journal, href: "/journal" },
                   ...customerCareNav,

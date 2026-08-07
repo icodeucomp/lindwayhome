@@ -6,11 +6,11 @@ import { useRouter } from "next/navigation";
 
 import { useQueryClient } from "@tanstack/react-query";
 
-import { AUDIENCE, BRANDING, GARMENT } from "@/static/taxonomy";
+import { AUDIENCE, BRANDING, CLOTHING } from "@/static/taxonomy";
 
 import { calculateDiscountedPrice, formatIDR, productsApi } from "@/utils";
 
-import { ApiResponse, AudienceType, BrandingType, CreateProduct, EditProduct, Files, GarmentType, Locale, Product } from "@/types";
+import { ApiResponse, AudienceType, BrandingType, CreateProduct, EditProduct, Files, ClothingType, Locale, Product } from "@/types";
 
 import {
   CheckboxGroup,
@@ -41,7 +41,7 @@ interface FormState {
   slug: string;
   name: string;
   branding: BrandingType | "";
-  garment: GarmentType | "";
+  clothing: ClothingType | "";
   audiences: AudienceType[];
   price: string;
   discount: string;
@@ -61,7 +61,7 @@ const EMPTY: FormState = {
   slug: "",
   name: "",
   branding: "",
-  garment: "",
+  clothing: "",
   audiences: [],
   price: "",
   discount: "0",
@@ -150,7 +150,7 @@ export const ProductForm = ({ productId }: { productId?: string }) => {
       slug: record.slug,
       name: record.name,
       branding: record.branding,
-      garment: record.garment ?? "",
+      clothing: record.clothing ?? "",
       audiences: record.audiences ?? [],
       price: String(record.price),
       discount: String(record.discount ?? 0),
@@ -224,7 +224,7 @@ export const ProductForm = ({ productId }: { productId?: string }) => {
       slug: form.slug.trim(),
       name: form.name.trim(),
       branding: form.branding as BrandingType,
-      garment: form.garment || null,
+      clothing: form.clothing || null,
       audiences: form.audiences,
       sizeGuideId: form.sizeGuideId,
       price: Number(form.price),
@@ -309,12 +309,12 @@ export const ProductForm = ({ productId }: { productId?: string }) => {
               />
             </Field>
 
-            <Field label="Garment" htmlFor="garment" hint="Optional — one garment type per product">
+            <Field label="Clothing" htmlFor="clothing" hint="Optional — one clothing type per product">
               <SelectInput
-                id="garment"
-                value={form.garment}
-                onChange={(event) => patch({ garment: event.target.value as GarmentType })}
-                options={[{ value: "", label: "No garment type" }, ...GARMENT.map((entry) => ({ value: entry.key, label: entry.label }))]}
+                id="clothing"
+                value={form.clothing}
+                onChange={(event) => patch({ clothing: event.target.value as ClothingType })}
+                options={[{ value: "", label: "No clothing type" }, ...CLOTHING.map((entry) => ({ value: entry.key, label: entry.label }))]}
               />
             </Field>
           </FieldRow>

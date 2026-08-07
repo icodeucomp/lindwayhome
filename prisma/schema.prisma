@@ -8,7 +8,7 @@
 //   psql "$DATABASE_URL" -f prisma/triggers/product-stock.sql
 //
 // 21 models. Decisions taken during review:
-//   · Branding, audience and garment are ENUMS, not tables (D25). Their display
+//   · Branding, audience and clothing are ENUMS, not tables (D25). Their display
 //     data lives in src/static/taxonomy.ts. Adding a value costs a migration and
 //     a deploy — accepted in exchange for three tables and three admin screens.
 //   · Guest → Order, Cart → OrderItem (D17). The old names described neither
@@ -152,7 +152,7 @@ model Product {
   // Taxonomy is three enums, not three tables (D25). Display data — label, slug,
   // description, hero image, menu order — lives in src/static/taxonomy.ts.
   branding    BrandingType // required (D5)
-  garment     GarmentType? // single
+  clothing     ClothingType? // single
   audiences   AudienceType[] // many, so a product can be unisex
   sizeGuideId String?
 
@@ -188,7 +188,7 @@ model Product {
   orderItems   OrderItem[]
 
   @@index([branding])
-  @@index([garment])
+  @@index([clothing])
   @@index([releasedAt])
   @@index([bestSellerRank, soldCount]) // Best Sellers sorts by rank then soldCount
   @@index([isActive, isFavorite])
@@ -545,7 +545,7 @@ enum AudienceType {
   KIDS
 }
 
-enum GarmentType {
+enum ClothingType {
   DRESSES
   TOPS
   SKIRTS

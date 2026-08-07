@@ -18,7 +18,7 @@ export enum AudienceType {
   KIDS = "KIDS",
 }
 
-export enum GarmentType {
+export enum ClothingType {
   DRESSES = "DRESSES",
   TOPS = "TOPS",
   SKIRTS = "SKIRTS",
@@ -99,7 +99,7 @@ export interface QueryParams {
   order?: "asc" | "desc";
   locale?: Locale;
   branding?: string;
-  garment?: string;
+  clothing?: string;
   audience?: string;
   sort?: "latest" | "new-arrivals" | "best-sellers" | "price-asc" | "price-desc";
   /** String form carries the tri-state a list screen needs: "" (both), "true", "false". */
@@ -254,7 +254,7 @@ export interface Product {
   name: string;
 
   branding: BrandingType;
-  garment: GarmentType | null;
+  clothing: ClothingType | null;
   audiences: AudienceType[];
   sizeGuideId: string | null;
   sizeGuide?: SizeGuide | null;
@@ -294,7 +294,7 @@ export interface CreateProduct {
   slug: string;
   name: string;
   branding: BrandingType;
-  garment?: GarmentType | null;
+  clothing?: ClothingType | null;
   audiences: AudienceType[];
   sizeGuideId?: string | null;
   price: number;
