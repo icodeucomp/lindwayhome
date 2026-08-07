@@ -120,9 +120,9 @@ export const Header = ({ labels }: { labels: HeaderLabels }) => {
   // better — see useIsHydrated for why this is not an effect.
   const isHydrated = useIsHydrated();
 
-  // Past this point the tall wordmark row folds away and a small one moves into the
-  // middle slot, leaving two rows. Held open while the mobile drawer is, since
-  // collapsing under an open menu just makes the page jump.
+  // Past this point the wordmark shrinks and the header tightens. Held expanded while
+  // the mobile drawer is open, since condensing under an open menu just makes the page
+  // jump.
   const isCondensed = useScrolled(24) && !isDrawerOpen;
 
   const bagCount = isHydrated ? getCartItemByProduct() : 0;
@@ -142,28 +142,27 @@ export const Header = ({ labels }: { labels: HeaderLabels }) => {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-light border-border" onMouseLeave={() => setOpenMenu(null)}>
       <Container>
-        {/* Row 1 — the wordmark, centred and alone. It collapses on scroll rather than
-            being unmounted, so the height animates instead of snapping. */}
-        <div className={`flex justify-center overflow-hidden duration-300 ${isCondensed ? "max-h-0 py-0 opacity-0" : "max-h-32 pt-7 pb-4 lg:pt-9 lg:pb-5 opacity-100"}`}>
-          <LocaleLink href="/" aria-label="Lindway home" tabIndex={isCondensed ? -1 : undefined}>
-            <Img src="/icons/dark-logo.png" alt="Lindway" className="w-32 h-12 lg:w-40 lg:h-14" cover />
-          </LocaleLink>
-        </div>
+        {/* Row 1 — language, wordmark, and the two counters, all on one line. A three-column
+            grid rather than flex justify-between, so the wordmark stays optically centred no
+            matter how wide the two sides get: with justify-between the middle item drifts
+            off-centre the moment the counts go from (0) to (12).
 
-        {/* Row 2 — language, wordmark slot, and the two counters. A three-column grid
-            rather than flex justify-between, so the middle stays optically centred no
-            matter how wide the two sides get. The middle is empty at rest and holds a
-            small wordmark once scrolled, which is what turns three rows into two. */}
-        <div className={`grid items-center grid-cols-[1fr_auto_1fr] gap-4 duration-300 ${isCondensed ? "py-3" : "pb-5 lg:pb-6"}`}>
+            Scrolling only shrinks the wordmark and tightens the padding. It is the same
+            element throughout rather than one per state, so the size animates instead of
+            one node unmounting and another appearing in its place. */}
+        <div className={`grid items-center grid-cols-[1fr_auto_1fr] gap-4 duration-300 ${isCondensed ? "py-3" : "py-5 lg:py-6"}`}>
           <div className="justify-self-start">
             <LanguageSwitch />
           </div>
 
-          {isCondensed && (
-            <LocaleLink href="/" aria-label="Lindway home" className="justify-self-center">
-              <Img src="/icons/dark-logo.png" alt="Lindway" className="w-24 h-9 lg:w-28 lg:h-10" cover />
-            </LocaleLink>
-          )}
+          <LocaleLink href="/" aria-label="Lindway home" className="justify-self-center">
+            <Img
+              src="/icons/dark-logo.png"
+              alt="Lindway"
+              className={`duration-300 ${isCondensed ? "w-24 h-9 lg:w-28 lg:h-10" : "w-32 h-12 lg:w-40 lg:h-14"}`}
+              cover
+            />
+          </LocaleLink>
 
           <div className="flex items-center gap-5 lg:gap-7 justify-self-end">
             <span className="hidden sm:block">
@@ -191,7 +190,7 @@ export const Header = ({ labels }: { labels: HeaderLabels }) => {
           </div>
         </div>
 
-        {/* Row 3 — the nav itself. */}
+        {/* Row 2 — the nav itself. */}
         <nav className="justify-center hidden lg:flex">
           <ul className="flex items-center list-none gap-9 xl:gap-12">
             <li>
