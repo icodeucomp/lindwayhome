@@ -2,205 +2,288 @@
 
 import * as React from "react";
 
-import { useCartStore, useToggleState, useWishlistStore } from "@/hooks";
+import { usePathname } from "next/navigation";
 
 import { AnimatePresence, motion } from "framer-motion";
 
-import { Img, Container, LocaleLink } from "@/components";
+import { PiCaretDown, PiHandbagSimple, PiHeartStraight, PiList, PiX } from "react-icons/pi";
 
-import { aboutNav, audienceNav, brandingNav, garmentNav, socialLinks } from "@/static/navigation";
+import { Container, Img, LocaleLink } from "@/components";
+
+import { useCartStore, useIsHydrated, useWishlistStore } from "@/hooks";
+
+import { aboutNav, audienceNav, brandingNav, customerCareNav, garmentNav, type NavItem } from "@/static/navigation";
+
+import { stripLocale } from "@/utils/locale-path";
 
 import { LanguageSwitch } from "./language-switch";
 
-import { PiCaretDownBold, PiHeartStraight, PiHandbagSimple } from "react-icons/pi";
+/** Labels the layout hands down, so the nav speaks the reader's language (F-30). */
+export interface HeaderLabels {
+  tagline: string;
+  newArrivals: string;
+  collections: string;
+  ourWorld: string;
+  journal: string;
+  customerCare: string;
+  about: string;
+  wishlist: string;
+  bag: string;
+  branding: string;
+  audience: string;
+  garment: string;
+}
 
-const dropdownVariants = {
-  hidden: { opacity: 0, y: -20, scale: 0.95, transition: { duration: 0.2 } },
-  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.3, staggerChildren: 0.08 } },
-  exit: { opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.2 } },
-};
+type MenuKey = "collections" | "customerCare" | "about";
 
-const menuItemVariants = {
-  hidden: { opacity: 0, y: -20, transition: { duration: 0.2 } },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
-};
-
-const megaMenuVariants = {
-  hidden: { opacity: 0, y: -8, transition: { duration: 0.15 } },
+const panelVariants = {
+  hidden: { opacity: 0, y: -6, transition: { duration: 0.15 } },
   visible: { opacity: 1, y: 0, transition: { duration: 0.2 } },
 };
 
-const Counter = ({ value }: { value: number }) =>
-  value > 0 ? <span className="absolute grid text-[10px] rounded-full -top-2 -right-2 bg-primary text-light size-4 place-items-center">{value}</span> : null;
+const drawerVariants = {
+  hidden: { opacity: 0, height: 0, transition: { duration: 0.2 } },
+  visible: { opacity: 1, height: "auto", transition: { duration: 0.25 } },
+};
 
-export const Header = ({ isDark }: { isDark?: boolean }) => {
+/* -------------------------------------------------------------------------- */
+/*                                 Utilities                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Active when the reader is on that page or anywhere beneath it, compared without the
+ * locale prefix so `/id/journal/some-post` still lights up Journal.
+ */
+const useIsActive = () => {
+  const path = stripLocale(usePathname() ?? "/");
+
+  return React.useCallback(
+    (href: string, children: NavItem[] = []) => {
+      const matches = (target: string) => path === target || path.startsWith(`${target}/`);
+      return matches(href) || children.some((child) => matches(child.href));
+    },
+    [path],
+  );
+};
+
+const NavLink = ({ href, label, isActive, onClick }: { href: string; label: string; isActive: boolean; onClick?: () => void }) => (
+  <LocaleLink
+    href={href}
+    onClick={onClick}
+    aria-current={isActive ? "page" : undefined}
+    className={`relative block py-4 font-heading text-sm tracking-[0.1em] uppercase duration-200 ${isActive ? "text-primary" : "text-body hover:text-primary"}`}
+  >
+    {label}
+    {/* The underline sits on the header's bottom edge rather than under the text, so
+        it reads as a tab marker instead of a text decoration. */}
+    {isActive && <span aria-hidden className="absolute inset-x-0 -bottom-px h-0.5 bg-primary" />}
+  </LocaleLink>
+);
+
+const NavTrigger = ({ label, isActive, isOpen, onOpen }: { label: string; isActive: boolean; isOpen: boolean; onOpen: () => void }) => (
+  <button
+    type="button"
+    onMouseEnter={onOpen}
+    onFocus={onOpen}
+    aria-expanded={isOpen}
+    aria-haspopup="true"
+    className={`relative flex items-center gap-1.5 py-4 font-heading text-sm tracking-[0.1em] uppercase duration-200 cursor-pointer ${isActive || isOpen ? "text-primary" : "text-body hover:text-primary"}`}
+  >
+    {label}
+    <PiCaretDown className={`size-3 duration-200 ${isOpen ? "rotate-180" : ""}`} />
+    {isActive && <span aria-hidden className="absolute inset-x-0 -bottom-px h-0.5 bg-primary" />}
+  </button>
+);
+
+const CountLink = ({ href, label, count, icon }: { href: string; label: string; count: number; icon: React.ReactNode }) => (
+  <LocaleLink href={href} className="flex items-center gap-2 duration-200 group text-body hover:text-primary">
+    <span className="text-primary">{icon}</span>
+    <span className="font-heading text-sm tracking-[0.08em] uppercase whitespace-nowrap">
+      {label} ({count})
+    </span>
+  </LocaleLink>
+);
+
+/* -------------------------------------------------------------------------- */
+/*                                   Header                                   */
+/* -------------------------------------------------------------------------- */
+
+export const Header = ({ labels }: { labels: HeaderLabels }) => {
   const { getCartItemByProduct } = useCartStore();
   const wishlist = useWishlistStore();
 
-  const { ref: mobileRef, state: openMobile, toggleState: toggleMobile } = useToggleState();
-  const [openMenu, setOpenMenu] = React.useState<"collections" | "about" | null>(null);
+  const isActive = useIsActive();
 
-  const tone = isDark ? "text-body" : "text-light";
-  const rule = isDark ? "bg-primary" : "bg-light";
+  const [openMenu, setOpenMenu] = React.useState<MenuKey | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
+
+  // Counts come from localStorage, so the server renders zero and the browser knows
+  // better — see useIsHydrated for why this is not an effect.
+  const isHydrated = useIsHydrated();
+
+  const bagCount = isHydrated ? getCartItemByProduct() : 0;
+  const wishlistCount = isHydrated ? wishlist.count() : 0;
+
+  const closeAll = () => {
+    setOpenMenu(null);
+    setIsDrawerOpen(false);
+  };
+
+  const columns = [
+    { title: labels.branding, items: brandingNav },
+    { title: labels.audience, items: audienceNav },
+    { title: labels.garment, items: garmentNav },
+  ];
 
   return (
-    <>
-      <header className={`w-full transition-all duration-300 border-b ${isDark ? "bg-light border-border text-body" : "bg-transparent border-transparent text-light"}`}>
-        <Container className="flex items-center justify-between h-24 gap-8">
-          <menu className="items-center hidden gap-4 list-none lg:flex">
-            <li>
-              <a href={socialLinks.maps} target="_blank" rel="noopener noreferrer">
-                <Img src={isDark ? "/icons/location-grey.svg" : "/icons/location-light.svg"} alt="location icons" className="size-6" />
-              </a>
-            </li>
-            <li>
-              <a href={socialLinks.whatsapp} target="_blank" rel="noopener noreferrer">
-                <Img src={isDark ? "/icons/whatsapp-grey.svg" : "/icons/whatsapp-light.svg"} alt="whatsapp icons" className="size-6" />
-              </a>
-            </li>
-            <li>
-              <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer">
-                <Img src={isDark ? "/icons/instagram-grey.svg" : "/icons/instagram-light.svg"} alt="instagram icons" className="size-6" />
-              </a>
-            </li>
-            <li>
-              <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer">
-                <Img src={isDark ? "/icons/facebook-grey.svg" : "/icons/facebook-light.svg"} alt="facebook icons" className="size-6" />
-              </a>
-            </li>
-          </menu>
+    <header className="relative w-full border-b bg-light border-border" onMouseLeave={() => setOpenMenu(null)}>
+      {/* Thin accent rule across the top edge. */}
+      <div aria-hidden className="w-full h-2 bg-body" />
 
-          <div className="relative lg:absolute lg:transform lg:-translate-x-1/2 lg:left-1/2">
-            <LocaleLink href="/">
-              <Img src={isDark ? "/icons/dark-logo.png" : "/icons/light-logo.png"} alt="lindway logo" className="h-12 mx-auto xl:h-14 min-w-28 lg:min-w-32 xl:min-w-36" cover />
-            </LocaleLink>
+      <Container>
+        {/* Row 1 — the wordmark, centred and alone. */}
+        <div className="flex justify-center pt-7 pb-4 lg:pt-9 lg:pb-5">
+          <LocaleLink href="/" aria-label="Lindway home">
+            <Img src="/icons/dark-logo.png" alt="Lindway" className="w-32 h-12 lg:w-40 lg:h-14" cover />
+          </LocaleLink>
+        </div>
+
+        {/* Row 2 — language, tagline, and the two counters. A three-column grid rather
+            than flex justify-between, so the tagline stays optically centred no matter
+            how wide the two sides get. */}
+        <div className="grid items-center grid-cols-[1fr_auto_1fr] gap-4 pb-5 lg:pb-6">
+          <div className="justify-self-start">
+            <LanguageSwitch />
           </div>
 
-          <div ref={mobileRef} className="flex items-center justify-center gap-4 xl:gap-5">
-            <LanguageSwitch isDark={isDark} />
+          <p className="hidden font-heading text-base lg:text-xl tracking-[0.12em] uppercase text-primary justify-self-center whitespace-nowrap md:block">{labels.tagline}</p>
 
-            <div className="relative">
-              <LocaleLink href="/wishlist" className="block" aria-label="Wishlist">
-                <PiHeartStraight className={`size-6 ${tone}`} />
+          <div className="flex items-center gap-5 lg:gap-7 justify-self-end">
+            <span className="hidden sm:block">
+              <CountLink href="/wishlist" label={labels.wishlist} count={wishlistCount} icon={<PiHeartStraight className="size-5" />} />
+            </span>
+            <span className="hidden sm:block">
+              <CountLink href="/cart" label={labels.bag} count={bagCount} icon={<PiHandbagSimple className="size-5" />} />
+            </span>
+
+            {/* Small screens keep the icons but drop the words, and gain the drawer. */}
+            <span className="flex items-center gap-4 sm:hidden">
+              <LocaleLink href="/wishlist" aria-label={labels.wishlist} className="relative text-primary">
+                <PiHeartStraight className="size-6" />
+                {wishlistCount > 0 && <span className="absolute grid rounded-full -top-1.5 -right-2 size-4 place-items-center bg-primary text-light text-[10px]">{wishlistCount}</span>}
               </LocaleLink>
-              <Counter value={wishlist.count()} />
-            </div>
-
-            <div className="relative">
-              <LocaleLink href="/cart" className="block" aria-label="Bag">
-                <PiHandbagSimple className={`size-6 ${tone}`} />
+              <LocaleLink href="/cart" aria-label={labels.bag} className="relative text-primary">
+                <PiHandbagSimple className="size-6" />
+                {bagCount > 0 && <span className="absolute grid rounded-full -top-1.5 -right-2 size-4 place-items-center bg-primary text-light text-[10px]">{bagCount}</span>}
               </LocaleLink>
-              <Counter value={getCartItemByProduct()} />
-            </div>
+            </span>
 
-            <button onClick={toggleMobile} className="flex flex-col items-center justify-center size-8 space-y-1.5 md:hidden" aria-label="Toggle mobile menu">
-              <span className={`w-6 h-0.5 transition-all duration-300 ${rule} ${openMobile ? "rotate-45 translate-y-2" : ""}`}></span>
-              <span className={`w-6 h-0.5 transition-all duration-300 ${rule} ${openMobile ? "opacity-0" : ""}`}></span>
-              <span className={`w-6 h-0.5 transition-all duration-300 ${rule} ${openMobile ? "-rotate-45 -translate-y-2" : ""}`}></span>
+            <button type="button" onClick={() => setIsDrawerOpen((open) => !open)} aria-label="Menu" aria-expanded={isDrawerOpen} className="cursor-pointer text-body lg:hidden">
+              {isDrawerOpen ? <PiX className="size-6" /> : <PiList className="size-6" />}
             </button>
           </div>
-        </Container>
-      </header>
-
-      <nav
-        className={`relative w-full md:flex md:items-center h-full md:h-12 ${isDark ? "bg-light text-body shadow-sm" : "bg-transparent text-light"}`}
-        onMouseLeave={() => setOpenMenu(null)}
-      >
-        <Container className="items-center justify-center hidden md:flex">
-          <menu className="items-center justify-center hidden gap-6 list-none md:flex lg:gap-10">
-            <li className="relative text-xs font-heading lg:text-sm group whitespace-nowrap">
-              <LocaleLink href="/new-arrivals">New Arrivals</LocaleLink>
-            </li>
-
-            <li className="text-xs font-heading lg:text-sm whitespace-nowrap" onMouseEnter={() => setOpenMenu("collections")}>
-              <button className="flex items-center gap-1" aria-expanded={openMenu === "collections"}>
-                Collections <PiCaretDownBold className="size-3" />
-              </button>
-            </li>
-
-            <li className="relative text-xs font-heading lg:text-sm whitespace-nowrap">
-              <LocaleLink href="/our-world">Our World</LocaleLink>
-            </li>
-
-            <li className="relative text-xs font-heading lg:text-sm whitespace-nowrap">
-              <LocaleLink href="/journal">Journal</LocaleLink>
-            </li>
-
-            <li className="text-xs font-heading lg:text-sm whitespace-nowrap" onMouseEnter={() => setOpenMenu("about")}>
-              <button className="flex items-center gap-1" aria-expanded={openMenu === "about"}>
-                About <PiCaretDownBold className="size-3" />
-              </button>
-            </li>
-          </menu>
-        </Container>
-
-        {/* Collections mega-menu — three taxonomy columns (D16). */}
-        <AnimatePresence>
-          {openMenu === "collections" && (
-            <motion.div variants={megaMenuVariants} initial="hidden" animate="visible" exit="hidden" className="absolute left-0 z-50 hidden w-full border-t shadow-md top-full bg-light border-border md:block">
-              <Container className="grid grid-cols-3 gap-10 py-8 text-body">
-                {[
-                  { title: "Branding", items: brandingNav },
-                  { title: "Audience", items: audienceNav },
-                  { title: "Garment", items: garmentNav },
-                ].map((column) => (
-                  <div key={column.title} className="space-y-3">
-                    <p className="text-xs tracking-[0.2em] uppercase font-heading text-primary">{column.title}</p>
-                    <ul className="space-y-2 list-none">
-                      {column.items.map((item) => (
-                        <li key={item.href}>
-                          <LocaleLink href={item.href} className="text-sm hover:text-primary" onClick={() => setOpenMenu(null)}>
-                            {item.name}
-                          </LocaleLink>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </Container>
-            </motion.div>
-          )}
-
-          {openMenu === "about" && (
-            <motion.div variants={megaMenuVariants} initial="hidden" animate="visible" exit="hidden" className="absolute left-0 z-50 hidden w-full border-t shadow-md top-full bg-light border-border md:block">
-              <Container className="flex flex-wrap gap-x-10 gap-y-2 py-6 text-body">
-                {aboutNav.map((item) => (
-                  <LocaleLink key={item.href} href={item.href} className="text-sm hover:text-primary" onClick={() => setOpenMenu(null)}>
-                    {item.name}
-                  </LocaleLink>
-                ))}
-              </Container>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Mobile drawer */}
-        <div className="relative flex items-center w-full md:hidden">
-          <AnimatePresence>
-            {openMobile && (
-              <motion.div className="absolute right-0 top-0 z-50 w-full overflow-hidden shadow-lg bg-body text-light" variants={dropdownVariants} initial="hidden" animate="visible" exit="exit">
-                <menu className="flex flex-col list-none">
-                  {[
-                    { name: "New Arrivals", href: "/new-arrivals" },
-                    { name: "Best Sellers", href: "/best-sellers" },
-                    ...brandingNav,
-                    ...audienceNav,
-                    ...garmentNav,
-                    { name: "Our World", href: "/our-world" },
-                    ...aboutNav,
-                  ].map((item) => (
-                    <motion.li key={`${item.name}-${item.href}`} variants={menuItemVariants}>
-                      <LocaleLink href={item.href} className="block px-4 py-3 text-sm transition-colors hover:bg-light/10" onClick={toggleMobile}>
-                        {item.name}
-                      </LocaleLink>
-                    </motion.li>
-                  ))}
-                </menu>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
-      </nav>
-    </>
+
+        {/* Row 3 — the nav itself. */}
+        <nav className="justify-center hidden lg:flex">
+          <ul className="flex items-center list-none gap-9 xl:gap-12">
+            <li>
+              <NavLink href="/new-arrivals" label={labels.newArrivals} isActive={isActive("/new-arrivals")} />
+            </li>
+            <li>
+              <NavTrigger
+                label={labels.collections}
+                isOpen={openMenu === "collections"}
+                isActive={isActive("/collections", [...audienceNav, ...garmentNav])}
+                onOpen={() => setOpenMenu("collections")}
+              />
+            </li>
+            <li>
+              <NavLink href="/our-world" label={labels.ourWorld} isActive={isActive("/our-world")} />
+            </li>
+            <li>
+              <NavLink href="/journal" label={labels.journal} isActive={isActive("/journal")} />
+            </li>
+            <li>
+              <NavTrigger label={labels.customerCare} isOpen={openMenu === "customerCare"} isActive={isActive("/customer-care")} onOpen={() => setOpenMenu("customerCare")} />
+            </li>
+            <li>
+              <NavTrigger label={labels.about} isOpen={openMenu === "about"} isActive={isActive("/about")} onOpen={() => setOpenMenu("about")} />
+            </li>
+          </ul>
+        </nav>
+      </Container>
+
+      {/* Collections mega-menu — three taxonomy columns, straight from taxonomy.ts. */}
+      <AnimatePresence>
+        {openMenu === "collections" && (
+          <motion.div variants={panelVariants} initial="hidden" animate="visible" exit="hidden" className="absolute inset-x-0 z-50 hidden border-t border-b shadow-sm top-full bg-light border-border lg:block">
+            <Container className="grid grid-cols-3 py-10 gap-x-10">
+              {columns.map((column) => (
+                <div key={column.title}>
+                  <p className="font-heading text-xxs tracking-[0.2em] uppercase text-primary mb-4">{column.title}</p>
+                  <ul className="space-y-2.5 list-none">
+                    {column.items.map((item) => (
+                      <li key={item.href}>
+                        <LocaleLink href={item.href} onClick={closeAll} className="text-sm duration-200 text-body hover:text-primary">
+                          {item.name}
+                        </LocaleLink>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </Container>
+          </motion.div>
+        )}
+
+        {(openMenu === "customerCare" || openMenu === "about") && (
+          <motion.div variants={panelVariants} initial="hidden" animate="visible" exit="hidden" className="absolute inset-x-0 z-50 hidden border-t border-b shadow-sm top-full bg-light border-border lg:block">
+            <Container className="flex flex-wrap justify-center py-8 gap-x-10 gap-y-3">
+              {(openMenu === "about" ? aboutNav : customerCareNav).map((item) => (
+                <LocaleLink key={item.href} href={item.href} onClick={closeAll} className="text-sm duration-200 text-body hover:text-primary">
+                  {item.name}
+                </LocaleLink>
+              ))}
+            </Container>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile drawer — one flat list, since a nested accordion on a phone hides more
+          than it organises at this menu size. */}
+      <AnimatePresence>
+        {isDrawerOpen && (
+          <motion.div variants={drawerVariants} initial="hidden" animate="visible" exit="hidden" className="overflow-hidden border-t bg-light border-border lg:hidden">
+            <Container className="py-4">
+              <p className="mb-4 font-heading text-xs tracking-[0.12em] uppercase text-primary md:hidden">{labels.tagline}</p>
+
+              <ul className="list-none divide-y divide-border/70">
+                {[
+                  { name: labels.newArrivals, href: "/new-arrivals" },
+                  ...brandingNav,
+                  ...audienceNav,
+                  ...garmentNav,
+                  { name: labels.ourWorld, href: "/our-world" },
+                  { name: labels.journal, href: "/journal" },
+                  ...customerCareNav,
+                  ...aboutNav,
+                ].map((item) => (
+                  <li key={`${item.name}-${item.href}`}>
+                    <LocaleLink
+                      href={item.href}
+                      onClick={closeAll}
+                      className={`block py-3 font-heading text-sm tracking-[0.08em] uppercase duration-200 ${isActive(item.href) ? "text-primary" : "text-body hover:text-primary"}`}
+                    >
+                      {item.name}
+                    </LocaleLink>
+                  </li>
+                ))}
+              </ul>
+            </Container>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </header>
   );
 };

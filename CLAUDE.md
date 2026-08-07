@@ -947,7 +947,7 @@ Do not guess these; ask.
 2. **`Order.instagram` / `Order.reference`** — two optional v1 attribution columns ("how did you hear about us"). Still collected, or dropped? Cosmetic either way; decide before the seed is written.
 3. **`ConfigParameter.validation`** — only `validation.options` is ever read (it fills SELECT dropdowns). The min/max/required rules stored there are never enforced anywhere. Keep the loose `Json`, or narrow it to an `options` column?
 4. **`User.username`** — `email` and `username` are both unique and login accepts either. Two identity columns for one person.
-5. **Who designs the public v2 pages** — the admin has its own design system now (§C2), but the storefront does not. Three readings of "semua UI page nyaa dari saya", and they lead to different work: (a) designs already exist and should be implemented as given; (b) designs are coming later, so build the pages structurally correct and visually plain; (c) design them here from the palette and type scale. **Phase 2b is blocked on this** — building a visual treatment that is then replaced is the one genuinely wasted outcome.
+5. ~~**Who designs the public v2 pages**~~ **Answered: the client supplies them.** The header design arrived as a mockup and was built from it (§C8). Public work now proceeds design-first — build a screen when its design exists, not before.
 
 ---
 
@@ -955,7 +955,7 @@ Do not guess these; ask.
 
 Each phase ends with `npx tsc --noEmit` clean, `npm run build` clean, and the affected flow exercised by hand. Move the phase's sections from `[TARGET]` to `[SHIPPED]` and delete the superseded Part A text before starting the next one.
 
-**Lint has a pre-existing baseline that v2 did not create.** `npm run lint` reported 10 `react-hooks/set-state-in-effect` errors on the pre-v2 commit. None were introduced since; deleting v1 files removed 7, and the admin rewrite fixed `config-field.tsx` and `useSearchPagination.ts` by deriving during render instead of syncing in an effect. **1 remains** — `carts/cart.tsx`, which phase 2/3 rewrites. Restore "lint clean" as the gate once it goes.
+**Lint is clean, and the gate is back to "no errors".** `npm run lint` reported 10 `react-hooks/set-state-in-effect` errors on the pre-v2 commit. Deleting v1 files removed 7; the admin rewrite fixed `config-field.tsx` and `useSearchPagination.ts` by deriving during render instead of syncing in an effect; the header rework cleared the last one by replacing the `useState` + effect hydration guard with [`useIsHydrated`](src/hooks/useIsHydrated.ts), which is `useSyncExternalStore` with separate server and client snapshots. Use that hook for anything read from `localStorage` — the cart and the wishlist — rather than reintroducing the pattern.
 
 **The database is dropped and rebuilt, not migrated (D-note).** There is no production data to preserve, so phase 1 runs `npm run db:reset` and reseeds. Confirm before running it — it is destructive and irreversible.
 
@@ -1134,6 +1134,22 @@ The member registry (F-48). D19 is the whole point of this screen, so it is what
 - **Delete is refused once a member has orders.** `Order.memberId` is an optional relation, so Prisma would null it out and report success — quietly severing every order from the person who placed it. The screen only offers Delete when `orderCount` is 0; the server refuses regardless.
 - **Order stats come from one `groupBy` per page**, not per row, and count only verified orders — an unverified order has not been paid, and showing it as spend overstates what a member is worth.
 - **Order count links to the Orders screen filtered by email** rather than duplicating a list. Its search already matches on email, so there is nothing new to build or keep in sync.
+
+## C8. Public shell `[SHIPPED]`
+
+The v2 header, built from the client's mockup. The footer is next.
+
+**The header is a solid band, and that changed the page structure.** v1's header floated over a hero background image, so it was rendered *inside* the hero on six pages, plus separately on the cart and the placeholder — nine copies. A solid band cannot do that, so `Header`, `Footer` and `<main>` moved into [`[lang]/layout.tsx`](<src/app/(public)/[lang]/layout.tsx>) and every page dropped its own. Pages are now their body and nothing else.
+
+**That move is also what makes the nav translate.** The dictionaries have carried `nav.*` since phase 0 but nothing read them — the header hardcoded English, so switching to Indonesian left the whole menu in English. The layout is a server component, so it loads the dictionary and hands the header plain strings; `get-dictionary.ts` still never reaches a client bundle.
+
+Three rows: wordmark centred and alone · language, tagline and the two counters · the nav. The middle row is a `grid-cols-[1fr_auto_1fr]` rather than `justify-between`, so the tagline stays optically centred whatever the sides weigh.
+
+- **The active nav marker is a tab underline on the header's bottom edge**, not a text decoration, and a section counts as active anywhere beneath it — `/journal/some-post` still lights up Journal. Compared with the locale stripped, so it works in both languages.
+- **The language switch is a dropdown, not "EN / ID" side by side.** With two languages the pair never makes it obvious which one you are in; showing the active one alone does.
+- **Counts are guarded by `useIsHydrated`.** The cart and wishlist live in `localStorage`, so the server cannot know them — it renders `(0)` and the browser corrects it during hydration.
+
+Two things deliberately not done, because the mockup does not show them: the header is **not sticky**, and there is **no condensed-on-scroll state**. Both are worth having on a shop where the bag should stay reachable; raise them when the design covers it.
 
 ---
 

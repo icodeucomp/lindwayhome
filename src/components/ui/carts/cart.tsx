@@ -4,7 +4,7 @@ import * as React from "react";
 
 import { useRouter } from "next/navigation";
 
-import { useCartStore, useLocaleHref } from "@/hooks";
+import { useCartStore, useIsHydrated, useLocaleHref } from "@/hooks";
 
 import toast from "react-hot-toast";
 
@@ -36,7 +36,8 @@ export const CartProduct = () => {
   } = useCartStore();
 
   const [isModalOpen, setIsModalOpen] = React.useState<boolean>(false);
-  const [isHydrated, setIsHydrated] = React.useState<boolean>(false);
+  // Cart lives in localStorage, so the first paint cannot know it yet.
+  const isHydrated = useIsHydrated();
 
   const cartItems = React.useMemo(() => {
     return Object.entries(
@@ -76,10 +77,6 @@ export const CartProduct = () => {
     },
     [removeFromCart],
   );
-
-  React.useEffect(() => {
-    setIsHydrated(true);
-  }, []);
 
   if (!isHydrated) {
     return (

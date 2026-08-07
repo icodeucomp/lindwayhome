@@ -1,8 +1,8 @@
-import { Footer, EverySnap, ReturnExchanges, Hero } from "@/components/ui";
+import { EverySnap, ReturnExchanges, Hero } from "@/components/ui";
 
 export default function ReturnExchangesPage() {
   return (
-    <main>
+    <>
       <Hero
         title="Return & Exchanges Policies"
         description="Clear and straightforward return and exchange terms for your peace of mind. Review our policy before making a purchase."
@@ -10,7 +10,6 @@ export default function ReturnExchangesPage() {
       />
       <ReturnExchanges />
       <EverySnap />
-      <Footer />
-    </main>
+    </>
   );
 }

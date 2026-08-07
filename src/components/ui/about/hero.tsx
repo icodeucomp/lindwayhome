@@ -1,10 +1,8 @@
 import { Background, Container, Img, Motion } from "@/components";
-import { Header } from "@/components/ui";
 
 export const Hero = () => {
   return (
     <Background src="/images/about-lindway-header-background.webp" alt="hero background" className="flex flex-col items-center min-h-175 md:min-h-screen bg-filter">
-      <Header />
       <Container className="flex flex-col items-center gap-8 pt-16 pb-10 md:pb-0 md:flex-row lg:gap-16">
         <Img
           src="/images/about-lindway-header-artisan-journey.webp"
