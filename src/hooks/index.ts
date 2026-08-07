@@ -8,3 +8,4 @@ export * from "./useSearchPagination";
 export * from "./useLocale";
 export * from "./useWishlist";
 export * from "./useIsHydrated";
+export * from "./useScrolled";

@@ -1151,7 +1151,9 @@ Three rows: wordmark centred and alone · language, tagline and the two counters
 
 **The header is sticky, and that forced a fix one layer up.** `body` carried `overflow-x: hidden`, which makes the element a scroll container — a sticky descendant then sticks to *it* rather than to the viewport, and the header would have scrolled away regardless of the `sticky` class. It is now `overflow-x: clip`, which stops sideways scrolling without creating a scroll container. Keep it that way; swapping it back would break the header silently, with nothing in the markup to explain why.
 
-Still not done: there is **no condensed-on-scroll state**, so all three rows stay pinned — roughly 200px of viewport on desktop. Worth revisiting when a design for the compact form exists.
+**Scrolled, it condenses to two rows.** Past 24px the tall wordmark row folds away and a small wordmark takes the tagline's slot, leaving `[language · wordmark · counters]` over `[nav]`. The tall row collapses rather than unmounting, so its height animates instead of snapping, and it stays open while the mobile drawer is — collapsing under an open menu only makes the page jump.
+
+Both this and the hydration guard use [`useScrolled`](src/hooks/useScrolled.ts) / [`useIsHydrated`](src/hooks/useIsHydrated.ts), which are `useSyncExternalStore` rather than `useState` + effect. Beyond satisfying the lint rule, the server snapshot means a page restored mid-scroll reports the right answer on its first client render instead of flashing the tall header and then collapsing it.
 
 ---
 
