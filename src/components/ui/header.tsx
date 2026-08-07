@@ -20,7 +20,6 @@ import { LanguageSwitch } from "./language-switch";
 
 /** Labels the layout hands down, so the nav speaks the reader's language (F-30). */
 export interface HeaderLabels {
-  tagline: string;
   newArrivals: string;
   collections: string;
   ourWorld: string;
@@ -121,8 +120,8 @@ export const Header = ({ labels }: { labels: HeaderLabels }) => {
   // better — see useIsHydrated for why this is not an effect.
   const isHydrated = useIsHydrated();
 
-  // Past this point the tall wordmark row folds away and a small one takes the
-  // tagline's slot, leaving two rows. Held open while the mobile drawer is, since
+  // Past this point the tall wordmark row folds away and a small one moves into the
+  // middle slot, leaving two rows. Held open while the mobile drawer is, since
   // collapsing under an open menu just makes the page jump.
   const isCondensed = useScrolled(24) && !isDrawerOpen;
 
@@ -151,21 +150,19 @@ export const Header = ({ labels }: { labels: HeaderLabels }) => {
           </LocaleLink>
         </div>
 
-        {/* Row 2 — language, tagline, and the two counters. A three-column grid rather
-            than flex justify-between, so the middle stays optically centred no matter
-            how wide the two sides get. Scrolled, the tagline gives its slot to a small
-            wordmark, which is what turns three rows into two. */}
+        {/* Row 2 — language, wordmark slot, and the two counters. A three-column grid
+            rather than flex justify-between, so the middle stays optically centred no
+            matter how wide the two sides get. The middle is empty at rest and holds a
+            small wordmark once scrolled, which is what turns three rows into two. */}
         <div className={`grid items-center grid-cols-[1fr_auto_1fr] gap-4 duration-300 ${isCondensed ? "py-3" : "pb-5 lg:pb-6"}`}>
           <div className="justify-self-start">
             <LanguageSwitch />
           </div>
 
-          {isCondensed ? (
+          {isCondensed && (
             <LocaleLink href="/" aria-label="Lindway home" className="justify-self-center">
               <Img src="/icons/dark-logo.png" alt="Lindway" className="w-24 h-9 lg:w-28 lg:h-10" cover />
             </LocaleLink>
-          ) : (
-            <p className="hidden font-heading text-base lg:text-xl tracking-[0.12em] uppercase text-primary justify-self-center whitespace-nowrap md:block">{labels.tagline}</p>
           )}
 
           <div className="flex items-center gap-5 lg:gap-7 justify-self-end">
@@ -266,7 +263,6 @@ export const Header = ({ labels }: { labels: HeaderLabels }) => {
         {isDrawerOpen && (
           <motion.div variants={drawerVariants} initial="hidden" animate="visible" exit="hidden" className="overflow-hidden border-t bg-light border-border lg:hidden">
             <Container className="py-4">
-              <p className="mb-4 font-heading text-xs tracking-[0.12em] uppercase text-primary md:hidden">{labels.tagline}</p>
 
               <ul className="list-none divide-y divide-border/70">
                 {[

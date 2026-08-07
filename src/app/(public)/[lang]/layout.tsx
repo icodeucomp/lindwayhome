@@ -49,7 +49,7 @@ export default async function PublicLayout({ children, params }: Readonly<{ chil
               rendered per page — and inside the hero on six of them, because the old
               header floated over the background image. The v2 header is a solid band,
               so that arrangement is gone and one placement serves every route. */}
-          <Header labels={{ ...dictionary.nav, tagline: dictionary.brand.tagline }} />
+          <Header labels={dictionary.nav} />
           <main className="flex-1">{children}</main>
           <Footer />
         </QueryClientWrapper>
