@@ -263,7 +263,6 @@ export const Header = ({ labels }: { labels: HeaderLabels }) => {
         {isDrawerOpen && (
           <motion.div variants={drawerVariants} initial="hidden" animate="visible" exit="hidden" className="overflow-hidden border-t bg-light border-border lg:hidden">
             <Container className="py-4">
-
               <ul className="list-none divide-y divide-border/70">
                 {[
                   { name: labels.newArrivals, href: "/new-arrivals" },
