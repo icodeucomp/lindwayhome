@@ -63,8 +63,9 @@ export const BRANDING = [
     order: 3,
     isActive: true,
   },
-  // Copy and artwork for the two lines below are still with the client. They are
-  // inactive so nothing links to an empty page; flip isActive once the assets land.
+  // Copy and artwork for the two lines below are still with the client, but the menu
+  // lists all five brandings by the client's own design, so they are active and their
+  // pages carry the placeholder until the assets land.
   {
     key: "STUDIO_BY_LINDWAY",
     label: "Studio by Lindway",
@@ -72,7 +73,7 @@ export const BRANDING = [
     description: "",
     image: "",
     order: 4,
-    isActive: false,
+    isActive: true,
   },
   {
     key: "LINDWAY_AWP",
@@ -81,7 +82,7 @@ export const BRANDING = [
     description: "",
     image: "",
     order: 5,
-    isActive: false,
+    isActive: true,
   },
 ] as const satisfies readonly BrandingEntry[];
 

@@ -266,20 +266,23 @@ Product and article URLs use `slug`, not `id`. **Slug is single, not per-locale*
 
 **Header** — New Arrivals · Collections · Our World · Journal · About (Our Story, Our Production, Our Artisan, Sustainability, Our Fabrics, Journal — the duplicate Journal entry is intentional, D13) · Wishlist counter · Bag counter · EN/ID switch.
 
-**Collections is a three-column mega-menu** rendered from [`src/static/taxonomy.ts`](src/static/taxonomy.ts) (D16, D25):
+**Collections is a two-column mega-menu** rendered from [`src/static/taxonomy.ts`](src/static/taxonomy.ts) (D16, D25):
 
 ```
 Collections ▾
-  Branding              Audience              Clothing
-  My Lindway            Women                 Dresses
-  Simply Lindway        Men                   Tops
-  Lure by Lindway       Kids                  Skirts
-  Studio by Lindway                           …
-  Lindway × AWP
-  → /collections/[slug]  → /shop/for/[slug]    → /shop/[slug]
+  Branding              Shop By
+  My Lindway            Dresses        → /shop/[slug]
+  Simply Lindway        Tops
+  Lure by Lindway       Skirts
+  Studio by Lindway     Best Sellers   → /best-sellers
+  Lindway × AWP         Women          → /shop/for/[slug]
+                        Men
+  → /collections/[slug] Kids
 ```
 
-Each column renders the `isActive` entries ordered by `order`. Since the taxonomy is enums (D25), a new branding or clothing reaches the menu through a deploy, not a database row — `isActive` is what an admin-free change can toggle in the meantime. This is also how clothing and audience listings become reachable from the header, not just the footer.
+Audience and clothing are **one list, not two columns** — a reader picking their way in is answering a single question ("what am I shopping for"), and two headed columns made them read the headings before the links. Best Sellers sits between the two halves, both as a destination and as the divider. The list lives in `shopByNav`; only Best Sellers carries a dictionary key, since taxonomy labels are not translated (D2).
+
+Each column renders the `isActive` entries ordered by `order`. Since the taxonomy is enums (D25), a new branding or clothing reaches the menu through a deploy, not a database row — `isActive` is what an admin-free change can toggle in the meantime. **All five brandings are active**: the client's design lists all five, so `STUDIO_BY_LINDWAY` and `LINDWAY_AWP` link to the branding placeholder rather than being hidden. Their `description` and `image` in `taxonomy.ts` are still empty, so fill those before building the branding page (phase 2b).
 
 **Footer** — four columns: Collections (5 brandings) · Shop (New Arrivals, Best Sellers, Dresses, Tops, Skirts, Kids, Men) · Customer Care (Size Guide, How to Shop, Shipping & Delivery, Return & Exchanges, Care Instructions, Contact Us, FAQ) · About (Our Story, Our Production, Our Artisan, Sustainability, Our Fabrics, Journal).
 
@@ -1178,7 +1181,7 @@ Agreed in discussion. Do not reopen without a new decision recorded here.
 | **D13** | Journal appears both as a top-level menu and under About (intentional). `/our-world` is a placeholder. New Arrivals uses `releasedAt`; Best Sellers uses automatic `soldCount` plus a manual `bestSellerRank` | Confirmed with the client |
 | **D14** | Raleway + Inter via `next/font/google`; the full palette is replaced. Alethia Next OTF files stay in `public/fonts` but are unused | v2 is an intentional visual overhaul; keeping the old font files is cheaper than restoring them |
 | **D15** | Contact Inbox is a standalone top-level admin menu with full inquiry management (filter, search, detail, status transitions), not an email relay and not a Content sub-item | It is a daily work queue, not authored content; status tracking is what makes an inquiry not get dropped |
-| **D16** | The Collections header menu is a three-column mega-menu over branding, audience and clothing. Curated Collections is deleted — page, component, home-page section, and the `videos_curated_collection` config key | It gives clothing and audience listings a header entry point instead of footer-only. *(The original rationale — "a new branding appears without a deploy" — no longer holds: D25 made the taxonomy static.)* |
+| **D16** | The Collections header menu is a **two-column** mega-menu: Branding (all five) and Shop By (clothing, then Best Sellers, then audience). Curated Collections is deleted — page, component, home-page section, and the `videos_curated_collection` config key | It gives clothing and audience listings a header entry point instead of footer-only. Audience and clothing merged into one list because they answer one question for the reader, and two headed columns of three links each made the headings do more work than the links. *(The original rationale — "a new branding appears without a deploy" — no longer holds: D25 made the taxonomy static.)* |
 | **D17** | `Guest` → `Order`, `Cart` → `OrderItem`, and the endpoints follow (`/api/guests/*` → `/api/orders/*`) | Neither name described its table. The real shopping cart is `localStorage` and never reaches the database, so a table called `Cart` holding order lines actively misleads. Renaming is safe because D8 protects behaviour, not identifiers — and doing it during the phase-1 rewrite costs nothing extra |
 | ~~**D18**~~ | ~~`Promotion` and `MemberDiscount` collapse into one `Discount` table~~ | **Superseded by D22** — the tables themselves were dropped |
 | **D19** | `Member` is kept alongside `Order.isMember`, linked by `Order.memberId` | They answer different questions. Revoking membership by flipping `isMember` across past orders would rewrite history — orders genuinely charged the member price would start claiming otherwise while their stored totals said the opposite. Current state and historical record must never share a column |

@@ -12,15 +12,21 @@ import { Container, Img, LocaleLink } from "@/components";
 
 import { useCartStore, useIsHydrated, useWishlistStore } from "@/hooks";
 
-import { aboutNav, audienceNav, brandingNav, clothingNav, customerCareNav, type NavItem } from "@/static/navigation";
+import { aboutNav, brandingNav, customerCareNav, localizeNav, shopByNav, type NavItem } from "@/static/navigation";
 
 import { stripLocale } from "@/utils/locale-path";
 
 import { LanguageSwitch } from "./language-switch";
 
-/** Labels the layout hands down, so the nav speaks the reader's language (F-30). */
-export interface HeaderLabels {
+/**
+ * Labels the layout hands down, so the nav speaks the reader's language (F-30).
+ *
+ * A type rather than an interface so it satisfies `Record<string, string>` and can be
+ * handed straight to `localizeNav` — an interface has no implicit index signature.
+ */
+export type HeaderLabels = {
   newArrivals: string;
+  bestSellers: string;
   collections: string;
   ourWorld: string;
   journal: string;
@@ -29,9 +35,8 @@ export interface HeaderLabels {
   wishlist: string;
   bag: string;
   branding: string;
-  audience: string;
-  clothing: string;
-}
+  shopBy: string;
+};
 
 type MenuKey = "collections" | "customerCare" | "about";
 
@@ -128,10 +133,13 @@ export const Header = ({ labels }: { labels: HeaderLabels }) => {
     setIsDrawerOpen(false);
   };
 
+  // Branding labels are not translated (D2); Best Sellers is, so the shop-by list runs
+  // through localizeNav while the branding list does not need to.
+  const shopBy = localizeNav(shopByNav, labels);
+
   const columns = [
     { title: labels.branding, items: brandingNav },
-    { title: labels.audience, items: audienceNav },
-    { title: labels.clothing, items: clothingNav },
+    { title: labels.shopBy, items: shopBy },
   ];
 
   return (
@@ -189,7 +197,7 @@ export const Header = ({ labels }: { labels: HeaderLabels }) => {
               <NavTrigger
                 label={labels.collections}
                 isOpen={openMenu === "collections"}
-                isActive={isActive("/collections", [...audienceNav, ...clothingNav])}
+                isActive={isActive("/collections", shopBy)}
                 onOpen={() => setOpenMenu("collections")}
               />
             </li>
@@ -209,13 +217,17 @@ export const Header = ({ labels }: { labels: HeaderLabels }) => {
         </nav>
       </Container>
 
-      {/* Collections mega-menu — three taxonomy columns, straight from taxonomy.ts. */}
+      {/* Collections mega-menu — two columns, straight from taxonomy.ts. Branding on the
+          left, everything a reader might shop by on the right. */}
       <AnimatePresence>
         {openMenu === "collections" && (
           <motion.div variants={panelVariants} initial="hidden" animate="visible" exit="hidden" className="absolute inset-x-0 z-50 hidden border-t border-b shadow-sm top-full bg-light border-border lg:block">
-            <Container className="grid grid-cols-3 py-10 gap-x-10">
+            {/* Two fixed-width columns centred as a pair, rather than a grid spanning the
+                full container — two of three columns' worth of links stretched across the
+                whole width would leave the reader's eye crossing empty space. */}
+            <Container className="flex justify-center py-10 gap-x-24">
               {columns.map((column) => (
-                <div key={column.title}>
+                <div key={column.title} className="w-48">
                   <p className="font-heading text-xxs tracking-[0.2em] uppercase text-primary mb-4">{column.title}</p>
                   <ul className="space-y-2.5 list-none">
                     {column.items.map((item) => (
@@ -255,8 +267,7 @@ export const Header = ({ labels }: { labels: HeaderLabels }) => {
                 {[
                   { name: labels.newArrivals, href: "/new-arrivals" },
                   ...brandingNav,
-                  ...audienceNav,
-                  ...clothingNav,
+                  ...shopBy,
                   { name: labels.ourWorld, href: "/our-world" },
                   { name: labels.journal, href: "/journal" },
                   ...customerCareNav,

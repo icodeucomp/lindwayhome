@@ -259,7 +259,11 @@ export const MainDashboard = () => {
                     value={row.stock}
                     caption={`in stock · ${row.products} product${row.products === 1 ? "" : "s"}`}
                     footnote={
-                      brandingByKey(row.branding)?.isActive === false ? (
+                      // Not `=== false`: taxonomy.ts is `as const`, so with every branding
+                      // active the literal type is `true` and TypeScript rejects the
+                      // comparison as impossible. This keeps the badge working for
+                      // whenever one is switched off again.
+                      !(brandingByKey(row.branding)?.isActive ?? true) ? (
                         <Badge className="bg-body/6 text-body/50">Hidden from storefront</Badge>
                       ) : undefined
                     }
