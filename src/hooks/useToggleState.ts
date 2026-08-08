@@ -8,6 +8,8 @@ interface UseToggleStateReturn {
   ref: RefObject<HTMLDivElement | null>;
   state: boolean;
   toggleState: () => void;
+  /** Explicit setter, for dropdowns that must close on selection rather than on toggle. */
+  setState: (value: boolean) => void;
 }
 
 export const useToggleState = (initialValue = false): UseToggleStateReturn => {
@@ -49,5 +51,5 @@ export const useToggleState = (initialValue = false): UseToggleStateReturn => {
     }
   }, [isBigScreen]);
 
-  return { ref, state, toggleState };
+  return { ref, state, toggleState, setState };
 };

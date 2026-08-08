@@ -19,10 +19,15 @@ export const audienceNav: NavItem[] = activeAudience().map((entry) => ({ name: e
 
 export const garmentNav: NavItem[] = activeGarment().map((entry) => ({ name: entry.label, href: `/shop/${entry.slug}` }));
 
+/**
+ * Our Story and Our Artisan are sections of the single About page (reference/About
+ * Us.png), so they point at anchors rather than routes of their own. The old routes
+ * still exist as redirects.
+ */
 export const aboutNav: NavItem[] = [
-  { name: "Our Story", href: "/about/our-story" },
+  { name: "Our Story", href: "/about" },
   { name: "Our Production", href: "/about/our-production" },
-  { name: "Our Artisan", href: "/about/our-artisan" },
+  { name: "Our Artisan", href: "/about#artisan" },
   { name: "Sustainability", href: "/about/sustainability" },
   { name: "Our Fabrics", href: "/about/our-fabrics" },
   // Journal appears here as well as at top level — intentional (D13).
@@ -42,6 +47,7 @@ export const customerCareNav: NavItem[] = [
 export const shopNav: NavItem[] = [{ name: "New Arrivals", href: "/new-arrivals" }, { name: "Best Sellers", href: "/best-sellers" }, ...garmentNav, ...audienceNav];
 
 export const socialLinks = {
+  email: "mailto:mylindway@gmail.com",
   maps: "https://maps.app.goo.gl/2pUxXSh99bSCWTtd6",
   whatsapp: "https://api.whatsapp.com/send?phone=6282339936682",
   instagram: "https://www.instagram.com/mylindway",

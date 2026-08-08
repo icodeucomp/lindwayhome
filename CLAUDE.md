@@ -947,7 +947,7 @@ Do not guess these; ask.
 2. **`Order.instagram` / `Order.reference`** — two optional v1 attribution columns ("how did you hear about us"). Still collected, or dropped? Cosmetic either way; decide before the seed is written.
 3. **`ConfigParameter.validation`** — only `validation.options` is ever read (it fills SELECT dropdowns). The min/max/required rules stored there are never enforced anywhere. Keep the loose `Json`, or narrow it to an `options` column?
 4. **`User.username`** — `email` and `username` are both unique and login accepts either. Two identity columns for one person.
-5. **Who designs the public v2 pages** — the admin has its own design system now (§C2), but the storefront does not. Three readings of "semua UI page nyaa dari saya", and they lead to different work: (a) designs already exist and should be implemented as given; (b) designs are coming later, so build the pages structurally correct and visually plain; (c) design them here from the palette and type scale. **Phase 2b is blocked on this** — building a visual treatment that is then replaced is the one genuinely wasted outcome.
+5. ~~**Who designs the public v2 pages**~~ — **Answered.** Eighteen desktop mockups landed in [`reference/`](reference/); reading (a) applies, so they were implemented as given. Phase 2b is unblocked and done. What the mockups do *not* cover is listed in §C5.
 
 ---
 
@@ -965,10 +965,10 @@ Each phase ends with `npx tsc --noEmit` clean, `npm run build` clean, and the af
 | **0 — Foundation** ✅ **DONE** | `[lang]` routing + dictionaries · design tokens (`#BA8164`, `#39322C`, `#FAF6F5`, `#F7F3F0`, `#D2D2CA`) · Raleway + Inter via `next/font/google` · new header/footer shell · `tiptap-editor.tsx` shared component · delete `/curated-collections` and `video-carousel.tsx` (D16) | Touches every file. Doing it later means redoing every other phase |
 | **1 — Data model** ✅ **DONE** | Drop and rebuild the schema: taxonomy enums, Size/SizeGuide/Variant, Product + translations, Order/OrderItem, Member, content models · apply `product-stock.sql` · new seed · `resolveTranslation` + `resolveUnitPrice` helpers · `db:check` · assert `taxonomy.ts` keys match the Prisma enums · admin CRUD for sizes and size guides | Everything downstream depends on these tables |
 | **2a — Admin catalog** ✅ **DONE** | Admin design system (§C2) · product list with search, taxonomy filters, grid/list and paging · product form: size guide → variants → package dimensions, images, 5 Tiptap fields behind an EN\|ID tab · product **soft delete** (A9.13) | No dependency on the public design, and nothing else can be built against an empty catalog |
-| **2b — Public catalog** | Listings per axis, product detail, New Arrivals, Best Sellers, wishlist | **Blocked on the v2 visual design** — see §B7.5 |
+| **2b — Public catalog** ✅ **DONE** | Storefront kit (§C5) · header/footer shell in the layout · homepage · listings per axis · collection pages · product detail · cart drawer · wishlist · Journal · About · every Customer Care page · FAQ and Contact vertical slices | Implemented from the mockups in [`reference/`](reference/) |
 | **3 — Orders & pricing** | Member registry, `OrderStatus` + tracking number in the admin order screen, server-computed subtotal (F-51), line snapshot (F-55) | Touches the checkout path, so it runs alone |
 | **4a — Journal admin** ✅ **DONE** | `Article` + `ArticleCategory` CRUD: zod, types, API routes, client hooks, list and form screens, seed | Independent of 2b and 3 |
-| **4 — Content** | FAQ, Contact form + inbox, public size guide page, public Journal pages | Independent of 2 and 3; can run in parallel if needed |
+| **4 — Content** *(mostly done in 2b)* | FAQ, Contact form, public size guide, public Journal — **all shipped with 2b**, including `GET`·`POST /api/faqs` and `/api/contact-inquiries`. **Remaining: the two admin screens** — FAQ CRUD and the Contact Inbox (F-47, §B2.3) | The public halves came free with the storefront; the admin halves did not |
 | **5 — Hardening** | F-52…F-54 security fixes, `DELETE /api/orders/[id]` (A9.6), Denpasar origin coordinates, seed corrections | Deliberately last so it is not lost in the churn |
 
 Phase 1 also carries the D17 rename (`Guest`→`Order`, `Cart`→`OrderItem`, `/api/guests/*`→`/api/orders/*`, `guestsApi`→`ordersApi`). It touches ~15 files, all mechanical, and most of them are being rewritten in that phase anyway for the variant-stock change.
@@ -1097,6 +1097,48 @@ Journal admin, built as a full vertical slice — the schema existed but nothing
 - Categories edit inline (two fields, like Sizes); articles get dedicated pages (image + Tiptap body).
 
 One contract limit, the mirror of the product one D26 removed: `ArticleTranslationSchema` requires `title` and `content` on every row, so a half-filled Indonesian row cannot be submitted. The form asks for an ID title whenever any other ID field is filled.
+
+## C5. Storefront design system `[SHIPPED]`
+
+The public counterpart to §C2. Eighteen desktop mockups in [`reference/`](reference/) are the source; every page composes from one kit rather than inventing its own chrome.
+
+| File | Provides |
+| --- | --- |
+| `ui/storefront/ui.tsx` | `PageHero`, `SectionHeading`, `Eyebrow`, `Breadcrumb`, `PromoBanner`, `FeatureStrip`/`FeatureCard`, `ArrowLink`, `OutlineLink`, `StoreButton`/`StoreLinkButton`, `StoreEmptyState`, `StoreSkeletonGrid` |
+| `ui/storefront/interactive.tsx` | `AccordionItem`, `TabBar`/`Tabs`, `useCarousel`/`CarouselArrows`/`CarouselTrack` |
+| `ui/storefront/product-card.tsx` · `article-card.tsx` · `pagination.tsx` · `cart-drawer.tsx` | the four repeated objects |
+| `ui/storefront/brand-values.tsx` · `store-profile.ts` | the nine brand promises; the `store_profile` config reader |
+
+**The shell lives in the layout**, not in each page — v1 mounted `Header` inside its own `Hero`, which is why every page had to remount it and why they drifted. `Header` lost `isDark`: in v2 the hero image starts *below* the header, so the transparent variant has no second state to describe.
+
+**`RichText` renders Tiptap JSON to React elements**, never through `dangerouslySetInnerHTML`. §E6 requires sanitising admin-authored content on render; walking the node tree removes the injection surface rather than guarding it, so no sanitiser is in the trust path. Link hrefs are still protocol-checked, because a URL passes through as an attribute.
+
+**Four decisions where the mockups and the locked decisions disagreed**, resolved with the client:
+
+- **Size Guide is a flat list, not the mockup's two rows of tabs.** The mockup groups guides Women / Men / Baby & Kids and then Kebaya / Batik Skirts, but D21 removed grouping from `SizeGuide` deliberately and D1 specifies a flat list. Reinstating the tabs is a schema change, not a layout one — it needs a `group` column plus its translation.
+- **The cart drawer previews only.** `CHECKOUT` hands off to `/cart`, which keeps the address form, the shipping calculation and the signed token. None of that moved (D8).
+- **About is one page.** `/about` carries Our Story, Our Philosophy, Why Choose Us and Our Artisan Journey; `/about/our-story` and `/about/our-artisan` are redirects, and `aboutNav` points at anchors. Our Production, Sustainability and Our Fabrics keep their own routes because they have their own mockups.
+- **All five brandings are now `isActive`.** The mockups show Studio by Lindway on the homepage and Lindway × AWP in the footer. Copy came from the design; **photography for those two is still missing** and falls back to the shared placeholder.
+
+**Two gotchas worth knowing**, both of which cost a debugging pass:
+
+- `Img` sets `relative` on its own wrapper, so putting `absolute` in its `className` leaves two position utilities fighting and the image silently collapses to zero height. Absolute placement goes on a parent `div`.
+- `useSearchPagination` reads `useSearchParams`, which bails out of prerendering unless it sits under Suspense. `ProductListing` and `JournalList` wrap themselves, so a new listing route cannot forget it and break the build.
+
+**Verified:** `npx tsc --noEmit` clean · `npm run lint` at its documented 1-error baseline (`carts/cart.tsx`) · `npm run build` clean with 100 static pages · every public route smoke-tested for its status code · homepage, About, Collections and Contact screenshotted against the mockups.
+
+## C6. What the mockups do not cover `[OPEN]`
+
+Built from the kit rather than traced, and worth reviewing against the client's intent:
+
+1. **Journal article detail** — `reference/Journal.png` is the index only.
+2. **The checkout wizard** — only the cart drawer is designed. `/cart` still carries v1's summary → payment → complete flow, restyled only by the shared palette.
+3. **Order success / membership prompt**, **wishlist page**, **`/customer-care/shipping-delivery`** — all linked from nav or footer, none designed.
+4. **The FILTER panel's open state** — the button is drawn, the panel is not. Implemented as a dropdown over the axes the API already supports.
+5. **Mobile breakpoints** — every mockup is 1440px desktop. The build is responsive, but the small-screen treatment is inferred.
+6. **Privacy Policy and Terms & Conditions** — linked in the footer; neither route nor mockup exists, so both currently 404.
+7. **`Faq.topic` has no description column**, but the mockup shows a blurb under each topic heading. They live in a map in `customer-care/faq.tsx`; a topic missing from it simply renders without one.
+8. **Wishlist has no affordance in any mockup** despite the header counting it, so `ProductCard` and the product page carry a quiet heart — otherwise F-35 is unreachable.
 
 ---
 

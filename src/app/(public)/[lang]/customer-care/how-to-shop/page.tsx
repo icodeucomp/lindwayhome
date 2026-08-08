@@ -1,16 +1,20 @@
-import { Footer, EverySnap, Hero, HowToShop } from "@/components/ui";
+import { EverySnap, HowToShop } from "@/components/ui";
+import { PageHero } from "@/components/ui/storefront";
 
-export default function ShopPage() {
+export const metadata = { title: "How to Shop — Lindway" };
+
+export default function HowToShopPage() {
   return (
-    <main>
-      <Hero
+    <>
+      <PageHero
         title="How to Shop"
-        description="At Lindway, we aim to make your shopping experience as seamless and personal as our designs. Whether you're looking for everyday elegance or a bespoke statement piece, follow these simple steps to order your favorite styles."
-        imagePath="/images/how-to-shop-header-background.webp"
+        description="At Lindway, we aim to make your shopping experience as seamless and personal as our designs."
+        image="/images/how-to-shop-header-background.webp"
+        crumbs={[{ name: "Home", href: "/" }, { name: "Customer Care" }, { name: "How to Shop" }]}
+        cta="Discover Now"
       />
       <HowToShop />
       <EverySnap />
-      <Footer />
-    </main>
+    </>
   );
 }

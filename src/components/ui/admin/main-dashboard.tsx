@@ -8,7 +8,7 @@ import { PiArrowUpRight } from "react-icons/pi";
 
 import { useAuthStore } from "@/hooks";
 
-import { brandingByKey } from "@/static/taxonomy";
+import { brandingByKey, isBrandingActive } from "@/static/taxonomy";
 
 import { orderStatusBars, orderStatusLabels } from "@/static/order";
 
@@ -259,7 +259,7 @@ export const MainDashboard = () => {
                     value={row.stock}
                     caption={`in stock · ${row.products} product${row.products === 1 ? "" : "s"}`}
                     footnote={
-                      brandingByKey(row.branding)?.isActive === false ? (
+                      !isBrandingActive(row.branding) ? (
                         <Badge className="bg-body/6 text-body/50">Hidden from storefront</Badge>
                       ) : undefined
                     }

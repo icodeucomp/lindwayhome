@@ -1,13 +1,21 @@
-import { EverySnap, Footer } from "@/components/ui";
-import { Hero, Products } from "@/components/ui/home";
+import { EverySnap } from "@/components/ui";
+
+import { AtelierPromos, Collections, FabricLibraryPromo, Hero, Journal, JustArrived } from "@/components/ui/home";
+
+import { careValues, craftValues, FeatureStrip } from "@/components/ui/storefront";
 
 export default function HomePage() {
   return (
-    <main>
+    <>
       <Hero />
-      <Products />
+      <FeatureStrip items={craftValues} />
+      <JustArrived />
+      <Collections />
+      <AtelierPromos />
+      <Journal />
+      <FabricLibraryPromo />
+      <FeatureStrip items={careValues} />
       <EverySnap />
-      <Footer />
-    </main>
+    </>
   );
 }

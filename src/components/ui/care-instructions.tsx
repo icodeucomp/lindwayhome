@@ -1,25 +1,36 @@
-import { Img, Motion } from "@/components";
+import { Container } from "@/components";
 
-export const CareInstructions = () => {
-  return (
-    <div className="grid grid-cols-1 px-4 pt-8 mx-auto md:grid-cols-2 md:py-16 sm:px-8 md:px-0 max-w-screen-2xl">
-      <Motion tag="div" initialY={50} animateY={0} duration={0.5} className="order-2 py-4 space-y-2 sm:space-y-4 md:p-10 lg:p-16 text-gray md:order-1">
-        <h4 className="heading">Garment Care Instructions</h4>
-        <ul className="pl-6 space-y-1 text-xs list-disc sm:text-base">
-          <li>Wash before the first wear</li>
-          <li>Wash inside out</li>
-          <li>Gentle cold water</li>
-          <li>Hand wash only</li>
-          <li>Avoid detergents with fragrances or dyes</li>
-          <li>Do not bleach</li>
-          <li>Do not tumble dry</li>
-          <li>Warm iron</li>
-          <li>Do not dry clean</li>
-        </ul>
-      </Motion>
-      <Motion tag="div" initialY={50} animateY={0} duration={0.5} delay={0.1} className="order-1 md:order-2">
-        <Img src="/images/care-instructions-garmen-image.webp" alt="image return exhanges" className="w-full min-h-100 sm:min-h-125" cover />
-      </Motion>
+import { FeatureCard, SectionHeading } from "@/components/ui/storefront";
+
+import { PiDrop, PiSnowflake, PiHandSoap, PiHandsClapping, PiPaintBucket, PiWind, PiThermometer, PiProhibit, PiTShirt } from "react-icons/pi";
+
+/**
+ * "Care Instructions" (reference/Care Instructions.png).
+ *
+ * v1's bulleted list became a nine-card grid, one card per instruction, matching the
+ * mockup. The instructions themselves are unchanged.
+ */
+
+const instructions = [
+  { icon: <PiTShirt />, title: "Wash Before the First Wear", description: "Gently wash before first use to preserve comfort and freshness." },
+  { icon: <PiDrop />, title: "Wash Inside Out", description: "Turn the garment inside out to help protect its color and surface." },
+  { icon: <PiSnowflake />, title: "Gentle Cold Water", description: "Use cold water and a gentle cycle to maintain fabric quality." },
+  { icon: <PiHandsClapping />, title: "Hand Wash Only", description: "Carefully hand wash to preserve the garment's craftsmanship." },
+  { icon: <PiHandSoap />, title: "Avoid Detergents with Fragrances or Dyes", description: "Use mild detergent free from fragrances and dyes for better fabric care." },
+  { icon: <PiPaintBucket />, title: "Do Not Bleach", description: "Avoid bleach to protect the fabric and maintain its original color." },
+  { icon: <PiWind />, title: "Do Not Tumble Dry", description: "Air dry naturally to help retain the garment's shape and texture." },
+  { icon: <PiThermometer />, title: "Warm Iron", description: "Use a warm iron when needed to keep the garment neat and refined." },
+  { icon: <PiProhibit />, title: "Do Not Dry Clean", description: "Dry cleaning is not recommended for this garment." },
+];
+
+export const CareInstructions = () => (
+  <Container id="content" className="py-16 space-y-8 scroll-mt-40">
+    <SectionHeading title="Garment Care Instructions" description="Care that respects both your investment and the hands that made it." />
+
+    <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+      {instructions.map((instruction) => (
+        <FeatureCard key={instruction.title} item={instruction} />
+      ))}
     </div>
-  );
-};
+  </Container>
+);

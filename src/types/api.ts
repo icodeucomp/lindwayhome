@@ -105,8 +105,9 @@ export interface QueryParams {
   isActive?: boolean;
   isFavorite?: boolean;
   isPurchased?: string;
-  status?: OrderStatus | string;
+  status?: OrderStatus | InquiryStatus | string;
   paymentMethod?: PaymentMethods | string;
+  inquiryType?: InquiryType | string;
   categoryId?: string;
   featured?: string;
   published?: string;
@@ -381,6 +382,75 @@ export interface CreateArticle {
 }
 
 export type UpdateArticle = Partial<CreateArticle>;
+
+// =============================================================================
+// FAQ
+// =============================================================================
+
+export interface FaqTranslation {
+  locale: Locale;
+  question: string;
+  /** Tiptap — FAQ answers routinely need lists and links (§B4.5). */
+  answer: RichText;
+}
+
+export interface Faq {
+  id: string;
+  /** Groups FAQs so one component can serve several pages. */
+  topic: string;
+  isActive: boolean;
+  translations: FaqTranslation[];
+  /** Resolved for the requested locale (§B3.2). */
+  question?: string;
+  answer?: RichText;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateFaq {
+  topic: string;
+  isActive?: boolean;
+  translations: FaqTranslation[];
+}
+
+export type UpdateFaq = Partial<CreateFaq>;
+
+// =============================================================================
+// Contact inquiries
+// =============================================================================
+
+export interface ContactInquiry {
+  id: string;
+  fullname: string;
+  email: string;
+  phone: string | null;
+  inquiryType: InquiryType;
+  /** Only set when `inquiryType` is OTHER. */
+  otherDetail: string | null;
+  message: string;
+  status: InquiryStatus;
+  /** What the admin actually did — HANDLED alone does not record how (D23). */
+  handlingNote: string | null;
+  handledAt: string | null;
+  handledById: string | null;
+  handledBy?: Pick<User, "id" | "username"> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateContactInquiry {
+  fullname: string;
+  email: string;
+  phone?: string | null;
+  inquiryType: InquiryType;
+  otherDetail?: string | null;
+  message: string;
+}
+
+export interface UpdateContactInquiry {
+  status?: InquiryStatus;
+  handlingNote?: string | null;
+}
 
 // =============================================================================
 // Cart — client-side only, never persisted server-side before checkout (F-6)

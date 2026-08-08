@@ -29,10 +29,18 @@ export interface TaxonomyEntry<T extends string> {
 }
 
 export interface BrandingEntry extends TaxonomyEntry<BrandingType> {
-  /** Subheadline on the Branding Hero. */
+  /** One-line positioning, used under the label on collection cards. */
   description: string;
   /** Hero background for the branding landing page. */
   image: string;
+  /** Sentence under the title in the collection hero (reference/Collections Details.png). */
+  headline: string;
+  /** Eyebrow above the intro copy on the collection page. */
+  tagline: string;
+  /** Intro paragraphs on the collection page. */
+  body: readonly string[];
+  /** Editorial images beside the intro copy — two large, two small, in that order. */
+  gallery: readonly string[];
 }
 
 export const BRANDING = [
@@ -40,8 +48,15 @@ export const BRANDING = [
     key: "MY_LINDWAY",
     label: "My Lindway",
     slug: "my-lindway",
-    description: "Embracing Artistry, Celebrating Culture",
+    description: "Luxury Kebaya & Couture",
     image: "/images/home-product-my-lindway.webp",
+    headline: "Made-to-order artisanal pieces that blend Indonesian heritage with modern grace.",
+    tagline: "Embracing Artistry, Celebrating Culture",
+    body: [
+      "Our flagship collection is a tribute to Indonesia's rich cultural heritage. Every piece is made-to-order—crafted upon request to honor the art of slow fashion. From intricate embroidery to hand-painted fabrics and sequined artistry, My Lindway pieces are custom creations, designed to reflect your individuality.",
+      "We also offer a range of everyday kebaya—available in various ready designs, sizes, and motifs. These are made in limited quantities and are ready to wear or available for faster delivery.",
+    ],
+    gallery: ["/images/my-lindway-description-big.webp", "/images/my-lindway-description-list-1.webp", "/images/my-lindway-description-list-2.webp", "/images/my-lindway-description-list-3.webp"],
     order: 1,
     isActive: true,
   },
@@ -49,8 +64,20 @@ export const BRANDING = [
     key: "SIMPLY_LINDWAY",
     label: "Simply Lindway",
     slug: "simply-lindway",
-    description: "Pure Cotton Comfort",
+    description: "Everyday Heritage Wear",
     image: "/images/home-product-simply-lindway.webp",
+    headline: "Soft essentials for everyday wear, made in 100% pure cotton.",
+    tagline: "Pure Cotton Comfort",
+    body: [
+      "Simply Lindway is our everyday line—easy silhouettes cut from breathable cotton and finished with the same care as our couture pieces. Made for the school run, the market and the long afternoon in between.",
+      "Each style is produced in small batches so the fit, the fabric and the finish stay consistent from one season to the next.",
+    ],
+    gallery: [
+      "/images/simply-lindway-description-big.webp",
+      "/images/simply-lindway-description-list-1.webp",
+      "/images/simply-lindway-description-list-2.webp",
+      "/images/simply-lindway-description-list-3.webp",
+    ],
     order: 2,
     isActive: true,
   },
@@ -58,30 +85,50 @@ export const BRANDING = [
     key: "LURE_BY_LINDWAY",
     label: "Lure by Lindway",
     slug: "lure-by-lindway",
-    description: "Traditional Soul, Modern Edge",
+    description: "Crochet Resort Wear",
     image: "/images/home-product-lure-by-lindway.webp",
+    headline: "Hand-crocheted resort wear for slow days and warm coastlines.",
+    tagline: "Traditional Soul, Modern Edge",
+    body: [
+      "Lure is our resort line, hand-crocheted stitch by stitch by artisans across Bali. Open weaves, relaxed shapes and natural yarns made for heat, salt and sunlight.",
+      "Because every piece is worked by hand, no two are ever quite identical—the small variations are the signature, not the flaw.",
+    ],
+    gallery: [
+      "/images/lure-by-lindway-description-big.webp",
+      "/images/lure-by-lindway-description-list-1.webp",
+      "/images/lure-by-lindway-description-list-2.webp",
+      "/images/lure-by-lindway-description-list-3.webp",
+    ],
     order: 3,
     isActive: true,
   },
-  // Copy and artwork for the two lines below are still with the client. They are
-  // inactive so nothing links to an empty page; flip isActive once the assets land.
+  // Photography for the two lines below is still with the client, so they fall back to
+  // the shared placeholder. Copy is the design's; swap the art in when it arrives.
   {
     key: "STUDIO_BY_LINDWAY",
     label: "Studio by Lindway",
     slug: "studio-by-lindway",
-    description: "",
+    description: "Contemporary Balinese Wear",
     image: "",
+    headline: "Contemporary Balinese wear, cut in our Denpasar studio.",
+    tagline: "Modern Lines, Island Roots",
+    body: ["Studio is where our atelier experiments—sharper tailoring, quieter palettes, and Balinese detail worked into contemporary shapes."],
+    gallery: [],
     order: 4,
-    isActive: false,
+    isActive: true,
   },
   {
     key: "LINDWAY_AWP",
     label: "Lindway × AWP",
     slug: "lindway-awp",
-    description: "",
+    description: "Artisan Collaboration",
     image: "",
+    headline: "A collaboration series made with artisans we have worked alongside for years.",
+    tagline: "Made Together",
+    body: ["Limited collaborative runs, produced with partner artisans and released only while the materials last."],
+    gallery: [],
     order: 5,
-    isActive: false,
+    isActive: true,
   },
 ] as const satisfies readonly BrandingEntry[];
 
@@ -134,6 +181,14 @@ export const audienceBySlug = (slug: string) => bySlug(AUDIENCE, slug);
 export const garmentBySlug = (slug: string) => bySlug(GARMENT, slug);
 
 const byKey = <T extends TaxonomyEntry<string>>(entries: readonly T[], key: string) => entries.find((entry) => entry.key === key);
+
+/**
+ * Widened to `boolean` on purpose. The arrays are `as const`, so reading `.isActive`
+ * off an entry yields the literal `true`/`false` and any `=== false` check at a call
+ * site narrows to a compile error the moment every entry happens to be active.
+ * An unknown key is treated as active so a drifted branding still renders.
+ */
+export const isBrandingActive = (key: BrandingType): boolean => byKey(BRANDING, key)?.isActive ?? true;
 
 export const brandingByKey = (key: BrandingType) => byKey(BRANDING, key);
 export const audienceByKey = (key: AudienceType) => byKey(AUDIENCE, key);

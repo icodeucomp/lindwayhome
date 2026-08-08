@@ -1,13 +1,7 @@
-import { Footer, EverySnap } from "@/components/ui";
-import { AboutUs, Hero } from "@/components/ui/about";
+import { redirect } from "next/navigation";
 
-export default function AboutPage() {
-  return (
-    <main>
-      <Hero />
-      <AboutUs />
-      <EverySnap />
-      <Footer />
-    </main>
-  );
+/** Folded into the single About page. Kept so existing links and bookmarks resolve. */
+export default async function OurStoryPage({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params;
+  redirect(`/${lang}/about`);
 }

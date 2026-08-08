@@ -300,6 +300,11 @@ async function seedConfig() {
       whatsapp: "https://api.whatsapp.com/send?phone=6282339936682",
       instagram: "https://www.instagram.com/mylindway",
       facebook: "https://www.facebook.com/mylindwaybrand",
+      // Shown on How to Shop and Contact (reference/How to Shop.png, Contact.png).
+      assistants: [
+        { name: "Personal Assistant 1", whatsapp: "+62 823-3993-6682" },
+        { name: "Personal Assistant 2", whatsapp: "+62 812-3890-592" },
+      ],
     },
     type: "JSON",
     groupId: store.id,

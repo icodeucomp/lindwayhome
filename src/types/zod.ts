@@ -216,6 +216,9 @@ export const FaqSchema = z.object({
   translations: z.array(FaqTranslationSchema).min(1, "An EN translation is required"),
 });
 
+export const CreateFaqSchema = FaqSchema.omit({ id: true });
+export const UpdateFaqSchema = CreateFaqSchema.partial();
+
 export const ArticleCategoryTranslationSchema = z.object({
   locale: LocaleEnum,
   name: z.string().min(1, "Name is required"),
@@ -329,6 +332,13 @@ export const ArticleQuerySchema = z.object({
   // "true" = published only, "false" = drafts only. Absent means both, which is what
   // the admin list wants — a draft the admin cannot see is a draft they cannot finish.
   published: z.string().optional(),
+});
+
+export const ContactInquiryQuerySchema = z.object({
+  ...baseQuery,
+  order: z.enum(["asc", "desc"]).optional().default("desc"),
+  status: InquiryStatusEnum.optional(),
+  inquiryType: InquiryTypeEnum.optional(),
 });
 
 // =============================================================================

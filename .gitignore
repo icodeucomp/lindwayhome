@@ -42,7 +42,6 @@ next-env.d.ts
 
 # prisma 
 /generated/prisma
-/prisma/migrations/
 
 # exclude public uploads
 /public/uploads/*
@@ -54,3 +53,5 @@ next-env.d.ts
 logs/
 *.log
 
+# design files
+reference

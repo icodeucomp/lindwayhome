@@ -1,26 +1,50 @@
-import { Img, Motion } from "@/components";
+import { Container, Img } from "@/components";
 
-export const ReturnExchanges = () => {
-  return (
-    <div className="grid grid-cols-1 pt-8 mx-auto md:py-16 md:grid-cols-2 max-w-screen-2xl">
-      <Motion tag="div" initialY={50} animateY={0} duration={0.5} className="px-4 sm:px-8 md:p-0">
-        <Img src="/images/return-&-exchanges-policies-image.webp" alt="image return exhanges" className="w-full min-h-100 sm:min-h-125" cover />
-      </Motion>
-      <Motion tag="div" initialY={50} animateY={0} duration={0.5} delay={0.2} className="p-4 space-y-4 sm:p-8 md:p-4 lg:p-8 xl:p-16 text-gray">
-        <h4 className="heading">Return and Exchanges Policies</h4>
-        <ul className="pl-6 space-y-1 text-sm list-disc sm:text-base">
-          <li>All items are final sale, not eligible fo return</li>
-          <li>Non-refundable</li>
-          <li>Non-modifiable</li>
-          <li>Non-cashable</li>
-          <li>Non-exchangeable</li>
-          <li>Non-transferable</li>
+import { PromoBanner, SectionHeading } from "@/components/ui/storefront";
+
+/**
+ * "Return & Exchanges" (reference/Return & Exchanges.png).
+ *
+ * The policy list became hairline-separated rows with an em-dash marker, matching the
+ * mockup. Wording is unchanged from v1 — this is the legal copy, not decoration.
+ */
+
+const policies = ["All items are final sale, not eligible for return", "Non-refundable", "Non-modifiable", "Non-cashable", "Non-exchangeable", "Non-transferable"];
+
+export const ReturnExchanges = () => (
+  <>
+    <Container id="content" className="grid grid-cols-1 gap-10 py-16 lg:grid-cols-2 scroll-mt-40">
+      <div className="space-y-6">
+        <SectionHeading title="Return and Exchanges Policies" />
+
+        <ul className="list-none">
+          {policies.map((policy) => (
+            <li key={policy} className="flex items-baseline gap-4 py-4 border-b border-border">
+              <span aria-hidden className="text-primary">
+                &mdash;
+              </span>
+              <span className="text-lg text-primary">{policy}</span>
+            </li>
+          ))}
         </ul>
-        <div className="space-y-1 text-sm sm:text-base">
-          <h5 className="text-xl font-medium">Special Conditions</h5>
-          <p>Returned or exchanged may be provided; the items have to be in the same condition as when it is purchased. Items that include a bag must be returned with it.</p>
-        </div>
-      </Motion>
-    </div>
-  );
-};
+      </div>
+
+      <Img src="/images/return-&-exchanges-policies-image.webp" alt="Lindway packaging" className="w-full aspect-4/5 bg-footer/30" cover />
+    </Container>
+
+    <Container className="pb-8">
+      <p className="pb-8 text-base text-body">
+        <strong className="font-heading">Special Conditions:</strong> Returned or exchanged may be provided; the items have to be in the same condition as when it is purchased. Items that include a bag
+        must be returned with it.
+      </p>
+
+      <PromoBanner
+        title="Learn How to Shop"
+        description="From browsing to checkout, and where to reach us if you get stuck."
+        href="/customer-care/how-to-shop"
+        cta="Discover Now"
+        image="/images/how-to-shop-header-background.webp"
+      />
+    </Container>
+  </>
+);

@@ -1,16 +1,20 @@
-import { Footer, EverySnap, Hero, CareInstructions } from "@/components/ui";
+import { CareInstructions, EverySnap } from "@/components/ui";
+import { PageHero } from "@/components/ui/storefront";
+
+export const metadata = { title: "Care Instructions — Lindway" };
 
 export default function CareInstructionsPage() {
   return (
-    <main>
-      <Hero
+    <>
+      <PageHero
         title="Care Instructions"
-        description="Keep your clothes fresh and long-lasting with proper care that shows respect for both your investment and the environment. Follow these comprehensive steps to ensure your garments maintain their beauty, comfort, and quality throughout their lifetime."
-        imagePath="/images/care-instructions-header-background.webp"
+        description="Keep your clothes fresh and long-lasting with care that respects both your investment and the environment."
+        image="/images/care-instructions-header-background.webp"
+        crumbs={[{ name: "Home", href: "/" }, { name: "Customer Care" }, { name: "Care Instructions" }]}
+        cta="Discover Now"
       />
       <CareInstructions />
       <EverySnap />
-      <Footer />
-    </main>
+    </>
   );
 }

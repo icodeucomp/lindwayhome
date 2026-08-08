@@ -1,24 +1,23 @@
-import { Background, Container, Motion } from "@/components";
-import { Header } from "@/components/ui";
+import { PageHero } from "@/components/ui/storefront";
+
+import type { Crumb } from "@/components/ui/storefront";
 
 interface HeroProps {
   imagePath: string;
   title: string;
   description: string;
+  crumbs?: Crumb[];
+  cta?: string;
 }
 
-export const Hero = ({ description, title, imagePath }: HeroProps) => {
-  return (
-    <Background src={imagePath} alt="hero background" className="flex flex-col items-center min-h-150 bg-filter">
-      <Header />
-      <Container className="pt-32 space-y-4 text-center sm:text-justify">
-        <Motion tag="h3" initialY={50} animateY={0} duration={0.2} className="text-2xl font-semibold lg:text-3xl">
-          {title}
-        </Motion>
-        <Motion tag="p" initialY={50} animateY={0} duration={0.4} delay={0.2} className="max-w-5xl text-sm sm:text-base md:text-lg">
-          {description}
-        </Motion>
-      </Container>
-    </Background>
-  );
-};
+/**
+ * Back-compat shim over `PageHero`.
+ *
+ * v1's hero rendered the `Header` inside itself, which is why every page had to mount
+ * its own shell. The shell moved to the public layout, so this now only draws the hero
+ * band — the prop shape is unchanged so the content pages carried over from v1 keep
+ * working until each is rewritten against the mockups.
+ */
+export const Hero = ({ description, title, imagePath, crumbs, cta = "Discover Now" }: HeroProps) => (
+  <PageHero title={title} description={description} image={imagePath} crumbs={crumbs} cta={cta} />
+);

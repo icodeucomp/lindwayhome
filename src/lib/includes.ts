@@ -31,6 +31,9 @@ export const articleInclude = {
   author: { select: { id: true, username: true } },
 } satisfies Prisma.ArticleInclude;
 
+/** The question lives only in the translation, so it is always included. */
+export const faqInclude = { translations: true } satisfies Prisma.FaqInclude;
+
 /** Standard shape for reading an order with its lines. */
 export const orderInclude = {
   member: true,

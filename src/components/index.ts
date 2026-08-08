@@ -14,3 +14,4 @@ export * from "./circulate-progress";
 export * from "./progress-bar";
 export * from "./locale-link";
 export * from "./tiptap-editor";
+export * from "./rich-text";
