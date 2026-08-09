@@ -212,7 +212,7 @@ export const SizeGuideForm = ({ guideId, duplicateFromId }: { guideId?: string; 
         narrow
         back={{ href: LIST_HREF, label: "Size Guides" }}
         title={isEdit ? form.title.EN || "Edit size guide" : duplicateFromId ? "Duplicate size guide" : "New size guide"}
-        description="Body measurements for a pattern, shared by every product that uses this guide. Packing dimensions are not here — those belong to the individual product (D6)."
+        description="The body measurements customers compare themselves against. Any product can use this chart. Parcel weight and box size are set on the product itself, not here."
       />
 
       <FormLayout onSubmit={handleSubmit}>
@@ -227,7 +227,7 @@ export const SizeGuideForm = ({ guideId, duplicateFromId }: { guideId?: string; 
             htmlFor={`title-${activeLocale}`}
             required={activeLocale === "EN"}
             error={activeLocale === "EN" ? errors.title : undefined}
-            hint="The public page is a flat list, so the title carries the grouping — e.g. “Women — Batik” (D1)."
+            hint="Charts are listed one after another on your website, so put the grouping in the title — for example “Women — Batik”."
           >
             <TextInput
               id={`title-${activeLocale}`}
@@ -257,7 +257,7 @@ export const SizeGuideForm = ({ guideId, duplicateFromId }: { guideId?: string; 
               <Toggle
                 id="isPublished"
                 label="Published"
-                description="Draft guides are still assignable to products; only published ones appear on the public page (D1)."
+                description="Only published charts show on your website. You can still attach a draft to a product while you are finishing it."
                 checked={form.isPublished}
                 onChange={(isPublished) => patch({ isPublished })}
               />
@@ -267,7 +267,7 @@ export const SizeGuideForm = ({ guideId, duplicateFromId }: { guideId?: string; 
 
         <FormSection
           title="Measurements"
-          description="The columns of the table. The key is a stable identifier and is never shown to buyers — the labels are what they read, per language."
+          description="The columns of your chart, such as Bust or Waist. Shoppers see the labels you type; the short key beside them is just an internal name and is never shown."
           aside={
             <AdminButton type="button" size="sm" onClick={addParameter}>
               <PiPlus className="size-3" />
@@ -318,7 +318,7 @@ export const SizeGuideForm = ({ guideId, duplicateFromId }: { guideId?: string; 
           </div>
         </FormSection>
 
-        <FormSection title="Sizes" description="Which sizes this guide covers. Rows are always ordered by the size order set on the Sizes page (D21).">
+        <FormSection title="Sizes" description="Which sizes this chart covers. They always appear in the order you set on the Sizes page, not the order you tick them here.">
           {errors.sizes && <p className="text-xs text-red-700">{errors.sizes}</p>}
 
           <div className="grid gap-x-6 gap-y-2 sm:grid-cols-3 lg:grid-cols-4">

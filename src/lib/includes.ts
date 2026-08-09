@@ -31,8 +31,13 @@ export const articleInclude = {
   author: { select: { id: true, username: true } },
 } satisfies Prisma.ArticleInclude;
 
-/** The question lives only in the translation, so it is always included. */
+/** The question and answer live only in the translation, so it is always included. */
 export const faqInclude = { translations: true } satisfies Prisma.FaqInclude;
+
+/** Explicit select — the admin's password hash must never leave the server. */
+export const contactInquiryInclude = {
+  handledBy: { select: { id: true, username: true } },
+} satisfies Prisma.ContactInquiryInclude;
 
 /** Standard shape for reading an order with its lines. */
 export const orderInclude = {

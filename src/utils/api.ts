@@ -27,6 +27,8 @@ import {
   UpdateFaq,
   CreateContactInquiry,
   UpdateContactInquiry,
+  CreateMember,
+  UpdateMember,
 } from "@/types";
 
 import { QueryKey, useMutation, UseMutationOptions, useQuery } from "@tanstack/react-query";
@@ -87,7 +89,7 @@ export const productsApi = {
         const searchParams = new URLSearchParams();
         if (params.locale) searchParams.append("locale", params.locale);
         if (params.branding) searchParams.append("branding", params.branding);
-        if (params.garment) searchParams.append("garment", params.garment);
+        if (params.clothing) searchParams.append("clothing", params.clothing);
         if (params.audience) searchParams.append("audience", params.audience);
         if (params.sort) searchParams.append("sort", params.sort);
         if (params.search) searchParams.append("search", params.search);
@@ -107,13 +109,11 @@ export const productsApi = {
       retry: RETRY_TIMES,
     });
   },
-  useGetProduct: <T>({ key, id, params = {}, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+  useGetProduct: <T>({ key, id, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
     return useQuery<T, Error>({
       queryKey: key,
       queryFn: async () => {
-        // The detail route resolves translations for `locale` (§B3.2). Without it the
-        // storefront always renders EN, whichever language the visitor is browsing in.
-        const { data } = await api.get(`/products/${id}${params.locale ? `?locale=${params.locale}` : ""}`);
+        const { data } = await api.get(`/products/${id}`);
         return data;
       },
       gcTime,
@@ -703,15 +703,12 @@ export const sizesApi = {
 };
 
 export const sizeGuidesApi = {
-  useGetSizeGuides: <T>({ key, params = {}, published, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions & { published?: boolean }) => {
+  useGetSizeGuides: <T>({ key, params = {}, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions & { published?: boolean }) => {
     return useQuery<T, Error>({
       queryKey: key,
       queryFn: async () => {
         const searchParams = new URLSearchParams();
         if (params.locale) searchParams.append("locale", params.locale);
-        // The option existed but was never forwarded, so the route's `published=true`
-        // branch was unreachable and the public page would have listed drafts (D1).
-        if (published) searchParams.append("published", "true");
         const { data } = await api.get(`/size-guides?${searchParams.toString()}`);
         return data;
       },
@@ -802,12 +799,11 @@ export const articlesApi = {
       retry: RETRY_TIMES,
     });
   },
-  useGetArticle: <T>({ key, id, params = {}, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+  useGetArticle: <T>({ key, id, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
     return useQuery<T, Error>({
       queryKey: key,
-      // The raw translations array is always returned for the admin form; passing
-      // `locale` additionally resolves the flattened fields the public page reads.
-      queryFn: async () => (await api.get(`/articles/${id}${params.locale ? `?locale=${params.locale}` : ""}`)).data,
+      // Same reason as above: the form needs the raw translations array.
+      queryFn: async () => (await api.get(`/articles/${id}`)).data,
       gcTime,
       staleTime,
       enabled,
@@ -823,16 +819,17 @@ export const articlesApi = {
 };
 
 export const faqsApi = {
-  useGetFaqs: <T>({ key, params = {}, topic, isActive, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions & { topic?: string; isActive?: boolean }) => {
+  useGetFaqs: <T>({ key, params = {}, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
     return useQuery<T, Error>({
       queryKey: key,
       queryFn: async () => {
         const searchParams = new URLSearchParams();
         if (params.locale) searchParams.append("locale", params.locale);
-        if (topic) searchParams.append("topic", topic);
-        // Absent means both, so the admin list shows deactivated entries; the public
-        // page must pass true or it would render them.
-        if (isActive !== undefined) searchParams.append("isActive", String(isActive));
+        if (params.search) searchParams.append("search", params.search);
+        if (params.topic) searchParams.append("topic", params.topic);
+        if (params.isActive !== undefined) searchParams.append("isActive", params.isActive.toString());
+        if (params.limit) searchParams.append("limit", params.limit.toString());
+        if (params.page) searchParams.append("page", params.page.toString());
         const { data } = await api.get(`/faqs?${searchParams.toString()}`);
         return data;
       },
@@ -842,15 +839,17 @@ export const faqsApi = {
       retry: RETRY_TIMES,
     });
   },
-  useGetFaq: <T>({ key, id, params = {}, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) =>
-    useQuery<T, Error>({
+  useGetFaq: <T>({ key, id, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+    return useQuery<T, Error>({
       queryKey: key,
-      queryFn: async () => (await api.get(`/faqs/${id}${params.locale ? `?locale=${params.locale}` : ""}`)).data,
+      // No `locale` — the form edits every translation, not a resolved one.
+      queryFn: async () => (await api.get(`/faqs/${id}`)).data,
       gcTime,
       staleTime,
       enabled,
       retry: RETRY_TIMES,
-    }),
+    });
+  },
   useCreateFaq: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, CreateFaq>) =>
     useMutation({ mutationFn: mutation<CreateFaq>((body) => api.post("/faqs", body)), onError: onMutationError, ...mutationOptions }),
   useUpdateFaq: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, { id: string; faq: UpdateFaq }>) =>
@@ -866,15 +865,10 @@ export const contactInquiriesApi = {
       queryFn: async () => {
         const searchParams = new URLSearchParams();
         if (params.search) searchParams.append("search", params.search);
-        if (params.status) searchParams.append("status", String(params.status));
-        if (params.inquiryType) searchParams.append("inquiryType", String(params.inquiryType));
-        if (params.order) searchParams.append("order", params.order);
+        if (params.status) searchParams.append("status", params.status.toString());
+        if (params.inquiryType) searchParams.append("inquiryType", params.inquiryType.toString());
         if (params.limit) searchParams.append("limit", params.limit.toString());
         if (params.page) searchParams.append("page", params.page.toString());
-        if (params.year) searchParams.append("year", params.year.toString());
-        if (params.month) searchParams.append("month", params.month.toString());
-        if (params.dateFrom) searchParams.append("dateFrom", params.dateFrom);
-        if (params.dateTo) searchParams.append("dateTo", params.dateTo);
         const { data } = await api.get(`/contact-inquiries?${searchParams.toString()}`);
         return data;
       },
@@ -884,13 +878,62 @@ export const contactInquiriesApi = {
       retry: RETRY_TIMES,
     });
   },
-  /** Public — this is the contact form itself (F-45). */
+  useGetContactInquiry: <T>({ key, id, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+    return useQuery<T, Error>({
+      queryKey: key,
+      queryFn: async () => (await api.get(`/contact-inquiries/${id}`)).data,
+      gcTime,
+      staleTime,
+      enabled,
+      retry: RETRY_TIMES,
+    });
+  },
+  /** Public — this is what the storefront contact form posts to (F-45). */
   useCreateContactInquiry: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, CreateContactInquiry>) =>
     useMutation({ mutationFn: mutation<CreateContactInquiry>((body) => api.post("/contact-inquiries", body)), onError: onMutationError, ...mutationOptions }),
   useUpdateContactInquiry: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, { id: string; inquiry: UpdateContactInquiry }>) =>
     useMutation({
-      mutationFn: mutation<{ id: string; inquiry: UpdateContactInquiry }>(({ id, inquiry }) => api.patch(`/contact-inquiries/${id}`, inquiry)),
+      mutationFn: mutation<{ id: string; inquiry: UpdateContactInquiry }>(({ id, inquiry }) => api.put(`/contact-inquiries/${id}`, inquiry)),
       onError: onMutationError,
       ...mutationOptions,
     }),
+  useDeleteContactInquiry: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, string>) =>
+    useMutation({ mutationFn: mutation<string>((id) => api.delete(`/contact-inquiries/${id}`)), onError: onMutationError, ...mutationOptions }),
+};
+
+export const membersApi = {
+  useGetMembers: <T>({ key, params = {}, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+    return useQuery<T, Error>({
+      queryKey: key,
+      queryFn: async () => {
+        const searchParams = new URLSearchParams();
+        if (params.search) searchParams.append("search", params.search);
+        if (params.isActive !== undefined) searchParams.append("isActive", params.isActive.toString());
+        if (params.limit) searchParams.append("limit", params.limit.toString());
+        if (params.page) searchParams.append("page", params.page.toString());
+        const { data } = await api.get(`/members?${searchParams.toString()}`);
+        return data;
+      },
+      gcTime,
+      staleTime,
+      enabled,
+      retry: RETRY_TIMES,
+    });
+  },
+  useGetMember: <T>({ key, id, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+    return useQuery<T, Error>({
+      queryKey: key,
+      queryFn: async () => (await api.get(`/members/${id}`)).data,
+      gcTime,
+      staleTime,
+      enabled,
+      retry: RETRY_TIMES,
+    });
+  },
+  useCreateMember: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, CreateMember>) =>
+    useMutation({ mutationFn: mutation<CreateMember>((body) => api.post("/members", body)), onError: onMutationError, ...mutationOptions }),
+  useUpdateMember: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, { id: string; member: UpdateMember }>) =>
+    useMutation({ mutationFn: mutation<{ id: string; member: UpdateMember }>(({ id, member }) => api.put(`/members/${id}`, member)), onError: onMutationError, ...mutationOptions }),
+  useDeleteMember: ({ ...mutationOptions }: UseMutationOptions<unknown, Error, string>) =>
+    useMutation({ mutationFn: mutation<string>((id) => api.delete(`/members/${id}`)), onError: onMutationError, ...mutationOptions }),
 };

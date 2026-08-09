@@ -18,7 +18,7 @@ export enum AudienceType {
   KIDS = "KIDS",
 }
 
-export enum GarmentType {
+export enum ClothingType {
   DRESSES = "DRESSES",
   TOPS = "TOPS",
   SKIRTS = "SKIRTS",
@@ -99,10 +99,11 @@ export interface QueryParams {
   order?: "asc" | "desc";
   locale?: Locale;
   branding?: string;
-  garment?: string;
+  clothing?: string;
   audience?: string;
   sort?: "latest" | "new-arrivals" | "best-sellers" | "price-asc" | "price-desc";
-  isActive?: boolean;
+  /** String form carries the tri-state a list screen needs: "" (both), "true", "false". */
+  isActive?: boolean | string;
   isFavorite?: boolean;
   isPurchased?: string;
   status?: OrderStatus | InquiryStatus | string;
@@ -111,6 +112,7 @@ export interface QueryParams {
   categoryId?: string;
   featured?: string;
   published?: string;
+  topic?: string;
   year?: string;
   month?: string;
   dateFrom?: string;
@@ -252,7 +254,7 @@ export interface Product {
   name: string;
 
   branding: BrandingType;
-  garment: GarmentType | null;
+  clothing: ClothingType | null;
   audiences: AudienceType[];
   sizeGuideId: string | null;
   sizeGuide?: SizeGuide | null;
@@ -292,7 +294,7 @@ export interface CreateProduct {
   slug: string;
   name: string;
   branding: BrandingType;
-  garment?: GarmentType | null;
+  clothing?: ClothingType | null;
   audiences: AudienceType[];
   sizeGuideId?: string | null;
   price: number;
@@ -383,24 +385,19 @@ export interface CreateArticle {
 
 export type UpdateArticle = Partial<CreateArticle>;
 
-// =============================================================================
-// FAQ
-// =============================================================================
-
 export interface FaqTranslation {
   locale: Locale;
   question: string;
-  /** Tiptap — FAQ answers routinely need lists and links (§B4.5). */
   answer: RichText;
 }
 
 export interface Faq {
   id: string;
-  /** Groups FAQs so one component can serve several pages. */
+  /** Free-text grouping key so one component can serve several pages. */
   topic: string;
   isActive: boolean;
   translations: FaqTranslation[];
-  /** Resolved for the requested locale (§B3.2). */
+  /** Resolved for the requested locale (§B3.2). The question lives only here. */
   question?: string;
   answer?: RichText;
   createdAt: string;
@@ -415,8 +412,13 @@ export interface CreateFaq {
 
 export type UpdateFaq = Partial<CreateFaq>;
 
+/** The list endpoint also returns every distinct topic, for the filter and suggestions. */
+export interface FaqListResponse extends ApiResponse<Faq[]> {
+  topics: string[];
+}
+
 // =============================================================================
-// Contact inquiries
+// Contact inbox
 // =============================================================================
 
 export interface ContactInquiry {
@@ -425,7 +427,7 @@ export interface ContactInquiry {
   email: string;
   phone: string | null;
   inquiryType: InquiryType;
-  /** Only set when `inquiryType` is OTHER. */
+  /** Only meaningful when inquiryType is OTHER. */
   otherDetail: string | null;
   message: string;
   status: InquiryStatus;
@@ -447,9 +449,15 @@ export interface CreateContactInquiry {
   message: string;
 }
 
+/** The only two fields an admin authors — the rest is the customer's record. */
 export interface UpdateContactInquiry {
   status?: InquiryStatus;
   handlingNote?: string | null;
+}
+
+/** The list also carries counts per status: the tab row and the sidebar badge. */
+export interface ContactInquiryListResponse extends ApiResponse<ContactInquiry[]> {
+  statusCounts: Record<InquiryStatus, number>;
 }
 
 // =============================================================================
@@ -576,8 +584,28 @@ export interface Member {
   id: string;
   email: string;
   fullname: string | null;
+  /** false = revoked. Past orders keep their frozen `isMember` either way (D19). */
   isActive: boolean;
+  /** This IS the join date — there is no separate joinedAt (D21). */
   createdAt: string;
+  updatedAt?: string;
+  /** Attached by the list and detail endpoints, not stored. */
+  orderCount?: number;
+  /** Sum of `totalPurchased` across their verified orders. */
+  totalSpent?: number;
+  lastOrderAt?: string | null;
+}
+
+export interface CreateMember {
+  email: string;
+  fullname?: string | null;
+  isActive?: boolean;
+}
+
+/** Email is absent on purpose — it is the key checkout matches on. */
+export interface UpdateMember {
+  fullname?: string | null;
+  isActive?: boolean;
 }
 
 // =============================================================================

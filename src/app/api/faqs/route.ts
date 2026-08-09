@@ -8,50 +8,72 @@ import { checkAuth, errorMessage, faqInclude, getClientIp, logError, logger, log
 
 import { resolveTranslation, type Locale } from "@/utils";
 
-import { CreateFaqSchema } from "@/types";
+import { CreateFaqSchema, FaqQuerySchema } from "@/types";
 
-/**
- * GET is public — the FAQ page renders it (F-44). POST requires admin.
- *
- * `topic` groups FAQs so one component can serve several pages; the public page passes
- * no topic and renders every active entry grouped by it.
- */
-
-// GET - list FAQs
+// GET - list FAQs. Public, so a page can pull just its own topic.
 export async function GET(request: NextRequest) {
   const pathAPI = "GET /faqs";
   const startTime = Date.now();
 
   try {
     const { searchParams } = new URL(request.url);
-    const locale = (searchParams.get("locale") || "EN") as Locale;
-    const topic = searchParams.get("topic") || undefined;
-    const activeParam = searchParams.get("isActive");
 
-    const where: Prisma.FaqWhereInput = {};
-    if (topic) where.topic = topic;
-    // Absent means both, so the admin list can show deactivated entries; the public
-    // page passes isActive=true explicitly.
-    if (activeParam === "true" || activeParam === "false") where.isActive = activeParam === "true";
-
-    const faqs = await prisma.faq.findMany({
-      where,
-      include: faqInclude,
-      // Creation sequence within a topic, not the translated question — sorting by the
-      // question would reshuffle the page when a visitor switches language.
-      orderBy: [{ topic: "asc" }, { createdAt: "asc" }],
+    const queryParams = FaqQuerySchema.parse({
+      page: searchParams.get("page") || "1",
+      limit: searchParams.get("limit") || "50",
+      locale: searchParams.get("locale") || "EN",
+      search: searchParams.get("search") || undefined,
+      order: searchParams.get("order") || "asc",
+      topic: searchParams.get("topic") || undefined,
+      isActive: searchParams.get("isActive") || undefined,
     });
 
-    const data = faqs.map((faq) => ({ ...faq, ...resolveTranslation(faq.translations, locale) }));
+    const { locale, search, order, topic, isActive } = queryParams;
 
-    return NextResponse.json({ success: true, data }, { status: 200 });
+    const page = parseInt(queryParams.page);
+    const limit = parseInt(queryParams.limit);
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.FaqWhereInput = {};
+
+    if (topic) where.topic = topic;
+    if (isActive === "true" || isActive === "false") where.isActive = isActive === "true";
+
+    // The question lives in the translation, so search has to join it — and look at EN
+    // as well as the active locale, or an untranslated entry becomes unfindable the
+    // moment a visitor switches language (§B3.3). Same shape as Article.
+    if (search) {
+      where.OR = [{ topic: { contains: search, mode: "insensitive" } }, { translations: { some: { locale: { in: ["EN", locale] }, question: { contains: search, mode: "insensitive" } } } }];
+    }
+
+    const [faqs, total, topics] = await Promise.all([
+      // Grouped by topic, then creation order within it — `Faq` has no `order` column
+      // (D27), so the sequence is the sequence they were written in.
+      prisma.faq.findMany({ where, include: faqInclude, orderBy: [{ topic: order }, { createdAt: "asc" }], skip, take: limit }),
+      prisma.faq.count({ where }),
+      // The distinct topic list powers the admin's topic filter and its input
+      // suggestions, so a new entry reuses an existing topic rather than a typo of it.
+      prisma.faq.findMany({ distinct: ["topic"], select: { topic: true }, orderBy: { topic: "asc" } }),
+    ]);
+
+    const data = faqs.map((faq) => ({ ...faq, ...resolveTranslation(faq.translations, locale as Locale) }));
+
+    return NextResponse.json(
+      { success: true, data, topics: topics.map((row) => row.topic), pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } },
+      { status: 200 },
+    );
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      logError(`${pathAPI} zod error`, Date.now() - startTime, error);
+      return NextResponse.json({ success: false, message: "Validation error", errors: error.issues.map((issue) => ({ field: issue.path.join("."), message: issue.message })) }, { status: 400 });
+    }
+
     logError(`${pathAPI} error`, Date.now() - startTime, error);
     return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }
 
-// POST - create an FAQ
+// POST - create a FAQ
 export async function POST(request: NextRequest) {
   const pathAPI = "POST /faqs";
   const authError = await checkAuth(request, pathAPI);
@@ -64,28 +86,29 @@ export async function POST(request: NextRequest) {
 
     const data = CreateFaqSchema.parse(body);
 
-    // An ID-only row is unreachable for English visitors, because the per-field
-    // fallback runs ID → EN (§B4 invariants).
     if (!data.translations.some((translation) => translation.locale === "EN")) {
-      logger.error(`${pathAPI} error`, { error: "Missing EN translation" });
-      return NextResponse.json({ success: false, message: "An English translation is required" }, { status: 400 });
+      logger.error(`${pathAPI} error`, { error: "An EN translation is required" });
+      return NextResponse.json({ success: false, message: "An EN translation is required" }, { status: 400 });
     }
 
     const faq = await prisma.faq.create({
       data: {
+        // Already trimmed and lowercased by the schema.
         topic: data.topic,
-        isActive: data.isActive ?? true,
-        translations: { create: data.translations.map((translation) => ({ ...translation, answer: translation.answer as Prisma.InputJsonValue })) },
+        isActive: data.isActive,
+        translations: {
+          create: data.translations.map((translation) => ({ locale: translation.locale, question: translation.question, answer: translation.answer as Prisma.InputJsonValue })),
+        },
       },
-      include: faqInclude,
     });
 
-    logResponse(pathAPI, Date.now() - startTime, { message: "FAQ created" });
-    return NextResponse.json({ success: true, message: "FAQ created", data: faq }, { status: 201 });
+    logResponse(pathAPI, Date.now() - startTime, { message: "FAQ has been added successfully", data: faq.id });
+
+    return NextResponse.json({ success: true, message: "FAQ has been added successfully", data: { id: faq.id } }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      logError(`${pathAPI} validation error`, Date.now() - startTime, error);
-      return NextResponse.json({ success: false, message: "Validation error", errors: error.issues.map((issue) => issue.message) }, { status: 400 });
+      logError(`${pathAPI} zod error`, Date.now() - startTime, error);
+      return NextResponse.json({ success: false, message: "Validation error", errors: error.issues.map((issue) => ({ field: issue.path.join("."), message: issue.message })) }, { status: 400 });
     }
 
     logError(`${pathAPI} error`, Date.now() - startTime, error);

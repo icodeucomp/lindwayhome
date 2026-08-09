@@ -20,8 +20,10 @@ import { Background, Container, Img, LocaleLink } from "@/components";
 
 import { PiCaretDownBold, PiCaretRightBold, PiArrowRight } from "react-icons/pi";
 
+import { PLACEHOLDER_IMAGE } from "@/static/images";
+
 /** Neutral stand-in for the grey image boxes in the mockups, used until real art lands. */
-export const IMAGE_FALLBACK = "/images/home-header-background.webp";
+export const IMAGE_FALLBACK = PLACEHOLDER_IMAGE;
 
 // =============================================================================
 // Type

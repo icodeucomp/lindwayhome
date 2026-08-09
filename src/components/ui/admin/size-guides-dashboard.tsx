@@ -43,7 +43,7 @@ export const SizeGuidesDashboard = () => {
       <PageHeader
         eyebrow="Catalog"
         title="Size Guides"
-        description="Body measurements shared by every product that uses a guide. Published guides appear on the public Size Guide page as a flat list, listed in the order they were created; the rest are drafts, still assignable to products."
+        description="Measurement charts that help customers pick the right size. One chart can be used by many products. Published charts appear on your website; drafts stay private, but you can still attach them to a product while you finish them."
         actions={<AdminLinkButton href="/admin/dashboard/size-guides/create" variant="solid">New size guide</AdminLinkButton>}
       />
 

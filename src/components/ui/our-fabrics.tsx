@@ -6,6 +6,8 @@ import { fabricsLists } from "@/static/our-fabrics";
 
 import { AccordionItem, PromoBanner, SectionHeading } from "@/components/ui/storefront";
 
+import { PLACEHOLDER_IMAGE } from "@/static/images";
+
 /**
  * "Our Fabrics" (reference/Our Fabric.png).
  *
@@ -69,7 +71,7 @@ export const OurFabrics = () => (
         description="See how these fabrics become finished pieces."
         href="/about/our-production"
         cta="Discover Our Process"
-        image="/images/about-lindway-header-artisan-journey.webp"
+        image={PLACEHOLDER_IMAGE}
       />
     </Container>
   </>

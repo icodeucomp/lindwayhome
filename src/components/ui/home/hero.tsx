@@ -2,6 +2,8 @@ import { Background, Container } from "@/components";
 
 import { Eyebrow, StoreLinkButton } from "@/components/ui/storefront";
 
+import { PLACEHOLDER_IMAGE } from "@/static/images";
+
 /**
  * Homepage hero (reference/Homepage - LIndway.png).
  *
@@ -10,7 +12,7 @@ import { Eyebrow, StoreLinkButton } from "@/components/ui/storefront";
  * its left third, so the scrim runs left-to-right rather than dimming the whole frame.
  */
 export const Hero = () => (
-  <Background src="/images/home-header-background.webp" alt="Lindway hero" parentClassName="shadow-none" className="flex items-center min-h-150" imgClassName="object-right">
+  <Background src={PLACEHOLDER_IMAGE} alt="Lindway hero" parentClassName="shadow-none" className="flex items-center min-h-150" imgClassName="object-right">
     <div className="absolute inset-0 bg-linear-to-r from-light via-light/85 to-light/10" />
 
     <Container className="relative py-20">

@@ -10,6 +10,8 @@ import { articlesApi } from "@/utils";
 
 import type { ApiResponse, Article } from "@/types";
 
+import { PLACEHOLDER_IMAGE } from "@/static/images";
+
 /**
  * "Sustainability" (reference/Sustainability.png).
  *
@@ -24,17 +26,17 @@ const pillars = [
   {
     title: "Thoughtful Materials",
     body: "We carefully select high-quality fabrics that are durable, comfortable, and made to be worn for years. Every material is chosen with longevity and responsible sourcing in mind.",
-    image: "/images/home-conscious-initiatives-1.webp",
+    image: PLACEHOLDER_IMAGE,
   },
   {
     title: "Timeless Craftsmanship",
     body: "Every Lindway piece is crafted with precision and care by skilled artisans, combining traditional techniques with refined construction to create garments that stand the test of time.",
-    image: "/images/home-conscious-initiatives-2.webp",
+    image: PLACEHOLDER_IMAGE,
   },
   {
     title: "Conscious Longevity",
     body: "We believe the most sustainable wardrobe is one built to last. By creating timeless designs instead of chasing trends, we encourage mindful purchasing and lasting wear.",
-    image: "/images/home-conscious-initiatives-3.webp",
+    image: PLACEHOLDER_IMAGE,
   },
 ];
 

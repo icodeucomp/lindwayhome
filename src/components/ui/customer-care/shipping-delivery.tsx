@@ -4,6 +4,8 @@ import { FeatureCard, PromoBanner, SectionHeading } from "@/components/ui/storef
 
 import { PiClock, PiGlobeHemisphereEast, PiMapPinLine, PiPackage, PiReceipt, PiTruck } from "react-icons/pi";
 
+import { PLACEHOLDER_IMAGE } from "@/static/images";
+
 /**
  * "Shipping & Delivery".
  *
@@ -45,7 +47,7 @@ export const ShippingDelivery = () => (
         description="What can and cannot be returned, and under which conditions."
         href="/customer-care/return-exchanges"
         cta="Read the Policy"
-        image="/images/return-&-exchanges-header-background.webp"
+        image={PLACEHOLDER_IMAGE}
       />
     </Container>
   </>

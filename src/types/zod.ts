@@ -7,7 +7,7 @@ import { z } from "zod";
 export const LocaleEnum = z.enum(["EN", "ID"]);
 export const BrandingEnum = z.enum(["MY_LINDWAY", "SIMPLY_LINDWAY", "LURE_BY_LINDWAY", "STUDIO_BY_LINDWAY", "LINDWAY_AWP"]);
 export const AudienceEnum = z.enum(["WOMEN", "MEN", "KIDS"]);
-export const GarmentEnum = z.enum(["DRESSES", "TOPS", "SKIRTS"]);
+export const ClothingEnum = z.enum(["DRESSES", "TOPS", "SKIRTS"]);
 export const PaymentMethodEnum = z.enum(["BANK_TRANSFER", "QRIS"]);
 export const DiscountEnum = z.enum(["PERCENTAGE", "FIXED"]);
 export const OrderStatusEnum = z.enum(["AWAITING_PAYMENT", "PAID", "SHIPPED", "COMPLETED", "CANCELLED"]);
@@ -120,7 +120,7 @@ export const ProductSchema = z.object({
   name: z.string().min(1, "Product name is required"),
 
   branding: BrandingEnum,
-  garment: GarmentEnum.nullish(),
+  clothing: ClothingEnum.nullish(),
   audiences: z.array(AudienceEnum).optional(),
   sizeGuideId: z.string().nullish(),
 
@@ -185,23 +185,64 @@ export const CreateOrderSchema = OrderSchema.omit({ id: true });
 export const UpdateOrderSchema = OrderSchema.partial();
 
 // =============================================================================
+// Member
+//
+// The registry of who is a member *now* (D19). `Order.isMember` is the separate,
+// frozen record that a given order was priced as one — revoking here must never
+// reach back into it.
+// =============================================================================
+
+export const MemberSchema = z.object({
+  id: z.string().optional(),
+  // Trimmed and lowercased before validating: checkout looks members up by exact
+  // email, so " Rani@Example.com " and "rani@example.com" must not become two rows.
+  email: z.string().trim().toLowerCase().pipe(z.email("A valid email is required")),
+  fullname: z.string().trim().nullish(),
+  isActive: z.boolean().optional(),
+});
+
+export const CreateMemberSchema = MemberSchema.omit({ id: true });
+
+/** Email is immutable: it is the key checkout matches on, and the identity itself. */
+export const UpdateMemberSchema = MemberSchema.omit({ id: true, email: true }).partial();
+
+// =============================================================================
 // Content
 // =============================================================================
 
+/**
+ * Trimmed before validating, not after.
+ *
+ * This is the one schema fed directly by a public form, where a pasted email
+ * arrives as " name@example.com " often enough to matter. Validating first would
+ * reject that as malformed; trimming only in the handler would let a message of
+ * pure whitespace past `min(1)` and store it empty.
+ */
 export const ContactInquirySchema = z.object({
   id: z.string().optional(),
-  fullname: z.string().min(1, "Full name is required"),
-  email: z.string().email("A valid email is required"),
-  phone: z.string().nullish(),
+  fullname: z.string().trim().min(1, "Full name is required"),
+  email: z.string().trim().toLowerCase().pipe(z.email("A valid email is required")),
+  phone: z.string().trim().nullish(),
   inquiryType: InquiryTypeEnum,
-  otherDetail: z.string().nullish(), // only when inquiryType = OTHER
-  message: z.string().min(1, "Message is required"),
+  otherDetail: z.string().trim().nullish(), // only when inquiryType = OTHER
+  message: z.string().trim().min(1, "Message is required"),
   status: InquiryStatusEnum.optional(),
-  handlingNote: z.string().nullish(),
+  handlingNote: z.string().trim().nullish(),
 });
 
 export const CreateContactInquirySchema = ContactInquirySchema.omit({ id: true, status: true, handlingNote: true });
-export const UpdateContactInquirySchema = ContactInquirySchema.partial();
+
+/**
+ * Deliberately NOT `ContactInquirySchema.partial()`.
+ *
+ * An inquiry is a record of what somebody sent us. Letting an admin edit the name,
+ * email or message would rewrite that record while still looking like a support
+ * action — the two fields below are the only things the admin actually authors.
+ */
+export const UpdateContactInquirySchema = z.object({
+  status: InquiryStatusEnum.optional(),
+  handlingNote: z.string().nullish(),
+});
 
 export const FaqTranslationSchema = z.object({
   locale: LocaleEnum,
@@ -211,8 +252,18 @@ export const FaqTranslationSchema = z.object({
 
 export const FaqSchema = z.object({
   id: z.string().optional(),
-  topic: z.string().min(1, "Topic is required"),
+  /**
+   * A free-text grouping key, so one component can serve several pages. Not a
+   * relation: topics have no attributes of their own beyond their name.
+   *
+   * Stored lowercase. Grouping and filtering both match the string exactly, so
+   * without this "Shipping" and "shipping" become two separate topics — two
+   * headings on the page, and a filter that finds only half the entries. Screens
+   * capitalise it for display; the stored form stays canonical.
+   */
+  topic: z.string().trim().min(1, "Topic is required").toLowerCase(),
   isActive: z.boolean().optional(),
+  // The question lives here, not on the FAQ, so an EN row is genuinely required.
   translations: z.array(FaqTranslationSchema).min(1, "An EN translation is required"),
 });
 
@@ -300,9 +351,11 @@ const baseQuery = {
 export const ProductQuerySchema = z.object({
   ...baseQuery,
   locale: LocaleEnum.optional().default("EN"),
-  branding: z.string().optional(),
-  garment: z.string().optional(),
-  audience: z.string().optional(),
+  // Typed rather than `z.string()`: an unknown value used to reach Prisma and come
+  // back as a 500 quoting the generated query, file path included. Now it is a 400.
+  branding: BrandingEnum.optional(),
+  clothing: ClothingEnum.optional(),
+  audience: AudienceEnum.optional(),
   isActive: z.string().optional(),
   isFavorite: z.string().optional(),
   sort: z.enum(["latest", "new-arrivals", "best-sellers", "price-asc", "price-desc"]).optional().default("latest"),
@@ -322,6 +375,24 @@ export const LocationQuerySchema = z.object({
   province: z.string().optional(),
   district: z.string().optional(),
   sub_district: z.string().optional(),
+});
+
+export const MemberQuerySchema = z.object({
+  ...baseQuery,
+  // Absent means both — a revoked member the admin cannot see is one they cannot
+  // reinstate.
+  isActive: z.string().optional(),
+});
+
+export const FaqQuerySchema = z.object({
+  ...baseQuery,
+  locale: LocaleEnum.optional().default("EN"),
+  // Lowercased to match how topics are stored, so a shared or bookmarked URL with
+  // "?topic=Shipping" still finds the entries.
+  topic: z.string().trim().toLowerCase().optional(),
+  // Absent means both — the admin list must show inactive entries, or they cannot be
+  // brought back. The public page passes isActive=true.
+  isActive: z.string().optional(),
 });
 
 export const ArticleQuerySchema = z.object({

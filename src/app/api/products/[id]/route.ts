@@ -88,7 +88,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const folder = `products/${updateData.sku ?? existingProduct.sku}`;
     const resolvedImages = updateData.images ? await resolveFiles(existingProduct.images, updateData.images, folder) : undefined;
 
-    const { variants, translations, sizeGuideId, garment, releasedAt, bestSellerRank, images, ...product } = updateData;
+    const { variants, translations, sizeGuideId, clothing, releasedAt, bestSellerRank, images, ...product } = updateData;
 
     // Variants and translations are replaced wholesale rather than diffed: the admin
     // form always submits the complete set, and deleting a variant must actually
@@ -107,7 +107,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           ...product,
           ...(images ? { images: resolvedImages } : {}),
           ...(sizeGuideId !== undefined ? { sizeGuideId: nullToUndefined(sizeGuideId) } : {}),
-          ...(garment !== undefined ? { garment: nullToUndefined(garment) } : {}),
+          ...(clothing !== undefined ? { clothing: nullToUndefined(clothing) } : {}),
           ...(releasedAt !== undefined ? { releasedAt: nullToUndefined(releasedAt) } : {}),
           ...(bestSellerRank !== undefined ? { bestSellerRank: nullToUndefined(bestSellerRank) } : {}),
           ...(variants ? { variants: { create: variants.map(toVariantCreate) } } : {}),

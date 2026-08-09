@@ -1,8 +1,10 @@
 import { Container, Img, LocaleLink } from "@/components";
 
-import { activeAudience, activeGarment } from "@/static/taxonomy";
+import { activeAudience, activeClothing } from "@/static/taxonomy";
 
 import { IMAGE_FALLBACK } from "@/components/ui/storefront";
+
+import { PLACEHOLDER_IMAGE } from "@/static/images";
 
 /**
  * The row of category shortcuts under the listing hero (reference/Product Search.png).
@@ -13,9 +15,9 @@ import { IMAGE_FALLBACK } from "@/components/ui/storefront";
  */
 
 const links = [
-  { name: "New Arrivals", href: "/new-arrivals", image: "/images/home-header-background.webp" },
-  { name: "Best Sellers", href: "/best-sellers", image: "/images/home-product-my-lindway.webp" },
-  ...activeGarment().map((entry) => ({ name: entry.label, href: `/shop/${entry.slug}`, image: "" })),
+  { name: "New Arrivals", href: "/new-arrivals", image: PLACEHOLDER_IMAGE },
+  { name: "Best Sellers", href: "/best-sellers", image: PLACEHOLDER_IMAGE },
+  ...activeClothing().map((entry) => ({ name: entry.label, href: `/shop/${entry.slug}`, image: "" })),
   ...activeAudience().map((entry) => ({ name: entry.label, href: `/shop/for/${entry.slug}`, image: "" })),
 ];
 

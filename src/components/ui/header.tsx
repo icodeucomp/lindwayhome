@@ -10,7 +10,7 @@ import { AnimatePresence, motion } from "framer-motion";
 
 import { Img, Container, LocaleLink } from "@/components";
 
-import { aboutNav, audienceNav, brandingNav, customerCareNav, garmentNav } from "@/static/navigation";
+import { aboutNav, audienceNav, brandingNav, customerCareNav, clothingNav } from "@/static/navigation";
 
 import { stripLocale } from "@/utils/locale-path";
 
@@ -79,7 +79,7 @@ export const Header = () => {
     collections: [
       { title: "Branding", items: brandingNav },
       { title: "Audience", items: audienceNav },
-      { title: "Garment", items: garmentNav },
+      { title: "Clothing", items: clothingNav },
     ],
     customerCare: [{ title: "Customer Care", items: customerCareNav }],
     about: [{ title: "About", items: aboutNav }],
@@ -191,7 +191,7 @@ export const Header = () => {
                     { name: "New Arrivals", href: "/new-arrivals" },
                     { name: "Best Sellers", href: "/best-sellers" },
                     ...brandingNav,
-                    ...garmentNav,
+                    ...clothingNav,
                     ...audienceNav,
                     { name: "Our World", href: "/our-world" },
                     { name: "Journal", href: "/journal" },

@@ -12,6 +12,8 @@ import { faqsApi } from "@/utils";
 
 import type { Faq } from "@/types";
 
+import { PLACEHOLDER_IMAGE } from "@/static/images";
+
 /**
  * FAQ page (reference/Frequently Asked Questions.png).
  *
@@ -25,22 +27,31 @@ import type { Faq } from "@/types";
  * design, so omitting it would publish them.
  */
 
+/**
+ * Keyed lowercase because that is how a topic is stored: `FaqSchema` lowercases on
+ * write so `?topic=Shipping` and `?topic=shipping` cannot become two different filters.
+ * Display casing is applied on render, the same way the admin list does it.
+ */
 const TOPIC_BLURBS: Record<string, string> = {
-  "Orders & Shopping": "How to place an order, modify it, and what made-to-order means.",
-  "Shipping & Delivery": "Information about shipping methods, delivery times, and international orders.",
-  "Returns & Exchanges": "What can be returned, and under which conditions.",
-  "Sizing & Fit": "Finding your size, and asking for a custom fit.",
-  "Product & Care": "Fabrics, craftsmanship, and looking after your pieces.",
-  Payment: "Accepted methods, confirmation, and receipts.",
+  orders: "How to place an order, modify it, and what made-to-order means.",
+  shipping: "Shipping methods, delivery times, and international orders.",
+  returns: "What can be returned, and under which conditions.",
+  sizing: "Finding your size, and asking for a custom fit.",
+  care: "Fabrics, craftsmanship, and looking after your pieces.",
+  payment: "Accepted methods, confirmation, and receipts.",
 };
+
+const titleCase = (topic: string) => topic.replace(/\b\w/g, (letter) => letter.toUpperCase());
 
 export const FaqContent = () => {
   const locale = useApiLocale();
 
   const { data, isLoading, isError } = faqsApi.useGetFaqs<{ success: boolean; data: Faq[] }>({
     key: ["public-faqs", locale],
-    params: { locale },
-    isActive: true,
+    // `isActive` moved inside `params` when the admin FAQ screen merged in — it needs
+    // search, paging and the tri-state filter through the same option. Still passed
+    // explicitly: the admin list shows deactivated entries, so omitting it publishes them.
+    params: { locale, isActive: true },
   });
 
   // Grouped in arrival order, which the API already sorts by topic then creation —
@@ -68,7 +79,7 @@ export const FaqContent = () => {
         ) : (
           groups.map(([topic, entries]) => (
             <section key={topic} className="space-y-5">
-              <SectionHeading variant="title" title={topic} description={TOPIC_BLURBS[topic]} />
+              <SectionHeading variant="title" title={titleCase(topic)} description={TOPIC_BLURBS[topic]} />
 
               <div className="space-y-2">
                 {entries.map((faq, index) => (
@@ -88,7 +99,7 @@ export const FaqContent = () => {
           description="Our team answers within 1–2 business days."
           href="/customer-care/contact-us"
           cta="Contact Us"
-          image="/images/contact-us-header-background.webp"
+          image={PLACEHOLDER_IMAGE}
         />
       </Container>
     </>

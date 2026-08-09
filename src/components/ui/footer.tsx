@@ -4,6 +4,8 @@ import { aboutNav, brandingNav, customerCareNav, shopNav, socialLinks } from "@/
 
 import { PiEnvelopeSimple, PiFacebookLogo, PiInstagramLogo, PiWhatsappLogo } from "react-icons/pi";
 
+import { PLACEHOLDER_IMAGE } from "@/static/images";
+
 /**
  * Storefront footer (reference/Homepage - LIndway.png, bottom).
  *
@@ -32,7 +34,7 @@ export const Footer = () => (
     {/* `Img` already positions itself `relative`; the absolute placement belongs on a
         wrapper, or the two position utilities collide and nothing renders. */}
     <div className="absolute inset-y-0 right-0 hidden w-1/4 lg:block">
-      <Img src="/images/home-fabrics-characteristic-1.webp" alt="" className="w-full h-full" cover />
+      <Img src={PLACEHOLDER_IMAGE} alt="" className="w-full h-full" cover />
     </div>
     <div className="absolute inset-y-0 right-0 hidden w-1/3 lg:block bg-linear-to-r from-footer via-footer/80 to-transparent" />
 

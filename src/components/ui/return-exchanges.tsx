@@ -2,6 +2,8 @@ import { Container, Img } from "@/components";
 
 import { PromoBanner, SectionHeading } from "@/components/ui/storefront";
 
+import { PLACEHOLDER_IMAGE } from "@/static/images";
+
 /**
  * "Return & Exchanges" (reference/Return & Exchanges.png).
  *
@@ -29,7 +31,7 @@ export const ReturnExchanges = () => (
         </ul>
       </div>
 
-      <Img src="/images/return-&-exchanges-policies-image.webp" alt="Lindway packaging" className="w-full aspect-4/5 bg-footer/30" cover />
+      <Img src={PLACEHOLDER_IMAGE} alt="Lindway packaging" className="w-full aspect-4/5 bg-footer/30" cover />
     </Container>
 
     <Container className="pb-8">
@@ -43,7 +45,7 @@ export const ReturnExchanges = () => (
         description="From browsing to checkout, and where to reach us if you get stuck."
         href="/customer-care/how-to-shop"
         cta="Discover Now"
-        image="/images/how-to-shop-header-background.webp"
+        image={PLACEHOLDER_IMAGE}
       />
     </Container>
   </>

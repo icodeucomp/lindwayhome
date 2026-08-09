@@ -68,7 +68,7 @@ export const OrdersDashboard = () => {
       <PageHeader
         eyebrow="Sales"
         title="Orders"
-        description="Every checkout, and the receipts waiting to be verified. Verifying an order decrements stock and raises the product's sold count."
+        description="Every purchase made on your website. Check the payment receipt the customer uploaded, then verify the order — that confirms the sale and takes the items out of stock."
       />
 
       <ListToolbar>

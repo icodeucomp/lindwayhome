@@ -151,7 +151,11 @@ export const ProductDetail = ({ slug }: { slug: string }) => {
                 const realIndex = thumbOffset + index;
                 return (
                   <button
-                    key={image.url}
+                    // `filename`, not `url`: two images on one product can share a URL —
+                    // every one of them does while PLACEHOLDER_IMAGE stands in — and the
+                    // filename stays unique per upload. `realIndex` is the last resort,
+                    // since a node written by hand may carry no filename at all.
+                    key={image.filename || realIndex}
                     type="button"
                     onClick={() => setActiveImage(realIndex)}
                     aria-label={`View image ${realIndex + 1}`}

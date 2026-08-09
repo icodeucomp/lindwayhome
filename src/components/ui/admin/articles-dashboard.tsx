@@ -57,7 +57,7 @@ export const ArticlesDashboard = () => {
       <PageHeader
         eyebrow="Content"
         title="Articles"
-        description="The Journal. Drafts stay here until you publish them — publishedAt is the on/off switch, so there is no separate active flag."
+        description="Stories and posts for the Journal page on your website. Write them here and publish when you are ready — unpublished drafts are visible only to you."
         actions={<AdminLinkButton href="/admin/dashboard/articles/create" variant="solid">New article</AdminLinkButton>}
       />
 

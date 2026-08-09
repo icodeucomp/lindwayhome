@@ -6,6 +6,8 @@ import { Container, Img } from "@/components";
 
 import { SectionHeading } from "@/components/ui/storefront";
 
+import { PLACEHOLDER_IMAGE } from "@/static/images";
+
 /**
  * "Our Philosophy" (reference/About Us.png).
  *
@@ -18,19 +20,19 @@ const pillars = [
   {
     key: "custom",
     label: "Custom",
-    image: "/images/about-lindway-header-artisan-journey.webp",
+    image: PLACEHOLDER_IMAGE,
     body: "Most of what we make begins as a conversation. Measurements, motifs, a colour someone remembers from a ceremony — our made-to-order pieces are cut for one person rather than for a size chart. It is slower, and that is the point: nothing leaves the atelier until it fits the person who asked for it.",
   },
   {
     key: "cultural",
     label: "Cultural",
-    image: "/images/about-lindway-lindway-philosophy-kanan.webp",
+    image: PLACEHOLDER_IMAGE,
     body: "Every technique we use — hand-guided embroidery, hand-painted fabric, sequin work, batik — is Indonesian, and is worked by artisans who learned it here. We treat those traditions as living craft rather than decoration, which means paying properly for the time they take and naming the hands that do them.",
   },
   {
     key: "conscious",
     label: "Conscious",
-    image: "/images/home-fabrics-characteristic-1.webp",
+    image: PLACEHOLDER_IMAGE,
     body: "We produce in small runs, choose fabrics that outlast a season, and turn offcuts into patch art rather than waste. Fashion with intention means accounting for what a garment costs the community and the island it was made on, not only what it costs to buy.",
   },
 ];

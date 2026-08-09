@@ -1,12 +1,12 @@
 /**
  * Canonical taxonomy display data (CLAUDE.md D25).
  *
- * Branding, audience and garment are Prisma enums, so the database stores only the
+ * Branding, audience and clothing are Prisma enums, so the database stores only the
  * key. Everything a page needs to render — label, URL slug, hero copy, hero image,
  * menu order — lives here.
  *
  * Consequences to keep in mind:
- *   · Adding a branding, audience or garment means editing the Prisma enum, running
+ *   · Adding a branding, audience or clothing means editing the Prisma enum, running
  *     a migration, editing this file, and deploying. There is no admin screen.
  *   · `isActive: false` hides an entry from the navigation and its listing without
  *     removing the enum value, so products already tagged with it are never orphaned.
@@ -16,9 +16,11 @@
 
 import type { $Enums } from "prisma-client/client";
 
+import { PLACEHOLDER_IMAGE } from "@/static/images";
+
 export type BrandingType = $Enums.BrandingType;
 export type AudienceType = $Enums.AudienceType;
-export type GarmentType = $Enums.GarmentType;
+export type ClothingType = $Enums.ClothingType;
 
 export interface TaxonomyEntry<T extends string> {
   key: T;
@@ -49,14 +51,14 @@ export const BRANDING = [
     label: "My Lindway",
     slug: "my-lindway",
     description: "Luxury Kebaya & Couture",
-    image: "/images/home-product-my-lindway.webp",
+    image: PLACEHOLDER_IMAGE,
     headline: "Made-to-order artisanal pieces that blend Indonesian heritage with modern grace.",
     tagline: "Embracing Artistry, Celebrating Culture",
     body: [
       "Our flagship collection is a tribute to Indonesia's rich cultural heritage. Every piece is made-to-order—crafted upon request to honor the art of slow fashion. From intricate embroidery to hand-painted fabrics and sequined artistry, My Lindway pieces are custom creations, designed to reflect your individuality.",
       "We also offer a range of everyday kebaya—available in various ready designs, sizes, and motifs. These are made in limited quantities and are ready to wear or available for faster delivery.",
     ],
-    gallery: ["/images/my-lindway-description-big.webp", "/images/my-lindway-description-list-1.webp", "/images/my-lindway-description-list-2.webp", "/images/my-lindway-description-list-3.webp"],
+    gallery: [PLACEHOLDER_IMAGE, PLACEHOLDER_IMAGE, PLACEHOLDER_IMAGE, PLACEHOLDER_IMAGE],
     order: 1,
     isActive: true,
   },
@@ -65,7 +67,7 @@ export const BRANDING = [
     label: "Simply Lindway",
     slug: "simply-lindway",
     description: "Everyday Heritage Wear",
-    image: "/images/home-product-simply-lindway.webp",
+    image: PLACEHOLDER_IMAGE,
     headline: "Soft essentials for everyday wear, made in 100% pure cotton.",
     tagline: "Pure Cotton Comfort",
     body: [
@@ -73,10 +75,10 @@ export const BRANDING = [
       "Each style is produced in small batches so the fit, the fabric and the finish stay consistent from one season to the next.",
     ],
     gallery: [
-      "/images/simply-lindway-description-big.webp",
-      "/images/simply-lindway-description-list-1.webp",
-      "/images/simply-lindway-description-list-2.webp",
-      "/images/simply-lindway-description-list-3.webp",
+      PLACEHOLDER_IMAGE,
+      PLACEHOLDER_IMAGE,
+      PLACEHOLDER_IMAGE,
+      PLACEHOLDER_IMAGE,
     ],
     order: 2,
     isActive: true,
@@ -86,7 +88,7 @@ export const BRANDING = [
     label: "Lure by Lindway",
     slug: "lure-by-lindway",
     description: "Crochet Resort Wear",
-    image: "/images/home-product-lure-by-lindway.webp",
+    image: PLACEHOLDER_IMAGE,
     headline: "Hand-crocheted resort wear for slow days and warm coastlines.",
     tagline: "Traditional Soul, Modern Edge",
     body: [
@@ -94,10 +96,10 @@ export const BRANDING = [
       "Because every piece is worked by hand, no two are ever quite identical—the small variations are the signature, not the flaw.",
     ],
     gallery: [
-      "/images/lure-by-lindway-description-big.webp",
-      "/images/lure-by-lindway-description-list-1.webp",
-      "/images/lure-by-lindway-description-list-2.webp",
-      "/images/lure-by-lindway-description-list-3.webp",
+      PLACEHOLDER_IMAGE,
+      PLACEHOLDER_IMAGE,
+      PLACEHOLDER_IMAGE,
+      PLACEHOLDER_IMAGE,
     ],
     order: 3,
     isActive: true,
@@ -138,11 +140,11 @@ export const AUDIENCE = [
   { key: "KIDS", label: "Kids", slug: "kids", order: 3, isActive: true },
 ] as const satisfies readonly TaxonomyEntry<AudienceType>[];
 
-export const GARMENT = [
+export const CLOTHING = [
   { key: "DRESSES", label: "Dresses", slug: "dresses", order: 1, isActive: true },
   { key: "TOPS", label: "Tops", slug: "tops", order: 2, isActive: true },
   { key: "SKIRTS", label: "Skirts", slug: "skirts", order: 3, isActive: true },
-] as const satisfies readonly TaxonomyEntry<GarmentType>[];
+] as const satisfies readonly TaxonomyEntry<ClothingType>[];
 
 // =============================================================================
 // Drift guard
@@ -162,23 +164,23 @@ type AssertCovers<Enum extends string, Listed extends string> = [Exclude<Enum, L
 
 const _brandingCovered: AssertCovers<BrandingType, (typeof BRANDING)[number]["key"]> = true;
 const _audienceCovered: AssertCovers<AudienceType, (typeof AUDIENCE)[number]["key"]> = true;
-const _garmentCovered: AssertCovers<GarmentType, (typeof GARMENT)[number]["key"]> = true;
+const _clothingCovered: AssertCovers<ClothingType, (typeof CLOTHING)[number]["key"]> = true;
 
 void _brandingCovered;
 void _audienceCovered;
-void _garmentCovered;
+void _clothingCovered;
 
 const activeSorted = <T extends TaxonomyEntry<string>>(entries: readonly T[]) => entries.filter((entry) => entry.isActive).sort((a, b) => a.order - b.order);
 
 export const activeBranding = () => activeSorted(BRANDING);
 export const activeAudience = () => activeSorted(AUDIENCE);
-export const activeGarment = () => activeSorted(GARMENT);
+export const activeClothing = () => activeSorted(CLOTHING);
 
 const bySlug = <T extends TaxonomyEntry<string>>(entries: readonly T[], slug: string) => entries.find((entry) => entry.slug === slug && entry.isActive);
 
 export const brandingBySlug = (slug: string) => bySlug(BRANDING, slug);
 export const audienceBySlug = (slug: string) => bySlug(AUDIENCE, slug);
-export const garmentBySlug = (slug: string) => bySlug(GARMENT, slug);
+export const clothingBySlug = (slug: string) => bySlug(CLOTHING, slug);
 
 const byKey = <T extends TaxonomyEntry<string>>(entries: readonly T[], key: string) => entries.find((entry) => entry.key === key);
 
@@ -192,4 +194,4 @@ export const isBrandingActive = (key: BrandingType): boolean => byKey(BRANDING, 
 
 export const brandingByKey = (key: BrandingType) => byKey(BRANDING, key);
 export const audienceByKey = (key: AudienceType) => byKey(AUDIENCE, key);
-export const garmentByKey = (key: GarmentType) => byKey(GARMENT, key);
+export const clothingByKey = (key: ClothingType) => byKey(CLOTHING, key);

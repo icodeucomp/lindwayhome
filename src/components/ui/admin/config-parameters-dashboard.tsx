@@ -115,7 +115,7 @@ export const ConfigParameterDashboard = () => {
       <PageHeader
         eyebrow="Settings"
         title="Parameters"
-        description="Store-wide settings: shipping rates and origin, package dimensions, tax, the member rate and the promo. One value per store — anything with its own rows or lifecycle belongs in a table instead (D12)."
+        description="Settings that apply to your whole store: delivery rates, where you ship from, parcel sizes, tax, the member discount and any promotion. Anything you change here affects every new order, so double-check before saving."
       />
 
       {isLoading ? (

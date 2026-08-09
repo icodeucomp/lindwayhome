@@ -2,6 +2,8 @@ import { hashPassword, prisma } from "@/lib";
 
 import { ConfigService } from "@/services";
 
+import { PLACEHOLDER_IMAGE } from "@/static/images";
+
 import { SIZE_GUIDES } from "./seed-data/size-guides";
 
 import type { Prisma } from "prisma-client/client";
@@ -18,10 +20,19 @@ const ul = (items: string[]) => ({
   content: items.map((text) => ({ type: "listItem", content: [p(text)] })),
 });
 
+/**
+ * A stored upload record. `url` is what a page renders; `path` and `filename` are what
+ * `resolveFiles` uses to move and delete the file on disk.
+ *
+ * Only `url` points at the placeholder — the rest keeps its own identity, so the node
+ * still reads as a real upload and stays unique per product. Deleting one is harmless:
+ * `uploader.deleteFile` returns false for a path that does not exist rather than
+ * throwing. Put `/images/${filename}` back here when the client's photography lands.
+ */
 const imageNode = (filename: string) => ({
   originalName: filename,
   filename,
-  url: `/images/${filename}`,
+  url: PLACEHOLDER_IMAGE,
   path: `/images/${filename}`,
   size: 120_000,
   mimeType: "image/webp",
@@ -378,7 +389,7 @@ const PRODUCTS = [
     sku: "MLW-KEB-001",
     slug: "kebaya-bordir-melati",
     branding: "MY_LINDWAY" as const,
-    garment: "TOPS" as const,
+    clothing: "TOPS" as const,
     audiences: ["WOMEN" as const],
     price: 1_250_000,
     discount: 0,
@@ -393,7 +404,7 @@ const PRODUCTS = [
     sku: "MLW-BTK-002",
     slug: "rok-batik-parang-seling",
     branding: "MY_LINDWAY" as const,
-    garment: "SKIRTS" as const,
+    clothing: "SKIRTS" as const,
     audiences: ["WOMEN" as const],
     price: 890_000,
     discount: 15,
@@ -408,7 +419,7 @@ const PRODUCTS = [
     sku: "SLW-DRS-003",
     slug: "cotton-day-dress",
     branding: "SIMPLY_LINDWAY" as const,
-    garment: "DRESSES" as const,
+    clothing: "DRESSES" as const,
     audiences: ["WOMEN" as const],
     price: 640_000,
     discount: 0,
@@ -425,7 +436,7 @@ const PRODUCTS = [
     sku: "SLW-TOP-004",
     slug: "relaxed-linen-top",
     branding: "SIMPLY_LINDWAY" as const,
-    garment: "TOPS" as const,
+    clothing: "TOPS" as const,
     audiences: ["WOMEN" as const, "MEN" as const],
     price: 480_000,
     discount: 10,
@@ -440,7 +451,7 @@ const PRODUCTS = [
     sku: "LBL-DRS-005",
     slug: "modern-batik-slip-dress",
     branding: "LURE_BY_LINDWAY" as const,
-    garment: "DRESSES" as const,
+    clothing: "DRESSES" as const,
     audiences: ["WOMEN" as const],
     price: 1_480_000,
     discount: 0,
@@ -455,7 +466,7 @@ const PRODUCTS = [
     sku: "SLW-KID-006",
     slug: "kids-cotton-tee",
     branding: "SIMPLY_LINDWAY" as const,
-    garment: "TOPS" as const,
+    clothing: "TOPS" as const,
     audiences: ["KIDS" as const],
     price: 210_000,
     discount: 0,
@@ -506,7 +517,7 @@ async function seedProducts() {
         slug: product.slug,
         name: product.name,
         branding: product.branding,
-        garment: product.garment,
+        clothing: product.clothing,
         audiences: product.audiences,
         sizeGuideId: guideIdByTitle.get(product.guide),
         price: product.price,
@@ -617,6 +628,143 @@ async function seedJournal() {
 }
 
 // =============================================================================
+// FAQ
+//
+// `topic` groups entries so one component can serve several pages. Within a topic
+// the order is insertion order — Faq has no position column (D27).
+// =============================================================================
+
+const FAQS = [
+  {
+    topic: "shipping",
+    en: { q: "How long does delivery take?", a: "Orders within Bali arrive in 1-2 days. Elsewhere in Indonesia allow 3-5 working days after the piece ships." },
+    id: { q: "Berapa lama pengiriman?", a: "Pesanan di dalam Bali tiba dalam 1-2 hari. Ke luar Bali, mohon menunggu 3-5 hari kerja setelah barang dikirim." },
+  },
+  {
+    topic: "shipping",
+    en: { q: "Do you ship internationally?", a: "Yes, on request. Send us the destination and we will quote the freight before you pay." },
+    id: null,
+  },
+  {
+    topic: "sizing",
+    en: { q: "How do I choose my size?", a: "Every product page links the size guide for its pattern. Measure a garment you already own flat and compare." },
+    id: { q: "Bagaimana memilih ukuran?", a: "Setiap halaman produk menautkan panduan ukuran untuk polanya. Ukur pakaian yang sudah Anda miliki dalam keadaan rata, lalu bandingkan." },
+  },
+  {
+    topic: "orders",
+    en: { q: "How do I confirm my payment?", a: "Upload your transfer receipt at checkout. We verify it by hand, usually within one working day." },
+    id: { q: "Bagaimana konfirmasi pembayaran?", a: "Unggah bukti transfer Anda saat checkout. Kami memeriksanya secara manual, biasanya dalam satu hari kerja." },
+  },
+  {
+    topic: "orders",
+    // Inactive, so the admin list has something the public page must never show.
+    isActive: false,
+    en: { q: "Can I pay with a credit card?", a: "Not yet. Bank transfer and QRIS are the two ways to pay today." },
+    id: null,
+  },
+];
+
+async function seedFaqs() {
+  const existing = await prisma.faq.count();
+  if (existing > 0) {
+    console.log(`❓ faqs… skipped (${existing} already present)`);
+    return;
+  }
+
+  console.log("❓ faqs…");
+
+  for (const faq of FAQS) {
+    await prisma.faq.create({
+      data: {
+        topic: faq.topic,
+        isActive: faq.isActive ?? true,
+        translations: {
+          create: [
+            { locale: "EN", question: faq.en.q, answer: doc(p(faq.en.a)) },
+            ...(faq.id ? [{ locale: "ID" as const, question: faq.id.q, answer: doc(p(faq.id.a)) }] : []),
+          ],
+        },
+      },
+    });
+  }
+}
+
+// =============================================================================
+// Contact inbox
+//
+// Spread across the workflow so the inbox has something at every stage — an empty
+// queue tells you nothing about whether the status transitions work.
+// =============================================================================
+
+const INQUIRIES = [
+  {
+    fullname: "Sinta Wijaya",
+    email: "sinta.wijaya@example.com",
+    phone: "+62 812 3456 7890",
+    inquiryType: "PRODUCT_INQUIRY" as const,
+    message: "Is the Melati Embroidered Kebaya available in XXL? I could not find it on the size picker.",
+    status: "NEW" as const,
+  },
+  {
+    fullname: "Andre Kusuma",
+    email: "andre.k@example.com",
+    inquiryType: "ORDER_SUPPORT" as const,
+    message: "I transferred yesterday but my order still shows as awaiting payment. The receipt is attached to the order.",
+    status: "NEW" as const,
+  },
+  {
+    fullname: "Maria Halim",
+    email: "maria@boutique.example.com",
+    phone: "+62 813 9999 1111",
+    inquiryType: "WHOLESALE_B2B" as const,
+    message: "We run a boutique in Seminyak and would like to stock the Simply Lindway line. Could you send wholesale terms?",
+    status: "IN_PROGRESS" as const,
+  },
+  {
+    fullname: "Putu Ardana",
+    email: "putu.ardana@example.com",
+    inquiryType: "CUSTOM_ORDER" as const,
+    message: "I need six matching kebaya for a family ceremony in November. Is that possible?",
+    status: "HANDLED" as const,
+    handlingNote: "Quoted for six pieces, 5 weeks lead time. Customer confirmed by WhatsApp.",
+  },
+  {
+    fullname: "Growth Partners",
+    email: "no-reply@spam.example.com",
+    inquiryType: "OTHER" as const,
+    otherDetail: "Marketing services",
+    message: "Boost your SEO ranking with our proven backlink strategy!",
+    status: "ARCHIVED" as const,
+  },
+];
+
+async function seedInquiries() {
+  const existing = await prisma.contactInquiry.count();
+  if (existing > 0) {
+    console.log(`📨 inquiries… skipped (${existing} already present)`);
+    return;
+  }
+
+  console.log("📨 inquiries…");
+
+  const admin = await prisma.user.findFirst({ where: { username: "admin" }, select: { id: true } });
+
+  for (const [index, inquiry] of INQUIRIES.entries()) {
+    const isHandled = inquiry.status === "HANDLED";
+
+    await prisma.contactInquiry.create({
+      data: {
+        ...inquiry,
+        // Spread over the past fortnight so the list is not one timestamp repeated.
+        createdAt: new Date(Date.now() - index * 3 * 24 * 60 * 60 * 1000),
+        handledAt: isHandled ? new Date(Date.now() - 24 * 60 * 60 * 1000) : null,
+        handledById: isHandled ? admin?.id : null,
+      },
+    });
+  }
+}
+
+// =============================================================================
 
 async function main() {
   console.log("🌱 seeding…\n");
@@ -628,8 +776,10 @@ async function main() {
   await seedSizeGuides();
   await seedProducts();
   await seedJournal();
+  await seedFaqs();
+  await seedInquiries();
 
-  const [users, sizeCount, guideCount, productCount, variantCount, configCount, locationCount, categoryCount, articleCount, draftCount] = await Promise.all([
+  const [users, sizeCount, guideCount, productCount, variantCount, configCount, locationCount, categoryCount, articleCount, draftCount, faqCount, inquiryCount] = await Promise.all([
     prisma.user.count(),
     prisma.size.count(),
     prisma.sizeGuide.count(),
@@ -640,6 +790,8 @@ async function main() {
     prisma.articleCategory.count(),
     prisma.article.count(),
     prisma.article.count({ where: { publishedAt: null } }),
+    prisma.faq.count(),
+    prisma.contactInquiry.count(),
   ]);
 
   const stockSynced = await prisma.product.findMany({ select: { sku: true, stock: true } });
@@ -647,7 +799,7 @@ async function main() {
   console.log("\n✅ done");
   console.log(`   users ${users} · sizes ${sizeCount} · size guides ${guideCount} · config ${configCount} · locations ${locationCount}`);
   console.log(`   products ${productCount} · variants ${variantCount}`);
-  console.log(`   article categories ${categoryCount} · articles ${articleCount} (${draftCount} draft)`);
+  console.log(`   article categories ${categoryCount} · articles ${articleCount} (${draftCount} draft) · faqs ${faqCount} · inquiries ${inquiryCount}`);
   console.log(`   stock from trigger: ${stockSynced.map((product) => `${product.sku}=${product.stock}`).join(" ")}`);
   if (stockSynced.every((product) => product.stock === 0)) {
     console.warn("\n⚠️  every product has stock 0 — the trigger was probably not applied.");

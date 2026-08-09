@@ -10,6 +10,8 @@ import { sizeGuidesApi } from "@/utils";
 
 import type { ApiResponse, SizeGuide } from "@/types";
 
+import { PLACEHOLDER_IMAGE } from "@/static/images";
+
 /**
  * Public size guide (reference/Size Guide.png).
  *
@@ -102,7 +104,7 @@ export const SizeGuideContent = () => {
       </Container>
 
       <Container className="grid grid-cols-1 gap-10 py-8 lg:grid-cols-2">
-        <Img src="/images/how-to-shop-sample-photo-1.webp" alt="Measuring a garment" className="w-full aspect-4/3 bg-footer/30" cover />
+        <Img src={PLACEHOLDER_IMAGE} alt="Measuring a garment" className="w-full aspect-4/3 bg-footer/30" cover />
 
         <div className="space-y-4 text-sm text-body">
           <p>*Most of our garments follow a tailored silhouette. If you&apos;re between sizes or prefer a looser fit, we recommend sizing up. Many of our skirts include an adjustable or elastic waistband for comfort.</p>
@@ -127,7 +129,7 @@ export const SizeGuideContent = () => {
           description="From browsing to checkout, and where to reach us if you get stuck."
           href="/customer-care/how-to-shop"
           cta="Discover Now"
-          image="/images/how-to-shop-header-background.webp"
+          image={PLACEHOLDER_IMAGE}
         />
       </Container>
     </>

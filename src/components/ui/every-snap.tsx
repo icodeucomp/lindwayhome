@@ -4,6 +4,8 @@ import { socialLinks } from "@/static/navigation";
 
 import { SectionHeading } from "@/components/ui/storefront";
 
+import { PLACEHOLDER_IMAGE } from "@/static/images";
+
 /**
  * "Seen With Lindway" (reference/Homepage - LIndway.png).
  *
@@ -13,10 +15,10 @@ import { SectionHeading } from "@/components/ui/storefront";
  */
 
 const snaps = [
-  { image: "/images/customer-moment-photo-1.webp", href: socialLinks.instagram },
-  { image: "/images/customer-moment-photo-2.webp", href: socialLinks.instagram },
-  { image: "/images/customer-moment-photo-3.webp", href: socialLinks.instagram },
-  { image: "/images/customer-moment-photo-4.webp", href: socialLinks.instagram },
+  { image: PLACEHOLDER_IMAGE, href: socialLinks.instagram },
+  { image: PLACEHOLDER_IMAGE, href: socialLinks.instagram },
+  { image: PLACEHOLDER_IMAGE, href: socialLinks.instagram },
+  { image: PLACEHOLDER_IMAGE, href: socialLinks.instagram },
 ];
 
 export const EverySnap = () => (
@@ -24,8 +26,10 @@ export const EverySnap = () => (
     <SectionHeading title="Seen With Lindway" description="Real moments, real stories, beautifully Lindway." />
 
     <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
+      {/* Keyed by position: the strip is a fixed list, and every entry now points at the
+          same PLACEHOLDER_IMAGE, so the URL is no longer an identity. */}
       {snaps.map((snap, index) => (
-        <a key={snap.image} href={snap.href} target="_blank" rel="noopener noreferrer" className="relative block overflow-hidden group aspect-4/5 bg-footer/30">
+        <a key={index} href={snap.href} target="_blank" rel="noopener noreferrer" className="relative block overflow-hidden group aspect-4/5 bg-footer/30">
           <Img src={snap.image} alt={`Lindway customer moment ${index + 1}`} className="w-full h-full transition-transform duration-700 group-hover:scale-105" cover />
           <span className="absolute px-5 py-2.5 text-xs -translate-x-1/2 bottom-5 left-1/2 bg-primary text-light font-heading uppercase tracking-[0.14em] whitespace-nowrap">Explore More</span>
         </a>

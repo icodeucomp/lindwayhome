@@ -2,11 +2,11 @@
  * v2 navigation (CLAUDE.md §B2.2).
  *
  * The three Collections columns are derived from `taxonomy.ts`, not queried. Branding,
- * audience and garment are Prisma enums (D25), so the menu changes with a deploy, not
+ * audience and clothing are Prisma enums (D25), so the menu changes with a deploy, not
  * with a database row — `isActive` in taxonomy.ts is what hides an entry meanwhile.
  */
 
-import { activeAudience, activeBranding, activeGarment } from "./taxonomy";
+import { activeAudience, activeBranding, activeClothing } from "./taxonomy";
 
 export interface NavItem {
   name: string;
@@ -17,7 +17,7 @@ export const brandingNav: NavItem[] = activeBranding().map((entry) => ({ name: e
 
 export const audienceNav: NavItem[] = activeAudience().map((entry) => ({ name: entry.label, href: `/shop/for/${entry.slug}` }));
 
-export const garmentNav: NavItem[] = activeGarment().map((entry) => ({ name: entry.label, href: `/shop/${entry.slug}` }));
+export const clothingNav: NavItem[] = activeClothing().map((entry) => ({ name: entry.label, href: `/shop/${entry.slug}` }));
 
 /**
  * Our Story and Our Artisan are sections of the single About page (reference/About
@@ -44,7 +44,7 @@ export const customerCareNav: NavItem[] = [
   { name: "FAQ", href: "/customer-care/faq" },
 ];
 
-export const shopNav: NavItem[] = [{ name: "New Arrivals", href: "/new-arrivals" }, { name: "Best Sellers", href: "/best-sellers" }, ...garmentNav, ...audienceNav];
+export const shopNav: NavItem[] = [{ name: "New Arrivals", href: "/new-arrivals" }, { name: "Best Sellers", href: "/best-sellers" }, ...clothingNav, ...audienceNav];
 
 export const socialLinks = {
   email: "mailto:mylindway@gmail.com",

@@ -66,7 +66,7 @@ export const SizesDashboard = () => {
       <PageHeader
         eyebrow="Catalog"
         title="Sizes"
-        description="The master list every product variant and size guide row points at. A size code must match a package_dimensions key exactly, or checkout returns 404 for it."
+        description="The sizes you can offer, shared by every product and size chart. Each size also needs its parcel weight and box measurements filled in under Parameters — without those, customers cannot check out in that size."
       />
 
       <Panel className="p-5 mb-8 sm:p-6">

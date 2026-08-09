@@ -6,6 +6,8 @@ import { PageHero } from "@/components/ui/storefront";
 
 import { AUDIENCE, audienceBySlug } from "@/static/taxonomy";
 
+import { PLACEHOLDER_IMAGE } from "@/static/images";
+
 export const generateStaticParams = () => AUDIENCE.filter((entry) => entry.isActive).map((entry) => ({ audience: entry.slug }));
 
 export async function generateMetadata({ params }: { params: Promise<{ audience: string }> }) {
@@ -25,7 +27,7 @@ export default async function AudienceListingPage({ params }: { params: Promise<
       <PageHero
         title={entry.label}
         description={`Pieces made for ${entry.label.toLowerCase()} — artisanal, comfortable, and built to last.`}
-        image="/images/home-header-background.webp"
+        image={PLACEHOLDER_IMAGE}
         crumbs={[{ name: "Home", href: "/" }, { name: "Shop" }, { name: entry.label }]}
         cta="Shop Now"
       />

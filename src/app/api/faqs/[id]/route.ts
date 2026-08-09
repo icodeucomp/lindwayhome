@@ -26,14 +26,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ success: false, message: "FAQ not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, data: { ...faq, ...resolveTranslation(faq.translations, locale) } });
+    return NextResponse.json({ success: true, data: { ...faq, ...resolveTranslation(faq.translations, locale) } }, { status: 200 });
   } catch (error) {
     logError(`${pathAPI} error`, Date.now() - startTime, error);
     return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
   }
 }
 
-// PUT - update an FAQ
+// PUT - update a FAQ
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const pathAPI = `PUT /faqs/${id}`;
@@ -47,41 +47,45 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const data = UpdateFaqSchema.parse(body);
 
-    const existing = await prisma.faq.findUnique({ where: { id } });
+    const existing = await prisma.faq.findUnique({ where: { id }, select: { id: true } });
     if (!existing) {
       logger.error(`${pathAPI} error`, { error: "FAQ not found" });
       return NextResponse.json({ success: false, message: "FAQ not found" }, { status: 404 });
     }
 
     if (data.translations && !data.translations.some((translation) => translation.locale === "EN")) {
-      logger.error(`${pathAPI} error`, { error: "Missing EN translation" });
-      return NextResponse.json({ success: false, message: "An English translation is required" }, { status: 400 });
+      logger.error(`${pathAPI} error`, { error: "An EN translation is required" });
+      return NextResponse.json({ success: false, message: "An EN translation is required" }, { status: 400 });
     }
 
-    const faq = await prisma.$transaction(async (tx) => {
-      // Translations are replaced wholesale rather than upserted, so removing the ID
-      // row actually removes it — an upsert-only path would leave it behind forever.
-      if (data.translations) {
-        await tx.faqTranslation.deleteMany({ where: { faqId: id } });
-      }
+    // Translations are replaced wholesale — the form always submits the complete set,
+    // and dropping the Indonesian row has to actually remove it.
+    await prisma.$transaction(async (tx) => {
+      if (data.translations) await tx.faqTranslation.deleteMany({ where: { faqId: id } });
 
-      return tx.faq.update({
+      await tx.faq.update({
         where: { id },
         data: {
-          topic: data.topic,
-          isActive: data.isActive,
-          ...(data.translations ? { translations: { create: data.translations.map((translation) => ({ ...translation, answer: translation.answer as Prisma.InputJsonValue })) } } : {}),
+          ...(data.topic !== undefined ? { topic: data.topic } : {}),
+          ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
+          ...(data.translations
+            ? {
+                translations: {
+                  create: data.translations.map((translation) => ({ locale: translation.locale, question: translation.question, answer: translation.answer as Prisma.InputJsonValue })),
+                },
+              }
+            : {}),
         },
-        include: faqInclude,
       });
     });
 
-    logResponse(pathAPI, Date.now() - startTime, { message: "FAQ updated" });
-    return NextResponse.json({ success: true, message: "FAQ updated", data: faq });
+    logResponse(pathAPI, Date.now() - startTime, { message: "FAQ has been updated successfully" });
+
+    return NextResponse.json({ success: true, message: "FAQ has been updated successfully" }, { status: 200 });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      logError(`${pathAPI} validation error`, Date.now() - startTime, error);
-      return NextResponse.json({ success: false, message: "Validation error", errors: error.issues.map((issue) => issue.message) }, { status: 400 });
+      logError(`${pathAPI} zod error`, Date.now() - startTime, error);
+      return NextResponse.json({ success: false, message: "Validation error", errors: error.issues.map((issue) => ({ field: issue.path.join("."), message: issue.message })) }, { status: 400 });
     }
 
     logError(`${pathAPI} error`, Date.now() - startTime, error);
@@ -89,7 +93,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-// DELETE - remove an FAQ
+// DELETE - nothing references a FAQ, so it really is removed
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const pathAPI = `DELETE /faqs/${id}`;
@@ -98,17 +102,19 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   const startTime = Date.now();
 
   try {
-    const existing = await prisma.faq.findUnique({ where: { id } });
-    if (!existing) {
+    const faq = await prisma.faq.findUnique({ where: { id }, select: { id: true } });
+
+    if (!faq) {
       logger.error(`${pathAPI} error`, { error: "FAQ not found" });
       return NextResponse.json({ success: false, message: "FAQ not found" }, { status: 404 });
     }
 
-    // Translations cascade with the row, so no explicit cleanup is needed.
+    // Translations go with the cascade; there are no files and no downstream rows.
     await prisma.faq.delete({ where: { id } });
 
-    logResponse(pathAPI, Date.now() - startTime, { message: "FAQ deleted" });
-    return NextResponse.json({ success: true, message: "FAQ deleted" });
+    logResponse(pathAPI, Date.now() - startTime, { message: "FAQ deleted successfully" });
+
+    return NextResponse.json({ success: true, message: "FAQ deleted successfully" }, { status: 200 });
   } catch (error) {
     logError(`${pathAPI} error`, Date.now() - startTime, error);
     return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });

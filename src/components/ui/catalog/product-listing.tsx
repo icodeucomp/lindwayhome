@@ -6,7 +6,7 @@ import { Container } from "@/components";
 
 import { useApiLocale, useSearchPagination, useToggleState } from "@/hooks";
 
-import { activeAudience, activeBranding, activeGarment } from "@/static/taxonomy";
+import { activeAudience, activeBranding, activeClothing } from "@/static/taxonomy";
 
 import { ProductCard, StoreEmptyState, StorePagination, StoreSkeletonGrid } from "@/components/ui/storefront";
 
@@ -20,7 +20,7 @@ import { PiCaretDownBold, PiFadersHorizontal } from "react-icons/pi";
  * The product grid shared by every listing route (reference/Product Search.png,
  * Collections Details.png §grid).
  *
- * `fixed` is the axis the route itself pins — `/shop/dresses` fixes `garment` — and it
+ * `fixed` is the axis the route itself pins — `/shop/dresses` fixes `clothing` — and it
  * is never offered as a filter, because a filter that contradicts the page you are on
  * has no meaning. Everything else stays adjustable and lives in the URL, so a filtered
  * grid is shareable.
@@ -37,7 +37,7 @@ const SORT_OPTIONS = [
   { value: "price-desc", label: "Price: High to Low" },
 ] as const;
 
-type Axis = "branding" | "garment" | "audience";
+type Axis = "branding" | "clothing" | "audience";
 
 export interface ProductListingProps {
   /** Axis values pinned by the route. Not filterable, and merged into every query. */
@@ -48,7 +48,7 @@ export interface ProductListingProps {
   id?: string;
 }
 
-const FILTER_KEYS = ["branding", "garment", "audience", "sort"] as const;
+const FILTER_KEYS = ["branding", "clothing", "audience", "sort"] as const;
 
 const ProductListingInner = ({ fixed = {}, defaultSort = "latest", id = "content" }: ProductListingProps) => {
   const locale = useApiLocale();
@@ -68,12 +68,12 @@ const ProductListingInner = ({ fixed = {}, defaultSort = "latest", id = "content
     limit,
     sort,
     branding: fixed.branding ?? filters.branding ?? undefined,
-    garment: fixed.garment ?? filters.garment ?? undefined,
+    clothing: fixed.clothing ?? filters.clothing ?? undefined,
     audience: fixed.audience ?? filters.audience ?? undefined,
   };
 
   const { data, isLoading, isError } = productsApi.useGetProducts<ApiResponse<Product[]>>({
-    key: ["products-listing", locale, page, limit, sort, params.branding ?? "", params.garment ?? "", params.audience ?? ""],
+    key: ["products-listing", locale, page, limit, sort, params.branding ?? "", params.clothing ?? "", params.audience ?? ""],
     params,
   });
 
@@ -83,7 +83,7 @@ const ProductListingInner = ({ fixed = {}, defaultSort = "latest", id = "content
 
   const allAxes: { key: Axis; label: string; options: { value: string; label: string }[] }[] = [
     { key: "branding", label: "Collection", options: activeBranding().map((entry) => ({ value: entry.key, label: entry.label })) },
-    { key: "garment", label: "Garment", options: activeGarment().map((entry) => ({ value: entry.key, label: entry.label })) },
+    { key: "clothing", label: "Clothing", options: activeClothing().map((entry) => ({ value: entry.key, label: entry.label })) },
     { key: "audience", label: "Audience", options: activeAudience().map((entry) => ({ value: entry.key, label: entry.label })) },
   ];
 

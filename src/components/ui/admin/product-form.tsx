@@ -6,11 +6,11 @@ import { useRouter } from "next/navigation";
 
 import { useQueryClient } from "@tanstack/react-query";
 
-import { AUDIENCE, BRANDING, GARMENT } from "@/static/taxonomy";
+import { AUDIENCE, BRANDING, CLOTHING } from "@/static/taxonomy";
 
 import { calculateDiscountedPrice, formatIDR, productsApi } from "@/utils";
 
-import { ApiResponse, AudienceType, BrandingType, CreateProduct, EditProduct, Files, GarmentType, Locale, Product } from "@/types";
+import { ApiResponse, AudienceType, BrandingType, CreateProduct, EditProduct, Files, ClothingType, Locale, Product } from "@/types";
 
 import {
   CheckboxGroup,
@@ -41,7 +41,7 @@ interface FormState {
   slug: string;
   name: string;
   branding: BrandingType | "";
-  garment: GarmentType | "";
+  clothing: ClothingType | "";
   audiences: AudienceType[];
   price: string;
   discount: string;
@@ -61,7 +61,7 @@ const EMPTY: FormState = {
   slug: "",
   name: "",
   branding: "",
-  garment: "",
+  clothing: "",
   audiences: [],
   price: "",
   discount: "0",
@@ -93,7 +93,7 @@ const validate = (form: FormState): FormErrors => {
   if (!form.sku.trim()) errors.sku = "SKU is required — it is also the image folder name";
   if (!form.slug.trim()) errors.slug = "Slug is required";
   if (!form.name.trim()) errors.name = "Name is required";
-  if (!form.branding) errors.branding = "Branding is required (D5)";
+  if (!form.branding) errors.branding = "Pick which Lindway line this belongs to";
 
   const price = Number(form.price);
   if (!form.price.trim()) errors.price = "Price is required";
@@ -150,7 +150,7 @@ export const ProductForm = ({ productId }: { productId?: string }) => {
       slug: record.slug,
       name: record.name,
       branding: record.branding,
-      garment: record.garment ?? "",
+      clothing: record.clothing ?? "",
       audiences: record.audiences ?? [],
       price: String(record.price),
       discount: String(record.discount ?? 0),
@@ -224,7 +224,7 @@ export const ProductForm = ({ productId }: { productId?: string }) => {
       slug: form.slug.trim(),
       name: form.name.trim(),
       branding: form.branding as BrandingType,
-      garment: form.garment || null,
+      clothing: form.clothing || null,
       audiences: form.audiences,
       sizeGuideId: form.sizeGuideId,
       price: Number(form.price),
@@ -256,7 +256,7 @@ export const ProductForm = ({ productId }: { productId?: string }) => {
         narrow
         back={{ href: LIST_HREF, label: "Products" }}
         title={isEdit ? form.name || "Edit product" : "New product"}
-        description="The name is the same in both languages (D26). Rich content is optional and can be added later."
+        description="The product name is shown exactly as you type it, in both languages. Descriptions are optional — you can publish now and write them later."
       />
 
       <FormLayout onSubmit={handleSubmit}>
@@ -279,7 +279,7 @@ export const ProductForm = ({ productId }: { productId?: string }) => {
               />
             </Field>
 
-            <Field label="Slug" htmlFor="slug" required error={errors.slug} hint="The public URL — one slug for both languages (D4)">
+            <Field label="Slug" htmlFor="slug" required error={errors.slug} hint="The short name used in the web address. The same one is used for both languages.">
               <TextInput
                 id="slug"
                 value={form.slug}
@@ -309,17 +309,17 @@ export const ProductForm = ({ productId }: { productId?: string }) => {
               />
             </Field>
 
-            <Field label="Garment" htmlFor="garment" hint="Optional — one garment type per product">
+            <Field label="Clothing" htmlFor="clothing" hint="Optional — one clothing type per product">
               <SelectInput
-                id="garment"
-                value={form.garment}
-                onChange={(event) => patch({ garment: event.target.value as GarmentType })}
-                options={[{ value: "", label: "No garment type" }, ...GARMENT.map((entry) => ({ value: entry.key, label: entry.label }))]}
+                id="clothing"
+                value={form.clothing}
+                onChange={(event) => patch({ clothing: event.target.value as ClothingType })}
+                options={[{ value: "", label: "No clothing type" }, ...CLOTHING.map((entry) => ({ value: entry.key, label: entry.label }))]}
               />
             </Field>
           </FieldRow>
 
-          <Field label="Audience" hint="A product can belong to several — that is how unisex pieces are modelled (D5)">
+          <Field label="Audience" hint="Tick more than one for unisex pieces">
             {/* taxonomy.ts types its keys off the Prisma enum ($Enums.AudienceType, a
                 union of string literals) while the client contract uses a TS enum of
                 the same members — structurally identical, nominally distinct. */}
@@ -349,7 +349,7 @@ export const ProductForm = ({ productId }: { productId?: string }) => {
               />
             </Field>
 
-            <Field label="Discount (%)" htmlFor="discount" error={errors.discount} hint="Per-product markdown. The store-wide promo is separate and applies on top (D22).">
+            <Field label="Discount (%)" htmlFor="discount" error={errors.discount} hint="A discount just for this product. Any store-wide promotion is separate and applies on top of it.">
               <TextInput
                 id="discount"
                 type="number"
@@ -398,18 +398,18 @@ export const ProductForm = ({ productId }: { productId?: string }) => {
 
         <FormSection title="Publishing">
           <FieldRow>
-            <Field label="Release date" htmlFor="releasedAt" hint="Drives New Arrivals — distinct from when the record was created (F-33)">
+            <Field label="Release date" htmlFor="releasedAt" hint="Decides where it appears under New Arrivals. Leave blank if it is not a new release.">
               <TextInput id="releasedAt" type="date" value={form.releasedAt} onChange={(event) => patch({ releasedAt: event.target.value })} />
             </Field>
 
-            <Field label="Best seller rank" htmlFor="bestSellerRank" hint="Optional manual override. Empty means sort by units sold (F-34).">
+            <Field label="Best seller rank" htmlFor="bestSellerRank" hint="Force a position in Best Sellers. Leave blank to let actual sales decide.">
               <TextInput id="bestSellerRank" type="number" min={1} value={form.bestSellerRank} onChange={(event) => patch({ bestSellerRank: event.target.value })} placeholder="—" />
             </Field>
           </FieldRow>
 
           <div>
             <Toggle id="isActive" label="Active" description="Inactive products disappear from the storefront but keep their order history." checked={form.isActive} onChange={(isActive) => patch({ isActive })} />
-            <Toggle id="isFavorite" label="Featured" description="Surfaces on this product's branding page. Not the visitor wishlist (D11)." checked={form.isFavorite} onChange={(isFavorite) => patch({ isFavorite })} />
+            <Toggle id="isFavorite" label="Featured" description="Highlights this product on its collection page. This is not the customer's wishlist." checked={form.isFavorite} onChange={(isFavorite) => patch({ isFavorite })} />
             <Toggle id="isPreOrder" label="Pre-order" description="Shows a pre-order badge on the listing and product page." checked={form.isPreOrder} onChange={(isPreOrder) => patch({ isPreOrder })} />
           </div>
         </FormSection>

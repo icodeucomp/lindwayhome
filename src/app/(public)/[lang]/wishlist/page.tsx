@@ -1,6 +1,8 @@
 import { Wishlist } from "@/components/ui/catalog";
 import { PageHero } from "@/components/ui/storefront";
 
+import { PLACEHOLDER_IMAGE } from "@/static/images";
+
 export const metadata = { title: "Wishlist — Lindway" };
 
 export default function WishlistPage() {
@@ -9,7 +11,7 @@ export default function WishlistPage() {
       <PageHero
         title="Wishlist"
         description="The pieces you have saved, kept on this device."
-        image="/images/home-product-my-lindway.webp"
+        image={PLACEHOLDER_IMAGE}
         crumbs={[{ name: "Home", href: "/" }, { name: "Wishlist" }]}
         cta="View Saved"
       />

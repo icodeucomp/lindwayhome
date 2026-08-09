@@ -2,6 +2,8 @@ import { ArtisanJourney, OurStory, Philosophy, SustainabilityPromo, WhyChooseUs 
 import { EverySnap } from "@/components/ui";
 import { PageHero } from "@/components/ui/storefront";
 
+import { PLACEHOLDER_IMAGE } from "@/static/images";
+
 export const metadata = {
   title: "About Us — Lindway",
   description: "Rooted in Bali, inspired by purpose. The story, philosophy and artisans behind Lindway.",
@@ -18,7 +20,7 @@ export default function AboutPage() {
       <PageHero
         title="About Us"
         description="A house of artisanal fashion, built in Denpasar by the hands of local craftspeople."
-        image="/images/about-lindway-header-background.webp"
+        image={PLACEHOLDER_IMAGE}
         crumbs={[{ name: "Home", href: "/" }, { name: "About" }]}
         cta="Explore Now"
       />

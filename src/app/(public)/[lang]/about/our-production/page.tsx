@@ -3,6 +3,8 @@ import { EverySnap } from "@/components/ui";
 import { PageHero, PromoBanner } from "@/components/ui/storefront";
 import { Container } from "@/components";
 
+import { PLACEHOLDER_IMAGE } from "@/static/images";
+
 export const metadata = { title: "Our Production — Lindway" };
 
 export default function OurProductionPage() {
@@ -11,7 +13,7 @@ export default function OurProductionPage() {
       <PageHero
         title="Our Production"
         description="Skilled hands, patience and purpose — how a Lindway piece is actually made."
-        image="/images/about-lindway-header-artisan-journey.webp"
+        image={PLACEHOLDER_IMAGE}
         crumbs={[{ name: "Home", href: "/" }, { name: "About" }, { name: "Our Production" }]}
         cta="Discover Now"
       />
@@ -22,7 +24,7 @@ export default function OurProductionPage() {
           description="Premium fabrics chosen for comfort, quality and elegance."
           href="/about/our-fabrics"
           cta="Explore Fabrics"
-          image="/images/home-fabrics-characteristic-1.webp"
+          image={PLACEHOLDER_IMAGE}
         />
       </Container>
       <EverySnap />

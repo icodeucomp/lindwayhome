@@ -2,6 +2,8 @@ import { Container, Img } from "@/components";
 
 import { allValues, FeatureCard, PromoBanner, SectionHeading } from "@/components/ui/storefront";
 
+import { PLACEHOLDER_IMAGE } from "@/static/images";
+
 /**
  * "Why Choose Us?" and "Our Artisan Journey" (reference/About Us.png).
  *
@@ -34,7 +36,7 @@ export const ArtisanJourney = () => (
     <SectionHeading title="Our Artisan Journey" />
 
     <div className="grid items-start grid-cols-1 gap-10 p-8 bg-muted lg:grid-cols-3">
-      <Img src="/images/about-lindway-header-artisan-journey.webp" alt="Lindway artisans at work" className="w-full aspect-3/4 bg-footer/30" cover />
+      <Img src={PLACEHOLDER_IMAGE} alt="Lindway artisans at work" className="w-full aspect-3/4 bg-footer/30" cover />
 
       <div className="space-y-4 lg:col-span-2">
         <h3 className="text-2xl font-heading text-primary">A Celebration of Craftsmanship and Culture</h3>
@@ -55,7 +57,7 @@ export const SustainabilityPromo = () => (
       description="How we choose materials, treat offcuts, and pace production."
       href="/about/sustainability"
       cta="Discover Now"
-      image="/images/home-conscious-initiatives-1.webp"
+      image={PLACEHOLDER_IMAGE}
     />
   </Container>
 );

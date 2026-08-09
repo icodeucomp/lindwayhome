@@ -2,6 +2,8 @@ import { Container, Img } from "@/components";
 
 import { SectionHeading } from "@/components/ui/storefront";
 
+import { PLACEHOLDER_IMAGE } from "@/static/images";
+
 /**
  * "Our Story" (reference/About Us.png).
  *
@@ -18,7 +20,7 @@ const paragraphs = [
 
 export const OurStory = () => (
   <Container id="content" className="grid items-start grid-cols-1 gap-10 py-16 lg:grid-cols-3 scroll-mt-40">
-    <Img src="/images/about-lindway-lindway-philosophy-kiri.webp" alt="Lindway atelier in Denpasar" className="w-full aspect-3/4 bg-footer/30" cover />
+    <Img src={PLACEHOLDER_IMAGE} alt="Lindway atelier in Denpasar" className="w-full aspect-3/4 bg-footer/30" cover />
 
     <div className="space-y-6 lg:col-span-2">
       <SectionHeading title="Our Story" description="Rooted in Bali, Inspired by Purpose" />

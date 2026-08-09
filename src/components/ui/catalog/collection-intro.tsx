@@ -27,9 +27,12 @@ export const CollectionIntro = ({ entry }: { entry: BrandingEntry }) => {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
+        {/* Keyed by position, not by URL: the gallery is a fixed four-slot layout that
+            never reorders, and two slots may legitimately hold the same image — as they
+            all do while PLACEHOLDER_IMAGE stands in for the client's photography. */}
         {gallery.slice(0, 4).map((image, index) => (
           <Img
-            key={image}
+            key={index}
             src={image}
             alt={`${entry.label} ${index + 1}`}
             className={`w-full bg-footer/30 ${index === 0 ? "aspect-3/4" : index === 1 ? "aspect-square self-end" : "aspect-4/5"}`}

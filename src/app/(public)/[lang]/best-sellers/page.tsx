@@ -2,6 +2,8 @@ import { CollectionStrip, ProductListing, ShopLinks } from "@/components/ui/cata
 import { Journal } from "@/components/ui/home";
 import { PageHero } from "@/components/ui/storefront";
 
+import { PLACEHOLDER_IMAGE } from "@/static/images";
+
 export const metadata = { title: "Best Sellers — Lindway" };
 
 export default function BestSellersPage() {
@@ -10,7 +12,7 @@ export default function BestSellersPage() {
       <PageHero
         title="Best Sellers"
         description="Explore the most-loved designs, chosen for their refined silhouettes, enduring craftsmanship, and everyday sophistication."
-        image="/images/home-product-my-lindway.webp"
+        image={PLACEHOLDER_IMAGE}
         crumbs={[{ name: "Home", href: "/" }, { name: "Collection" }, { name: "Best Sellers" }]}
         cta="Shop Now"
       />
