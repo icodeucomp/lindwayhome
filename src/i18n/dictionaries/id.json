@@ -10,10 +10,11 @@
     "customerCare": "Layanan Pelanggan",
     "wishlist": "Favorit",
     "bag": "Tas Belanja",
-    "branding": "Brand",
-    "shopBy": "Belanja Berdasarkan",
+    "brand": "Brand",
     "audience": "Kategori",
-    "clothing": "Jenis Busana"
+    "clothing": "Jenis Busana",
+    "shopBy": "Belanja Berdasarkan",
+    "menu": "Menu"
   },
   "about": {
     "ourStory": "Kisah Kami",
@@ -39,13 +40,104 @@
     "comingSoon": "Segera hadir",
     "backToHome": "Kembali ke beranda"
   },
+  "header": {
+    "tagline": "House of Artisanal Fashion",
+    "openBag": "Buka tas belanja",
+    "toggleMenu": "Buka menu",
+    "home": "Beranda Lindway"
+  },
   "footer": {
     "address": "Jalan Hayam Wuruk Gang XVII No. 36 Denpasar Timur, Bali 80239, Indonesia",
     "tagline": "House of Artisanal Fashion",
-    "description": "Lindway adalah rumah bagi tiga brand dengan karakter masing-masing—setiap brand punya ceritanya sendiri, namun disatukan oleh komitmen yang sama pada kualitas kerajinan tangan, warisan budaya, dan keunggulan desain.",
-    "email": "Kirim email",
+    "description": "Lindway adalah rumah bagi beberapa brand dengan karakter masing-masing—setiap brand punya ceritanya sendiri, namun disatukan oleh komitmen yang sama pada kualitas kerajinan tangan, warisan budaya, dan keunggulan desain.",
     "privacyPolicy": "Kebijakan Privasi",
     "termsConditions": "Syarat & Ketentuan",
     "rights": "Hak cipta dilindungi."
+  },
+  "meta": {
+    "home": {
+      "title": "Lindway — House of Artisanal Fashion",
+      "description": "Busana Indonesia yang dikerjakan tangan di Bali. Kebaya, batik, dan resort wear, diproduksi dalam jumlah terbatas oleh para pengrajin."
+    },
+    "shop": {
+      "title": "Belanja — Lindway",
+      "description": "Seluruh karya Lindway dari ketiga lini. Saring berdasarkan brand, jenis busana, atau untuk siapa."
+    },
+    "newArrivals": {
+      "title": "Koleksi Terbaru — Lindway",
+      "description": "Karya terbaru dari atelier kami di Denpasar, ditambahkan setiap satu produksi kecil selesai."
+    },
+    "bestSellers": {
+      "title": "Paling Laris — Lindway",
+      "description": "Karya yang paling sering dipilih pelanggan kami, dari seluruh lini Lindway."
+    },
+    "journal": {
+      "title": "Jurnal — Lindway",
+      "description": "Cerita dari atelier: bagaimana setiap karya dibuat, dan tangan-tangan yang membuatnya."
+    },
+    "ourWorld": {
+      "title": "Dunia Kami — Lindway",
+      "description": "Orang, tempat, dan kerajinan di balik Lindway."
+    },
+    "about": {
+      "title": "Tentang — Lindway",
+      "description": "Kisah kami, filosofi kami, dan para pengrajin di balik setiap karya Lindway."
+    },
+    "ourProduction": {
+      "title": "Produksi Kami — Lindway",
+      "description": "Produksi dalam jumlah kecil, dipotong tangan di atelier Denpasar kami, dari pola hingga penyelesaian."
+    },
+    "sustainability": {
+      "title": "Keberlanjutan — Lindway",
+      "description": "Kain yang dipilih agar bertahan lebih dari satu musim, sisa potongan yang diolah jadi patch art, dan apa yang sehelai busana bebankan pada pulau tempat ia dibuat."
+    },
+    "ourFabrics": {
+      "title": "Kain Kami — Lindway",
+      "description": "Bahan yang kami gunakan, dan alasan setiap bahan dipilih."
+    },
+    "sizeGuide": {
+      "title": "Panduan Ukuran — Lindway",
+      "description": "Ukuran untuk setiap pola Lindway, dan cara mengukur diri Anda sendiri."
+    },
+    "howToShop": {
+      "title": "Cara Belanja — Lindway",
+      "description": "Pemesanan, tenggat pengerjaan made-to-order, pembayaran, dan konfirmasi, langkah demi langkah."
+    },
+    "shippingDelivery": {
+      "title": "Pengiriman — Lindway",
+      "description": "Waktu pengiriman di Bali dan seluruh Indonesia, serta cara kami menghitung ongkos kirim internasional."
+    },
+    "returnExchanges": {
+      "title": "Pengembalian & Penukaran — Lindway",
+      "description": "Apa saja yang bisa dikembalikan atau ditukar, dan dengan syarat apa."
+    },
+    "careInstructions": {
+      "title": "Petunjuk Perawatan — Lindway",
+      "description": "Cara mencuci, mengeringkan, dan menyimpan busana Anda agar awet."
+    },
+    "contactUs": {
+      "title": "Hubungi Kami — Lindway",
+      "description": "Pertanyaan soal pesanan, pesanan khusus, atau kerja sama — kami menjawab dalam 1–2 hari kerja."
+    },
+    "faq": {
+      "title": "Tanya Jawab — Lindway",
+      "description": "Pesanan, pengiriman, ukuran, dan pembayaran, terjawab."
+    },
+    "cart": {
+      "title": "Tas Belanja — Lindway",
+      "description": "Periksa tas belanja Anda dan selesaikan pesanan tanpa perlu akun."
+    },
+    "wishlist": {
+      "title": "Favorit — Lindway",
+      "description": "Karya-karya yang Anda simpan."
+    },
+    "privacyPolicy": {
+      "title": "Kebijakan Privasi — Lindway",
+      "description": "Bagaimana kami memperlakukan data yang Anda bagikan."
+    },
+    "termsConditions": {
+      "title": "Syarat & Ketentuan — Lindway",
+      "description": "Ketentuan yang berlaku saat Anda memesan dari Lindway."
+    }
   }
 }

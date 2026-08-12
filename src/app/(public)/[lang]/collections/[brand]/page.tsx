@@ -4,21 +4,21 @@ import { CollectionFavorites, CollectionIntro, CollectionStrip, ProductListing }
 import { Journal } from "@/components/ui/home";
 import { IMAGE_FALLBACK, PageHero } from "@/components/ui/storefront";
 
-import { BRANDING, brandingBySlug } from "@/static/taxonomy";
+import { BRAND, brandBySlug } from "@/static/taxonomy";
 
-export const generateStaticParams = () => BRANDING.filter((entry) => entry.isActive).map((entry) => ({ branding: entry.slug }));
+export const generateStaticParams = () => BRAND.filter((entry) => entry.isActive).map((entry) => ({ brand: entry.slug }));
 
-export async function generateMetadata({ params }: { params: Promise<{ branding: string }> }) {
-  const { branding } = await params;
-  const entry = brandingBySlug(branding);
+export async function generateMetadata({ params }: { params: Promise<{ brand: string }> }) {
+  const { brand } = await params;
+  const entry = brandBySlug(brand);
   return entry ? { title: `${entry.label} — Lindway`, description: entry.headline } : { title: "Collections — Lindway" };
 }
 
-export default async function CollectionPage({ params }: { params: Promise<{ branding: string }> }) {
-  const { branding } = await params;
-  const entry = brandingBySlug(branding);
+export default async function CollectionPage({ params }: { params: Promise<{ brand: string }> }) {
+  const { brand } = await params;
+  const entry = brandBySlug(brand);
 
-  // Inactive brandings resolve to undefined, so an unreleased line 404s instead of
+  // Inactive brands resolve to undefined, so an unreleased line 404s instead of
   // rendering a page with no copy and no products.
   if (!entry) notFound();
 
@@ -33,8 +33,8 @@ export default async function CollectionPage({ params }: { params: Promise<{ bra
         align="center"
       />
       <CollectionIntro entry={entry} />
-      <CollectionFavorites branding={entry.key} />
-      <ProductListing fixed={{ branding: entry.key }} />
+      <CollectionFavorites brand={entry.key} />
+      <ProductListing fixed={{ brand: entry.key }} />
       <CollectionStrip exclude={entry.key} />
       <Journal title="Style Journal" />
     </>

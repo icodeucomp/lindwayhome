@@ -3,12 +3,11 @@
 //
 // Documented in CLAUDE.md §B4. After any change here:
 //   npm run db:generate
-// After a db:reset, the stock trigger must be re-applied — prisma/migrations/ is
-// gitignored, so it cannot live in a migration:
-//   psql "$DATABASE_URL" -f prisma/triggers/product-stock.sql
+// The stock trigger (D24) ships as a migration, so db:reset + db:migrate restores
+// it along with everything else. There is no separate apply step.
 //
 // 21 models. Decisions taken during review:
-//   · Branding, audience and clothing are ENUMS, not tables (D25). Their display
+//   · Brand, audience and clothing are ENUMS, not tables (D25). Their display
 //     data lives in src/static/taxonomy.ts. Adding a value costs a migration and
 //     a deploy — accepted in exchange for three tables and three admin screens.
 //   · Guest → Order, Cart → OrderItem (D17). The old names described neither
@@ -151,7 +150,7 @@ model Product {
 
   // Taxonomy is three enums, not three tables (D25). Display data — label, slug,
   // description, hero image, menu order — lives in src/static/taxonomy.ts.
-  branding    BrandingType // required (D5)
+  brand    BrandType // required (D5)
   clothing     ClothingType? // single
   audiences   AudienceType[] // many, so a product can be unisex
   sizeGuideId String?
@@ -187,7 +186,7 @@ model Product {
   translations ProductTranslation[]
   orderItems   OrderItem[]
 
-  @@index([branding])
+  @@index([brand])
   @@index([clothing])
   @@index([releasedAt])
   @@index([bestSellerRank, soldCount]) // Best Sellers sorts by rank then soldCount
@@ -531,7 +530,7 @@ enum Locale {
 // description, hero image and menu order. Adding a value here means a migration
 // plus a deploy, which is the trade accepted for dropping three tables and three
 // admin CRUD screens.
-enum BrandingType {
+enum BrandType {
   MY_LINDWAY
   SIMPLY_LINDWAY
   LURE_BY_LINDWAY

@@ -5,7 +5,7 @@ import { z } from "zod";
 // =============================================================================
 
 export const LocaleEnum = z.enum(["EN", "ID"]);
-export const BrandingEnum = z.enum(["MY_LINDWAY", "SIMPLY_LINDWAY", "LURE_BY_LINDWAY", "STUDIO_BY_LINDWAY", "LINDWAY_AWP"]);
+export const BrandEnum = z.enum(["MY_LINDWAY", "SIMPLY_LINDWAY", "LURE_BY_LINDWAY", "STUDIO_BY_LINDWAY", "LINDWAY_AWP"]);
 export const AudienceEnum = z.enum(["WOMEN", "MEN", "KIDS"]);
 export const ClothingEnum = z.enum(["DRESSES", "TOPS", "SKIRTS"]);
 export const PaymentMethodEnum = z.enum(["BANK_TRANSFER", "QRIS"]);
@@ -119,7 +119,7 @@ export const ProductSchema = z.object({
   slug: z.string().min(1, "Product slug is required"),
   name: z.string().min(1, "Product name is required"),
 
-  branding: BrandingEnum,
+  brand: BrandEnum,
   clothing: ClothingEnum.nullish(),
   audiences: z.array(AudienceEnum).optional(),
   sizeGuideId: z.string().nullish(),
@@ -353,7 +353,7 @@ export const ProductQuerySchema = z.object({
   locale: LocaleEnum.optional().default("EN"),
   // Typed rather than `z.string()`: an unknown value used to reach Prisma and come
   // back as a 500 quoting the generated query, file path included. Now it is a 400.
-  branding: BrandingEnum.optional(),
+  brand: BrandEnum.optional(),
   clothing: ClothingEnum.optional(),
   audience: AudienceEnum.optional(),
   isActive: z.string().optional(),

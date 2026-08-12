@@ -61,15 +61,15 @@ interface CartStore {
 
   // Selection methods
   toggleItemSelection: (id: string, size: string) => void;
-  toggleBrandingSelection: (branding: string) => void;
+  toggleBrandSelection: (brand: string) => void;
   selectAllItems: () => void;
   deselectAllItems: () => void;
   getSelectedItems: () => ProductCartItems[];
   addSelectedItems: () => CartItem[];
   getSelectedTotal: () => number;
   getSelectedCount: () => number;
-  isBrandingSelected: (branding: string) => boolean;
-  isBrandingPartiallySelected: (branding: string) => boolean;
+  isBrandSelected: (brand: string) => boolean;
+  isBrandPartiallySelected: (brand: string) => boolean;
   removeSelectedItems: () => void;
 }
 
@@ -119,8 +119,8 @@ const createCartStore = () => {
     return cart.find((item) => item.id === id && item.selectedSize === size);
   };
 
-  const getItemsByBranding = (cart: ProductCartItems[], branding: string): ProductCartItems[] => {
-    return cart.filter((item) => item.branding === branding);
+  const getItemsByBrand = (cart: ProductCartItems[], brand: string): ProductCartItems[] => {
+    return cart.filter((item) => item.brand === brand);
   };
 
   const store: CartStore = {
@@ -147,7 +147,7 @@ const createCartStore = () => {
           quantity,
           selectedSize,
           isSelected: false,
-          branding: product.branding,
+          brand: product.brand,
         };
 
         setState({
@@ -207,7 +207,7 @@ const createCartStore = () => {
         const cartWithSelection = savedCart.map((item) => ({
           ...item,
           isSelected: false,
-          branding: item.branding,
+          brand: item.brand,
         }));
 
         const selectedSet = savedSelection && Array.isArray(savedSelection) ? new Set(savedSelection) : new Set<string>();
@@ -236,23 +236,23 @@ const createCartStore = () => {
       });
     },
 
-    toggleBrandingSelection: (branding: string) => {
+    toggleBrandSelection: (brand: string) => {
       const currentCart = getState().cart;
       const currentSelected = getState().selectedItems;
-      const brandingItems = getItemsByBranding(currentCart, branding);
+      const brandItems = getItemsByBrand(currentCart, brand);
       const newSelected = new Set(currentSelected);
 
-      // Check if all items in branding are selected
-      const allBrandingSelected = brandingItems.every((item) => newSelected.has(getItemKey(item.id, item.selectedSize)));
+      // Check if all items in brand are selected
+      const allBrandSelected = brandItems.every((item) => newSelected.has(getItemKey(item.id, item.selectedSize)));
 
-      if (allBrandingSelected) {
-        // Deselect all items in branding
-        brandingItems.forEach((item) => {
+      if (allBrandSelected) {
+        // Deselect all items in brand
+        brandItems.forEach((item) => {
           newSelected.delete(getItemKey(item.id, item.selectedSize));
         });
       } else {
-        // Select all items in branding
-        brandingItems.forEach((item) => {
+        // Select all items in brand
+        brandItems.forEach((item) => {
           newSelected.add(getItemKey(item.id, item.selectedSize));
         });
       }
@@ -301,26 +301,26 @@ const createCartStore = () => {
       return store.getSelectedItems().reduce((count, item) => count + item.quantity, 0);
     },
 
-    isBrandingSelected: (branding: string) => {
+    isBrandSelected: (brand: string) => {
       const currentCart = getState().cart;
       const currentSelected = getState().selectedItems;
-      const brandingItems = getItemsByBranding(currentCart, branding);
+      const brandItems = getItemsByBrand(currentCart, brand);
 
-      if (brandingItems.length === 0) return false;
+      if (brandItems.length === 0) return false;
 
-      return brandingItems.every((item) => currentSelected.has(getItemKey(item.id, item.selectedSize)));
+      return brandItems.every((item) => currentSelected.has(getItemKey(item.id, item.selectedSize)));
     },
 
-    isBrandingPartiallySelected: (branding: string) => {
+    isBrandPartiallySelected: (brand: string) => {
       const currentCart = getState().cart;
       const currentSelected = getState().selectedItems;
-      const brandingItems = getItemsByBranding(currentCart, branding);
+      const brandItems = getItemsByBrand(currentCart, brand);
 
-      if (brandingItems.length === 0) return false;
+      if (brandItems.length === 0) return false;
 
-      const selectedInBranding = brandingItems.filter((item) => currentSelected.has(getItemKey(item.id, item.selectedSize)));
+      const selectedInBrand = brandItems.filter((item) => currentSelected.has(getItemKey(item.id, item.selectedSize)));
 
-      return selectedInBranding.length > 0 && selectedInBranding.length < brandingItems.length;
+      return selectedInBrand.length > 0 && selectedInBrand.length < brandItems.length;
     },
 
     removeSelectedItems: () => {

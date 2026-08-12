@@ -1,24 +1,16 @@
--- =============================================================================
 -- product_variant_stock_sync — keeps products.stock equal to the sum of its
 -- variants (CLAUDE.md D24).
 --
 -- WHY A TRIGGER AND NOT APPLICATION CODE
--- `stock` is the number the checkout reads to decide whether an item can still
--- be sold. If any write path ever forgets to recompute it, the column drifts
--- silently and the store oversells — with no error anywhere. A trigger makes the
--- drift structurally impossible instead of merely unlikely.
+-- `stock` is the number the checkout reads to decide whether an item can still be
+-- sold. If any write path ever forgets to recompute it, the column drifts silently
+-- and the store oversells — with no error anywhere. A trigger makes the drift
+-- structurally impossible instead of merely unlikely.
 --
 -- CONSEQUENCE: application code must NEVER write products.stock. Write
 -- product_variants.quantity and let the database follow.
 --
--- HOW TO APPLY
--- prisma/migrations/ is gitignored in this repo, so a hand-edited migration
--- would not survive a fresh clone. Run this file explicitly after migrating:
---
---   psql "$DATABASE_URL" -f prisma/triggers/product-stock.sql
---
--- It is idempotent — safe to re-run after every db:reset.
--- =============================================================================
+-- Idempotent, so re-running it against a database that already has it is safe.
 
 CREATE OR REPLACE FUNCTION recompute_product_stock() RETURNS TRIGGER AS $$
 BEGIN

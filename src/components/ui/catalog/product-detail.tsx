@@ -8,7 +8,7 @@ import { Container, Img, LocaleLink, RichText, isRichTextEmpty } from "@/compone
 
 import { useApiLocale, useCartDrawer, useCartStore, useWishlistStore } from "@/hooks";
 
-import { brandingByKey } from "@/static/taxonomy";
+import { brandByKey } from "@/static/taxonomy";
 
 import { AccordionItem, Breadcrumb, IMAGE_FALLBACK, StoreButton, StoreSkeletonGrid } from "@/components/ui/storefront";
 
@@ -70,7 +70,7 @@ export const ProductDetail = ({ slug }: { slug: string }) => {
   if (isError || !product || !product.isActive) notFound();
 
   const images = product.images?.length ? product.images : [];
-  const branding = brandingByKey(product.branding);
+  const brand = brandByKey(product.brand);
   const unitPrice = resolveUnitPrice(product);
   const listPrice = resolveListPrice(product);
   const discounted = hasDiscount(product);
@@ -96,7 +96,7 @@ export const ProductDetail = ({ slug }: { slug: string }) => {
         price: listPrice,
         discountedPrice: unitPrice,
         images: product.images ?? [],
-        branding: product.branding,
+        brand: product.brand,
         isPreOrder: product.isPreOrder,
       },
       quantity,
@@ -126,7 +126,7 @@ export const ProductDetail = ({ slug }: { slug: string }) => {
           items={[
             { name: "Home", href: "/" },
             { name: "Collections" },
-            ...(branding ? [{ name: branding.label, href: `/collections/${branding.slug}` }] : []),
+            ...(brand ? [{ name: brand.label, href: `/collections/${brand.slug}` }] : []),
             { name: product.name },
           ]}
         />
@@ -195,9 +195,9 @@ export const ProductDetail = ({ slug }: { slug: string }) => {
                 {wishlist.has(product.id) ? <PiHeartStraightFill className="size-6" /> : <PiHeartStraight className="size-6" />}
               </button>
             </div>
-            {branding && (
-              <LocaleLink href={`/collections/${branding.slug}`} className="text-lg text-body/70 hover:text-primary">
-                {branding.label}
+            {brand && (
+              <LocaleLink href={`/collections/${brand.slug}`} className="text-lg text-body/70 hover:text-primary">
+                {brand.label}
               </LocaleLink>
             )}
           </div>
@@ -312,10 +312,10 @@ export const ProductDetail = ({ slug }: { slug: string }) => {
         </div>
       </Container>
 
-      {/* Both closing sections need the branding, which is only known once the product
+      {/* Both closing sections need the brand, which is only known once the product
           has loaded — so they live here rather than in the route. */}
-      <RelatedProducts branding={product.branding} exclude={product.id} />
-      <CollectionStrip exclude={product.branding} />
+      <RelatedProducts brand={product.brand} exclude={product.id} />
+      <CollectionStrip exclude={product.brand} />
     </>
   );
 };

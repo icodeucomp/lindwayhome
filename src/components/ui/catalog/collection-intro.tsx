@@ -2,7 +2,7 @@ import { Container, Img } from "@/components";
 
 import { IMAGE_FALLBACK } from "@/components/ui/storefront";
 
-import type { BrandingEntry } from "@/static/taxonomy";
+import type { BrandEntry } from "@/static/taxonomy";
 
 /**
  * The copy-and-gallery block under a collection hero (reference/Collections Details.png).
@@ -11,7 +11,7 @@ import type { BrandingEntry } from "@/static/taxonomy";
  * top-left is tall, the top-right short. Fewer than four images degrades gracefully
  * because the grid is defined by the tiles that exist, not by a fixed template.
  */
-export const CollectionIntro = ({ entry }: { entry: BrandingEntry }) => {
+export const CollectionIntro = ({ entry }: { entry: BrandEntry }) => {
   const gallery = entry.gallery.length > 0 ? entry.gallery : [IMAGE_FALLBACK];
 
   return (

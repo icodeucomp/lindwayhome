@@ -81,7 +81,7 @@ const checks = [
   {
     name: "The stock trigger is installed",
     why: "Without it products.stock silently drifts on every variant write",
-    sql: `SELECT 'product_variant_stock_sync is NOT installed — run npm run db:trigger' AS detail
+    sql: `SELECT 'product_variant_stock_sync is NOT installed — run npm run db:migrate' AS detail
            WHERE NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'product_variant_stock_sync')`,
   },
 ];

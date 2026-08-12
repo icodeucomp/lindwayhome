@@ -18,7 +18,7 @@ import type { ApiResponse, Product } from "@/types";
  * filters the catalog client-side rather than calling an endpoint that does not exist.
  *
  * It is deliberately NOT `Product.isFavorite`, which is an admin flag shared by every
- * visitor and surfaces on the branding page instead.
+ * visitor and surfaces on the brand page instead.
  *
  * Filtering client-side is acceptable because a wishlist is small by nature; if it ever
  * outgrows one page of the catalog, the API needs an id-list filter.

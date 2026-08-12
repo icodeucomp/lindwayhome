@@ -1,6 +1,8 @@
 import { Container, Img, LocaleLink } from "@/components";
 
-import { aboutNav, brandingNav, customerCareNav, shopNav, socialLinks } from "@/static/navigation";
+import { aboutNav, brandNav, customerCareNav, localizeNav, shopNav, socialLinks } from "@/static/navigation";
+
+import type { Dictionary } from "@/i18n/get-dictionary";
 
 import { PiEnvelopeSimple, PiFacebookLogo, PiInstagramLogo, PiWhatsappLogo } from "react-icons/pi";
 
@@ -12,14 +14,20 @@ import { PLACEHOLDER_IMAGE } from "@/static/images";
  * Brand block plus four link columns, with a photograph bleeding off the right edge —
  * decorative, so it is hidden below `lg` rather than being squeezed into the column
  * stack. The link columns come from `static/navigation.ts`, which derives Collections
- * from `taxonomy.ts` (D25), so an inactive branding disappears here automatically.
+ * from `taxonomy.ts` (D25), so an inactive brand disappears here automatically.
  */
 
-const columns = [
-  { title: "Collections", items: brandingNav },
-  { title: "Shop", items: shopNav },
-  { title: "Customer Care", items: customerCareNav },
-  { title: "About", items: aboutNav },
+/**
+ * Built per render rather than at module scope: the labels depend on the reader’s
+ * language, and a module-level array would freeze whichever locale loaded first.
+ * Brand, clothing and audience names stay English (D2), so only the two groups that
+ * carry dictionary keys are swapped.
+ */
+const buildColumns = (t: Dictionary) => [
+  { title: t.nav.collections, items: brandNav },
+  { title: t.nav.shop, items: localizeNav(shopNav, t.nav) },
+  { title: t.nav.customerCare, items: localizeNav(customerCareNav, t.customerCare) },
+  { title: t.nav.about, items: localizeNav(aboutNav, { ...t.about, journal: t.nav.journal }) },
 ];
 
 const socials = [
@@ -29,7 +37,7 @@ const socials = [
   { href: socialLinks.instagram, label: "Instagram", icon: PiInstagramLogo },
 ];
 
-export const Footer = () => (
+export const Footer = ({ dictionary: t }: { dictionary: Dictionary }) => (
   <footer className="relative mt-auto overflow-hidden bg-footer text-body">
     {/* `Img` already positions itself `relative`; the absolute placement belongs on a
         wrapper, or the two position utilities collide and nothing renders. */}
@@ -40,15 +48,13 @@ export const Footer = () => (
 
     <Container className="relative grid grid-cols-1 gap-10 py-14 sm:grid-cols-2 lg:grid-cols-5">
       <div className="space-y-5 lg:pr-6">
-        <LocaleLink href="/" aria-label="Lindway home">
+        <LocaleLink href="/" aria-label={t.header.home}>
           <Img src="/icons/dark-logo.png" alt="Lindway" className="h-14 w-36" cover />
         </LocaleLink>
 
-        <p className="text-base font-heading">House of Artisanal Fashion</p>
+        <p className="text-base font-heading">{t.footer.tagline}</p>
 
-        <p className="max-w-xs text-sm leading-relaxed text-body/80">
-          Lindway is the parent house of distinctive brands—each with a unique story, yet united by a shared commitment to craftsmanship, cultural heritage, and design excellence.
-        </p>
+        <p className="max-w-xs text-sm leading-relaxed text-body/80">{t.footer.description}</p>
 
         <menu className="flex items-center gap-4 list-none">
           {socials.map(({ href, label, icon: Icon }) => (
@@ -61,7 +67,7 @@ export const Footer = () => (
         </menu>
       </div>
 
-      {columns.map((column) => (
+      {buildColumns(t).map((column) => (
         <div key={column.title} className="space-y-4">
           <p className="text-sm tracking-[0.14em] uppercase font-heading">{column.title}</p>
           <ul className="space-y-2.5 list-none">
@@ -79,16 +85,18 @@ export const Footer = () => (
 
     <div className="relative border-t border-body/10">
       <Container className="flex flex-col items-center justify-between gap-3 py-4 text-xs sm:flex-row text-body/80">
-        <p>© {new Date().getFullYear()} Lindway. Jalan Hayam Wuruk Gang XVII No. 36 Denpasar Timur, Bali 80239, Indonesia</p>
+        <p>
+          © {new Date().getFullYear()} Lindway. {t.footer.address}
+        </p>
         <menu className="flex items-center gap-6 list-none">
           <li>
             <LocaleLink href="/privacy-policy" className="transition-colors hover:text-primary">
-              Privacy Policy
+              {t.footer.privacyPolicy}
             </LocaleLink>
           </li>
           <li>
             <LocaleLink href="/terms-conditions" className="transition-colors hover:text-primary">
-              Terms &amp; Conditions
+              {t.footer.termsConditions}
             </LocaleLink>
           </li>
         </menu>

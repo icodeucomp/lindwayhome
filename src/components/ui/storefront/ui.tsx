@@ -16,7 +16,7 @@
 
 import * as React from "react";
 
-import { Background, Container, Img, LocaleLink } from "@/components";
+import { Background, Container, LocaleLink } from "@/components";
 
 import { PiCaretDownBold, PiCaretRightBold, PiArrowRight } from "react-icons/pi";
 
@@ -189,17 +189,24 @@ export const PageHero = ({ title, description, image = IMAGE_FALLBACK, crumbs, c
 // =============================================================================
 
 /**
- * The grey half-image call-out — "Inside the Atelier", "Our Fabric Library",
- * "Learn How to Shop", "Discover Our Sustainability Principles".
+ * The image call-out — "Inside the Atelier", "Our Fabric Library", "Learn How to Shop",
+ * "Discover Our Sustainability Principles".
+ *
+ * The artwork is the container's own background rather than an absolutely-positioned
+ * `<Img>` filling half the card, so the copy sits over one continuous surface instead
+ * of butting against a hard vertical seam.
+ *
+ * That means no `next/image` here — no srcset, no lazy loading. Acceptable while every
+ * banner shows the same placeholder SVG, which none of that would help. **When the
+ * client's photography lands, this is the component to reconsider**: a real photograph
+ * behind text wants both the optimisation and a scrim, since `text-body` over an
+ * unknown image is a legibility gamble.
  */
 export const PromoBanner = ({ title, description, href, cta, image = IMAGE_FALLBACK }: { title: string; description: string; href: string; cta: string; image?: string }) => (
-  <div className="relative flex flex-col justify-center overflow-hidden bg-footer/40 min-h-64">
-    {/* `Img` sets `relative` on its own wrapper, so the positioning has to live on a
-        parent — putting `absolute` in its className leaves two position utilities
-        fighting and the image silently collapses to zero height. */}
-    <div className="absolute inset-y-0 right-0 hidden w-1/2 sm:block">
-      <Img src={image} alt={title} className="w-full h-full" cover />
-    </div>
+  <div
+    style={{ backgroundImage: `url("${image}")` }}
+    className="relative flex flex-col justify-center overflow-hidden bg-center bg-no-repeat bg-cover bg-footer/40 min-h-64"
+  >
     <div className="relative z-10 max-w-md p-8 space-y-4 sm:p-10">
       <h3 className="text-xl uppercase font-heading text-primary sm:text-2xl">{title}</h3>
       <p className="text-sm text-body">{description}</p>
@@ -214,10 +221,22 @@ export interface Feature {
   description: string;
 }
 
-/** The icon row under the hero, and the same content again above the footer. */
+/**
+ * The icon row under the hero, and the same content again above the footer.
+ *
+ * The column count follows the item count rather than being fixed. It used to be
+ * `lg:grid-cols-5`, which fits `craftValues` (five) exactly and left `careValues`
+ * (four) with an empty fifth column — the strip bunched to the left with dead space on
+ * the right. A CSS variable carries the count because Tailwind cannot see a class name
+ * built at runtime, and an inline `grid-template-columns` could not be held back to
+ * `md` and up.
+ */
 export const FeatureStrip = ({ items, className }: { items: Feature[]; className?: string }) => (
   <div className={`bg-muted ${className ?? ""}`}>
-    <Container className="grid grid-cols-2 gap-6 py-8 md:grid-cols-4 lg:grid-cols-5">
+    <Container
+      style={{ "--feature-cols": items.length } as React.CSSProperties}
+      className="grid grid-cols-2 gap-6 py-8 md:grid-cols-[repeat(var(--feature-cols),minmax(0,1fr))]"
+    >
       {items.map((item) => (
         <div key={item.title} className="flex items-start gap-3">
           <span className="mt-0.5 text-primary [&>svg]:size-6">{item.icon}</span>

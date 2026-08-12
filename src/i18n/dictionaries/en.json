@@ -10,10 +10,11 @@
     "customerCare": "Customer Care",
     "wishlist": "Wishlist",
     "bag": "Bag",
-    "branding": "Branding",
-    "shopBy": "Shop By",
+    "brand": "Brand",
     "audience": "Audience",
-    "clothing": "Clothing"
+    "clothing": "Clothing",
+    "shopBy": "Shop By",
+    "menu": "Menu"
   },
   "about": {
     "ourStory": "Our Story",
@@ -39,13 +40,104 @@
     "comingSoon": "Coming soon",
     "backToHome": "Back to home"
   },
+  "header": {
+    "tagline": "House of Artisanal Fashion",
+    "openBag": "Open bag",
+    "toggleMenu": "Toggle menu",
+    "home": "Lindway home"
+  },
   "footer": {
     "address": "Jalan Hayam Wuruk Gang XVII No. 36 Denpasar Timur, Bali 80239, Indonesia",
     "tagline": "House of Artisanal Fashion",
-    "description": "Lindway is the parent house of three distinctive brands—each with a unique story, yet united by a shared commitment to craftsmanship, cultural heritage, and design excellence.",
-    "email": "Email us",
+    "description": "Lindway is the parent house of distinctive brands—each with a unique story, yet united by a shared commitment to craftsmanship, cultural heritage, and design excellence.",
     "privacyPolicy": "Privacy Policy",
     "termsConditions": "Terms & Conditions",
     "rights": "All rights reserved."
+  },
+  "meta": {
+    "home": {
+      "title": "Lindway — House of Artisanal Fashion",
+      "description": "Indonesian fashion handcrafted in Bali. Kebaya, batik and resort wear, made in small batches by artisans."
+    },
+    "shop": {
+      "title": "Shop — Lindway",
+      "description": "Every Lindway piece, across all three lines. Filter by brand, clothing, or who it is for."
+    },
+    "newArrivals": {
+      "title": "New Arrivals — Lindway",
+      "description": "The latest pieces from our Denpasar atelier, added as each small run is finished."
+    },
+    "bestSellers": {
+      "title": "Best Sellers — Lindway",
+      "description": "The pieces our customers return to most, across every Lindway line."
+    },
+    "journal": {
+      "title": "Journal — Lindway",
+      "description": "Stories from the atelier: how our pieces are made, and the hands that make them."
+    },
+    "ourWorld": {
+      "title": "Our World — Lindway",
+      "description": "The people, places and craft behind Lindway."
+    },
+    "about": {
+      "title": "About — Lindway",
+      "description": "Our story, our philosophy, and the artisans who make every Lindway piece."
+    },
+    "ourProduction": {
+      "title": "Our Production — Lindway",
+      "description": "Small runs, cut by hand in our Denpasar atelier, from pattern to finish."
+    },
+    "sustainability": {
+      "title": "Sustainability — Lindway",
+      "description": "Fabrics chosen to outlast a season, offcuts turned into patch art, and what a garment costs the island it was made on."
+    },
+    "ourFabrics": {
+      "title": "Our Fabrics — Lindway",
+      "description": "The materials we work with, and why each was chosen."
+    },
+    "sizeGuide": {
+      "title": "Size Guide — Lindway",
+      "description": "Measurements for every Lindway pattern, and how to take your own."
+    },
+    "howToShop": {
+      "title": "How to Shop — Lindway",
+      "description": "Ordering, made-to-order timelines, payment and confirmation, step by step."
+    },
+    "shippingDelivery": {
+      "title": "Shipping & Delivery — Lindway",
+      "description": "Delivery times within Bali and across Indonesia, and how international orders are quoted."
+    },
+    "returnExchanges": {
+      "title": "Return & Exchanges — Lindway",
+      "description": "What can be returned or exchanged, and under which conditions."
+    },
+    "careInstructions": {
+      "title": "Care Instructions — Lindway",
+      "description": "How to wash, dry and store your pieces so they last."
+    },
+    "contactUs": {
+      "title": "Contact Us — Lindway",
+      "description": "Questions about an order, a custom piece, or working together — we answer within 1–2 business days."
+    },
+    "faq": {
+      "title": "Frequently Asked Questions — Lindway",
+      "description": "Orders, shipping, sizing and payment, answered."
+    },
+    "cart": {
+      "title": "Your Bag — Lindway",
+      "description": "Review your bag and check out as a guest."
+    },
+    "wishlist": {
+      "title": "Wishlist — Lindway",
+      "description": "The pieces you have saved."
+    },
+    "privacyPolicy": {
+      "title": "Privacy Policy — Lindway",
+      "description": "How we handle the details you share with us."
+    },
+    "termsConditions": {
+      "title": "Terms & Conditions — Lindway",
+      "description": "The terms that apply when you order from Lindway."
+    }
   }
 }

@@ -7,7 +7,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 export type ViewMode = "grid" | "list";
 
 interface SearchPaginationOptions {
-  /** Query-string keys this screen treats as filters, e.g. ["status", "branding"]. */
+  /** Query-string keys this screen treats as filters, e.g. ["status", "brand"]. */
   filterKeys?: readonly string[];
   defaultView?: ViewMode;
   defaultLimit?: number;

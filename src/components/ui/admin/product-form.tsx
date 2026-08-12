@@ -6,11 +6,11 @@ import { useRouter } from "next/navigation";
 
 import { useQueryClient } from "@tanstack/react-query";
 
-import { AUDIENCE, BRANDING, CLOTHING } from "@/static/taxonomy";
+import { AUDIENCE, BRAND, CLOTHING } from "@/static/taxonomy";
 
 import { calculateDiscountedPrice, formatIDR, productsApi } from "@/utils";
 
-import { ApiResponse, AudienceType, BrandingType, CreateProduct, EditProduct, Files, ClothingType, Locale, Product } from "@/types";
+import { ApiResponse, AudienceType, BrandType, CreateProduct, EditProduct, Files, ClothingType, Locale, Product } from "@/types";
 
 import {
   CheckboxGroup,
@@ -40,7 +40,7 @@ interface FormState {
   sku: string;
   slug: string;
   name: string;
-  branding: BrandingType | "";
+  brand: BrandType | "";
   clothing: ClothingType | "";
   audiences: AudienceType[];
   price: string;
@@ -60,7 +60,7 @@ const EMPTY: FormState = {
   sku: "",
   slug: "",
   name: "",
-  branding: "",
+  brand: "",
   clothing: "",
   audiences: [],
   price: "",
@@ -85,7 +85,7 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-type FormErrors = Partial<Record<"sku" | "slug" | "name" | "branding" | "price" | "discount" | "images" | "variants", string>>;
+type FormErrors = Partial<Record<"sku" | "slug" | "name" | "brand" | "price" | "discount" | "images" | "variants", string>>;
 
 const validate = (form: FormState): FormErrors => {
   const errors: FormErrors = {};
@@ -93,7 +93,7 @@ const validate = (form: FormState): FormErrors => {
   if (!form.sku.trim()) errors.sku = "SKU is required — it is also the image folder name";
   if (!form.slug.trim()) errors.slug = "Slug is required";
   if (!form.name.trim()) errors.name = "Name is required";
-  if (!form.branding) errors.branding = "Pick which Lindway line this belongs to";
+  if (!form.brand) errors.brand = "Pick which Lindway line this belongs to";
 
   const price = Number(form.price);
   if (!form.price.trim()) errors.price = "Price is required";
@@ -149,7 +149,7 @@ export const ProductForm = ({ productId }: { productId?: string }) => {
       sku: record.sku,
       slug: record.slug,
       name: record.name,
-      branding: record.branding,
+      brand: record.brand,
       clothing: record.clothing ?? "",
       audiences: record.audiences ?? [],
       price: String(record.price),
@@ -223,7 +223,7 @@ export const ProductForm = ({ productId }: { productId?: string }) => {
       sku: form.sku.trim(),
       slug: form.slug.trim(),
       name: form.name.trim(),
-      branding: form.branding as BrandingType,
+      brand: form.brand as BrandType,
       clothing: form.clothing || null,
       audiences: form.audiences,
       sizeGuideId: form.sizeGuideId,
@@ -295,17 +295,17 @@ export const ProductForm = ({ productId }: { productId?: string }) => {
           </FieldRow>
 
           <FieldRow>
-            <Field label="Branding" htmlFor="branding" required error={errors.branding}>
+            <Field label="Brand" htmlFor="brand" required error={errors.brand}>
               <SelectInput
-                id="branding"
-                value={form.branding}
+                id="brand"
+                value={form.brand}
                 onChange={(event) => {
-                  patch({ branding: event.target.value as BrandingType });
-                  clearError("branding");
+                  patch({ brand: event.target.value as BrandType });
+                  clearError("brand");
                 }}
-                invalid={Boolean(errors.branding)}
-                placeholder="Select a branding"
-                options={BRANDING.map((entry) => ({ value: entry.key, label: entry.isActive ? entry.label : `${entry.label} — hidden` }))}
+                invalid={Boolean(errors.brand)}
+                placeholder="Select a brand"
+                options={BRAND.map((entry) => ({ value: entry.key, label: entry.isActive ? entry.label : `${entry.label} — hidden` }))}
               />
             </Field>
 

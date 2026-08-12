@@ -6,7 +6,7 @@ import { Img } from "@/components";
 
 import type { ViewMode } from "@/hooks";
 
-import { audienceByKey, brandingByKey, clothingByKey } from "@/static/taxonomy";
+import { audienceByKey, brandByKey, clothingByKey } from "@/static/taxonomy";
 
 import { formatIDR } from "@/utils";
 
@@ -44,7 +44,7 @@ const TranslationChips = ({ product }: { product: Product }) => {
 };
 
 const Taxonomy = ({ product }: { product: Product }) => {
-  const parts = [brandingByKey(product.branding)?.label ?? product.branding, product.clothing ? (clothingByKey(product.clothing)?.label ?? product.clothing) : null, ...product.audiences.map((key) => audienceByKey(key)?.label ?? key)];
+  const parts = [brandByKey(product.brand)?.label ?? product.brand, product.clothing ? (clothingByKey(product.clothing)?.label ?? product.clothing) : null, ...product.audiences.map((key) => audienceByKey(key)?.label ?? key)];
 
   return <span className="text-sm text-body/60">{parts.filter(Boolean).join(" · ")}</span>;
 };

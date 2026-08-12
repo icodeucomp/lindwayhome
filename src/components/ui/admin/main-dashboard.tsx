@@ -8,7 +8,7 @@ import { PiArrowUpRight } from "react-icons/pi";
 
 import { useAuthStore } from "@/hooks";
 
-import { brandingByKey, isBrandingActive } from "@/static/taxonomy";
+import { brandByKey, isBrandActive } from "@/static/taxonomy";
 
 import { orderStatusBars, orderStatusLabels } from "@/static/order";
 
@@ -245,21 +245,21 @@ export const MainDashboard = () => {
           <div>
             <BlockHeading title="Catalog" aside={`${metrics.totalProducts} products · ${metrics.inactiveProducts} inactive`} />
 
-            {metrics.stockByBranding.length === 0 ? (
+            {metrics.stockByBrand.length === 0 ? (
               <Panel className="px-6 py-10 text-sm text-center text-body/50">No products yet.</Panel>
             ) : (
               <StatGrid columns={3}>
-                {metrics.stockByBranding.map((row) => (
+                {metrics.stockByBrand.map((row) => (
                   <Stat
-                    key={row.branding}
-                    // A branding present in the database but missing from taxonomy.ts cannot
+                    key={row.brand}
+                    // A brand present in the database but missing from taxonomy.ts cannot
                     // happen — the drift guard makes it a compile error — but the fallback
                     // keeps the panel readable rather than blank if it ever did.
-                    label={brandingByKey(row.branding)?.label ?? row.branding}
+                    label={brandByKey(row.brand)?.label ?? row.brand}
                     value={row.stock}
                     caption={`in stock · ${row.products} product${row.products === 1 ? "" : "s"}`}
                     footnote={
-                      !isBrandingActive(row.branding) ? (
+                      !isBrandActive(row.brand) ? (
                         <Badge className="bg-body/6 text-body/50">Hidden from storefront</Badge>
                       ) : undefined
                     }

@@ -6,7 +6,7 @@ import { Img, LocaleLink } from "@/components";
 
 import { useCartDrawer, useCartStore, useWishlistStore } from "@/hooks";
 
-import { brandingByKey } from "@/static/taxonomy";
+import { brandByKey } from "@/static/taxonomy";
 
 import { formatIDR, hasDiscount, resolveListPrice, resolveUnitPrice } from "@/utils";
 
@@ -19,7 +19,7 @@ import { IMAGE_FALLBACK } from "./ui";
 /**
  * The listing card (reference/Collections Details.png, Product Search.png, Homepage).
  *
- * Two states share one footprint inside the image: at rest a branding chip, on hover a
+ * Two states share one footprint inside the image: at rest a brand chip, on hover a
  * row of size chips. Picking a size there adds that variant straight to the bag — it is
  * the only quick-add path in the design, so a card with no size cannot be bought from a
  * listing and links through to its detail page instead.
@@ -38,7 +38,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
   const wishlist = useWishlistStore();
 
   const image = product.images?.[0]?.url ?? IMAGE_FALLBACK;
-  const branding = brandingByKey(product.branding);
+  const brand = brandByKey(product.brand);
 
   const unitPrice = resolveUnitPrice(product);
   const listPrice = resolveListPrice(product);
@@ -67,7 +67,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
         price: listPrice,
         discountedPrice: unitPrice,
         images: product.images ?? [],
-        branding: product.branding,
+        brand: product.brand,
         isPreOrder: product.isPreOrder,
       },
       1,
@@ -102,10 +102,10 @@ export const ProductCard = ({ product }: { product: Product }) => {
           {wishlist.has(product.id) ? <PiHeartStraightFill className="size-4" /> : <PiHeartStraight className="size-4" />}
         </button>
 
-        {/* Branding chip at rest. */}
-        {branding && (
+        {/* Brand chip at rest. */}
+        {brand && (
           <span className="absolute px-3 py-1.5 text-xs transition-opacity -translate-x-1/2 bottom-4 left-1/2 bg-primary text-light font-heading whitespace-nowrap group-hover:opacity-0">
-            {branding.label}
+            {brand.label}
           </span>
         )}
 

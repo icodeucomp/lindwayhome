@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     trendStart.setHours(0, 0, 0, 0);
     trendStart.setDate(trendStart.getDate() - 29);
 
-    const [pending, purchased, itemsSold, totalOrders, totalProducts, totalMembers, byBranding, byStatus, trendRows, latestOrders, draftProducts] = await Promise.all([
+    const [pending, purchased, itemsSold, totalOrders, totalProducts, totalMembers, byBrand, byStatus, trendRows, latestOrders, draftProducts] = await Promise.all([
       prisma.order.count({ where: { isPurchased: false, ...orderWhere } }),
       prisma.order.aggregate({ where: { isPurchased: true, ...orderWhere }, _count: true, _sum: { totalPurchased: true } }),
       prisma.order.aggregate({ where: { isPurchased: true, ...orderWhere }, _sum: { totalItemsSold: true } }),
@@ -58,11 +58,11 @@ export async function GET(request: NextRequest) {
       prisma.product.count({ where: productWhere }),
       prisma.member.count(),
       prisma.product.groupBy({
-        by: ["branding"],
+        by: ["brand"],
         where: productWhere,
         _sum: { stock: true },
         _count: { _all: true },
-        orderBy: { branding: "asc" },
+        orderBy: { brand: "asc" },
       }),
       prisma.order.groupBy({ by: ["status"], where: orderWhere, _count: { _all: true } }),
       // Bucketed in JS rather than SQL: Prisma cannot group by day, and date_trunc
@@ -103,10 +103,10 @@ export async function GET(request: NextRequest) {
           totalProducts,
           totalMembers,
           inactiveProducts: draftProducts,
-          // One row per branding that actually has products, rather than three
+          // One row per brand that actually has products, rather than three
           // hardcoded fields that would need a code change per new brand line.
-          stockByBranding: byBranding.map((row) => ({
-            branding: row.branding,
+          stockByBrand: byBrand.map((row) => ({
+            brand: row.brand,
             stock: row._sum.stock ?? 0,
             products: row._count._all,
           })),

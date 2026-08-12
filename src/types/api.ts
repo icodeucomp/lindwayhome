@@ -4,7 +4,7 @@
 
 export type Locale = "EN" | "ID";
 
-export enum BrandingType {
+export enum BrandType {
   MY_LINDWAY = "MY_LINDWAY",
   SIMPLY_LINDWAY = "SIMPLY_LINDWAY",
   LURE_BY_LINDWAY = "LURE_BY_LINDWAY",
@@ -98,7 +98,7 @@ export interface QueryParams {
   search?: string;
   order?: "asc" | "desc";
   locale?: Locale;
-  branding?: string;
+  brand?: string;
   clothing?: string;
   audience?: string;
   sort?: "latest" | "new-arrivals" | "best-sellers" | "price-asc" | "price-desc";
@@ -253,7 +253,7 @@ export interface Product {
   /** Single name for both languages (D26) — never resolved through a fallback. */
   name: string;
 
-  branding: BrandingType;
+  brand: BrandType;
   clothing: ClothingType | null;
   audiences: AudienceType[];
   sizeGuideId: string | null;
@@ -293,7 +293,7 @@ export interface CreateProduct {
   sku: string;
   slug: string;
   name: string;
-  branding: BrandingType;
+  brand: BrandType;
   clothing?: ClothingType | null;
   audiences: AudienceType[];
   sizeGuideId?: string | null;
@@ -483,7 +483,7 @@ export interface CartProduct {
   price: number;
   discountedPrice: number;
   images: Files[];
-  branding: BrandingType;
+  brand: BrandType;
   isPreOrder: boolean;
 }
 
@@ -747,8 +747,8 @@ export interface DashboardData {
   totalProducts: number;
   totalMembers: number;
   inactiveProducts: number;
-  /** One entry per BrandingType present in the catalog — no longer three fixed fields. */
-  stockByBranding: { branding: BrandingType; stock: number; products: number }[];
+  /** One entry per BrandType present in the catalog — no longer three fixed fields. */
+  stockByBrand: { brand: BrandType; stock: number; products: number }[];
   /** Every OrderStatus, lifecycle-ordered, including the stages sitting at zero. */
   statusPipeline: { status: OrderStatus; count: number }[];
   /** Fixed 30-day window — independent of the month/year filter. */

@@ -14,19 +14,19 @@ import type { ApiResponse, Product } from "@/types";
  * The pair of wide feature cards on a collection page (reference/Collections Details.png).
  *
  * This is F-36: `isFavorite` keeps its v1 meaning — an admin flag for featured pieces
- * (D11) — and surfaces here, on the product's own branding page. It is not the
+ * (D11) — and surfaces here, on the product's own brand page. It is not the
  * wishlist, which is per-visitor and lives in localStorage.
  *
  * The blurb is the product's `description`, flattened from Tiptap: there is no plain
  * excerpt field on Product, and rendering formatted rich text inside an image overlay
  * would fight the layout.
  */
-export const CollectionFavorites = ({ branding }: { branding: string }) => {
+export const CollectionFavorites = ({ brand }: { brand: string }) => {
   const locale = useApiLocale();
 
   const { data, isLoading } = productsApi.useGetProducts<ApiResponse<Product[]>>({
-    key: ["collection-favorites", branding, locale],
-    params: { locale, branding, isFavorite: true, isActive: true, limit: 2, page: 1 },
+    key: ["collection-favorites", brand, locale],
+    params: { locale, brand, isFavorite: true, isActive: true, limit: 2, page: 1 },
   });
 
   const products = data?.data ?? [];

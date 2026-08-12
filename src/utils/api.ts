@@ -88,7 +88,7 @@ export const productsApi = {
       queryFn: async () => {
         const searchParams = new URLSearchParams();
         if (params.locale) searchParams.append("locale", params.locale);
-        if (params.branding) searchParams.append("branding", params.branding);
+        if (params.brand) searchParams.append("brand", params.brand);
         if (params.clothing) searchParams.append("clothing", params.clothing);
         if (params.audience) searchParams.append("audience", params.audience);
         if (params.sort) searchParams.append("sort", params.sort);

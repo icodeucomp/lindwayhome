@@ -18,7 +18,7 @@ const links = [
   { name: "New Arrivals", href: "/new-arrivals", image: PLACEHOLDER_IMAGE },
   { name: "Best Sellers", href: "/best-sellers", image: PLACEHOLDER_IMAGE },
   ...activeClothing().map((entry) => ({ name: entry.label, href: `/shop/${entry.slug}`, image: "" })),
-  ...activeAudience().map((entry) => ({ name: entry.label, href: `/shop/for/${entry.slug}`, image: "" })),
+  ...activeAudience().map((entry) => ({ name: entry.label, href: `/shop/${entry.slug}`, image: "" })),
 ];
 
 export const ShopLinks = () => (

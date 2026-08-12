@@ -13,18 +13,18 @@ import type { ApiResponse, Product } from "@/types";
 /**
  * "You May Also Like" (reference/Product Details.png).
  *
- * Related by branding, which is the only affinity the model actually carries — there is
+ * Related by brand, which is the only affinity the model actually carries — there is
  * no recommendation engine and inventing one from `soldCount` would just re-list the
  * best sellers on every product page. `exclude` keeps the current product out.
  */
-export const RelatedProducts = ({ branding, exclude }: { branding: string; exclude: string }) => {
+export const RelatedProducts = ({ brand, exclude }: { brand: string; exclude: string }) => {
   const locale = useApiLocale();
   const { ref, scrollBy } = useCarousel();
 
   const { data, isLoading } = productsApi.useGetProducts<ApiResponse<Product[]>>({
-    key: ["related-products", branding, locale],
+    key: ["related-products", brand, locale],
     // One over the display count, so removing the current product still fills the row.
-    params: { locale, branding, isActive: true, limit: 9, page: 1 },
+    params: { locale, brand, isActive: true, limit: 9, page: 1 },
   });
 
   const products = (data?.data ?? []).filter((product) => product.id !== exclude);

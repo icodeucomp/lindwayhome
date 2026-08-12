@@ -6,7 +6,7 @@ import { Container } from "@/components";
 
 import { useApiLocale, useSearchPagination, useToggleState } from "@/hooks";
 
-import { activeAudience, activeBranding, activeClothing } from "@/static/taxonomy";
+import { activeAudience, activeBrand, activeClothing, keyFromSlug, type Axis } from "@/static/taxonomy";
 
 import { ProductCard, StoreEmptyState, StorePagination, StoreSkeletonGrid } from "@/components/ui/storefront";
 
@@ -37,8 +37,6 @@ const SORT_OPTIONS = [
   { value: "price-desc", label: "Price: High to Low" },
 ] as const;
 
-type Axis = "branding" | "clothing" | "audience";
-
 export interface ProductListingProps {
   /** Axis values pinned by the route. Not filterable, and merged into every query. */
   fixed?: Partial<Record<Axis, string>>;
@@ -48,7 +46,7 @@ export interface ProductListingProps {
   id?: string;
 }
 
-const FILTER_KEYS = ["branding", "clothing", "audience", "sort"] as const;
+const FILTER_KEYS = ["brand", "clothing", "audience", "sort"] as const;
 
 const ProductListingInner = ({ fixed = {}, defaultSort = "latest", id = "content" }: ProductListingProps) => {
   const locale = useApiLocale();
@@ -59,21 +57,22 @@ const ProductListingInner = ({ fixed = {}, defaultSort = "latest", id = "content
 
   const sort = (filters.sort || defaultSort) as QueryParams["sort"];
 
-  // A pinned axis always wins over the query string, so a hand-edited URL cannot make
-  // /shop/dresses list skirts.
+  // The URL carries slugs; the API expects enum keys (see keyFromSlug). A pinned axis
+  // always wins over the query string, so a hand-edited URL cannot make /shop/dresses
+  // list skirts.
   const params: QueryParams = {
     locale,
     isActive: true,
     page,
     limit,
     sort,
-    branding: fixed.branding ?? filters.branding ?? undefined,
-    clothing: fixed.clothing ?? filters.clothing ?? undefined,
-    audience: fixed.audience ?? filters.audience ?? undefined,
+    brand: fixed.brand ?? keyFromSlug("brand", filters.brand),
+    clothing: fixed.clothing ?? keyFromSlug("clothing", filters.clothing),
+    audience: fixed.audience ?? keyFromSlug("audience", filters.audience),
   };
 
   const { data, isLoading, isError } = productsApi.useGetProducts<ApiResponse<Product[]>>({
-    key: ["products-listing", locale, page, limit, sort, params.branding ?? "", params.clothing ?? "", params.audience ?? ""],
+    key: ["products-listing", locale, page, limit, sort, params.brand ?? "", params.clothing ?? "", params.audience ?? ""],
     params,
   });
 
@@ -82,9 +81,9 @@ const ProductListingInner = ({ fixed = {}, defaultSort = "latest", id = "content
   const totalPages = data?.pagination?.totalPages ?? 1;
 
   const allAxes: { key: Axis; label: string; options: { value: string; label: string }[] }[] = [
-    { key: "branding", label: "Collection", options: activeBranding().map((entry) => ({ value: entry.key, label: entry.label })) },
-    { key: "clothing", label: "Clothing", options: activeClothing().map((entry) => ({ value: entry.key, label: entry.label })) },
-    { key: "audience", label: "Audience", options: activeAudience().map((entry) => ({ value: entry.key, label: entry.label })) },
+    { key: "brand", label: "Brand", options: activeBrand().map((entry) => ({ value: entry.slug, label: entry.label })) },
+    { key: "clothing", label: "Clothing", options: activeClothing().map((entry) => ({ value: entry.slug, label: entry.label })) },
+    { key: "audience", label: "Shop For", options: activeAudience().map((entry) => ({ value: entry.slug, label: entry.label })) },
   ];
 
   const axes = allAxes.filter((axis) => !fixed[axis.key]);

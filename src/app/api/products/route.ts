@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       page: searchParams.get("page") || "1",
       limit: searchParams.get("limit") || "10",
       locale: searchParams.get("locale") || "EN",
-      branding: searchParams.get("branding") || undefined,
+      brand: searchParams.get("brand") || undefined,
       clothing: searchParams.get("clothing") || undefined,
       audience: searchParams.get("audience") || undefined,
       search: searchParams.get("search") || undefined,
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       dateTo: searchParams.get("dateTo") || undefined,
     });
 
-    const { locale, branding, clothing, audience, search, order, sort, isActive, isFavorite, year, month, dateFrom, dateTo } = queryParams;
+    const { locale, brand, clothing, audience, search, order, sort, isActive, isFavorite, year, month, dateFrom, dateTo } = queryParams;
 
     const page = parseInt(queryParams.page);
     const limit = parseInt(queryParams.limit);
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
 
     // No casts: the query schema validates these against the same enums Prisma expects,
     // so an unknown value is a 400 from zod rather than a 500 from the database.
-    if (branding) where.branding = branding;
+    if (brand) where.brand = brand;
     if (clothing) where.clothing = clothing;
     if (audience) where.audiences = { has: audience };
     if (typeof isActive === "string") where.isActive = isActive === "true";
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Product with this slug already exists" }, { status: 400 });
     }
 
-    // Images live under products/<sku>/ rather than <branding>/<sku>/ — branding is
+    // Images live under products/<sku>/ rather than <brand>/<sku>/ — brand is
     // now a mutable enum, and re-tagging a product must not strand its files.
     const folder = `products/${createData.sku}`;
     const moved = await Promise.all(createData.images.filter((image) => !image.isMoved).map((image) => uploader.moveFromTemp(image, folder)));

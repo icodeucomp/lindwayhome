@@ -6,7 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { useAuthStore, useSearchPagination } from "@/hooks";
 
-import { AUDIENCE, BRANDING, CLOTHING } from "@/static/taxonomy";
+import { AUDIENCE, BRAND, CLOTHING } from "@/static/taxonomy";
 
 import { productsApi } from "@/utils";
 
@@ -16,9 +16,9 @@ import { AdminButton, AdminLinkButton, ConfirmDialog, DataPagination, FilterDrop
 
 const ALL = { value: "", label: "All" };
 
-// Inactive brandings are still offered as filters: products tagged with one are not
+// Inactive brands are still offered as filters: products tagged with one are not
 // orphaned when it is hidden from the storefront, and the admin needs to find them.
-const BRANDING_OPTIONS = [ALL, ...BRANDING.map((entry) => ({ value: entry.key, label: entry.label }))];
+const BRAND_OPTIONS = [ALL, ...BRAND.map((entry) => ({ value: entry.key, label: entry.label }))];
 const CLOTHING_OPTIONS = [ALL, ...CLOTHING.map((entry) => ({ value: entry.key, label: entry.label }))];
 const AUDIENCE_OPTIONS = [ALL, ...AUDIENCE.map((entry) => ({ value: entry.key, label: entry.label }))];
 
@@ -32,7 +32,7 @@ const SORT_OPTIONS = [
   { value: "price-desc", label: "Price high–low" },
 ];
 
-const FILTER_KEYS = ["branding", "clothing", "audience", "isActive", "sort"] as const;
+const FILTER_KEYS = ["brand", "clothing", "audience", "isActive", "sort"] as const;
 
 export const ProductsDashboard = () => {
   const queryClient = useQueryClient();
@@ -47,13 +47,13 @@ export const ProductsDashboard = () => {
   const [toDelete, setToDelete] = React.useState<Product | null>(null);
 
   const { data, isLoading, isError } = productsApi.useGetProducts<ApiResponse<Product[]>>({
-    key: ["products", searchQuery, page, limit, filters.branding, filters.clothing, filters.audience, filters.isActive, filters.sort],
+    key: ["products", searchQuery, page, limit, filters.brand, filters.clothing, filters.audience, filters.isActive, filters.sort],
     enabled: isAuthenticated,
     params: {
       search: searchQuery,
       page,
       limit,
-      branding: filters.branding,
+      brand: filters.brand,
       clothing: filters.clothing,
       audience: filters.audience,
       // The admin list must show inactive products too, so isActive is only sent when
@@ -87,7 +87,7 @@ export const ProductsDashboard = () => {
 
         <ToolbarRow>
           <FilterRow>
-            <FilterDropdown label="Branding" value={filters.branding} options={BRANDING_OPTIONS} onChange={(value) => setFilter("branding", value)} />
+            <FilterDropdown label="Brand" value={filters.brand} options={BRAND_OPTIONS} onChange={(value) => setFilter("brand", value)} />
             <FilterDropdown label="Clothing" value={filters.clothing} options={CLOTHING_OPTIONS} onChange={(value) => setFilter("clothing", value)} />
             <FilterDropdown label="Audience" value={filters.audience} options={AUDIENCE_OPTIONS} onChange={(value) => setFilter("audience", value)} />
             <FilterDropdown label="Status" value={filters.isActive} options={STATUS_OPTIONS} onChange={(value) => setFilter("isActive", value)} />

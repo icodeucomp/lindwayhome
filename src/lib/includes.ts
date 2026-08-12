@@ -53,7 +53,7 @@ export const orderInclude = {
           // longer resolve a name through the translation table.
           name: true,
           images: true,
-          branding: true,
+          brand: true,
         },
       },
     },

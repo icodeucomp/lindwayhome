@@ -10,7 +10,7 @@ import { Img } from "@/components";
 
 import { useCartDrawer, useCartStore, useLocaleHref } from "@/hooks";
 
-import { brandingByKey } from "@/static/taxonomy";
+import { brandByKey } from "@/static/taxonomy";
 
 import { formatIDR } from "@/utils";
 
@@ -114,7 +114,7 @@ export const CartDrawer = () => {
               <>
                 <div className="flex-1 px-6 overflow-y-auto divide-y divide-border">
                   {cart.map((item) => {
-                    const branding = brandingByKey(item.branding);
+                    const brand = brandByKey(item.brand);
 
                     return (
                       <div key={`${item.id}-${item.selectedSize}`} className="flex gap-4 py-5">
@@ -123,7 +123,7 @@ export const CartDrawer = () => {
                         <div className="flex-1 space-y-1.5">
                           <p className="text-sm uppercase font-heading text-body tracking-[0.04em]">{item.name}</p>
                           <p className="text-xs text-body/70">
-                            {branding?.label ?? item.branding} &middot; {item.selectedSize}
+                            {brand?.label ?? item.brand} &middot; {item.selectedSize}
                           </p>
                           <p className="text-sm text-body">{formatIDR(item.discountedPrice)}</p>
 
