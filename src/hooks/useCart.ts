@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 
 import { CartItem, ProductCartItems, CartProduct } from "@/types";
 
+import { resolveUnitPrice } from "@/utils/pricing";
+
 interface StorageData<T = unknown> {
   data: T;
   timestamp: number;
@@ -188,7 +190,10 @@ const createCartStore = () => {
     },
 
     getCartTotal: () => {
-      return getState().cart.reduce((total, item) => total + item.price * item.quantity, 0);
+      // resolveUnitPrice, not item.price: the buyer pays discountedPrice, and the server
+      // derives the subtotal the same way (§B6.3). Using the list price here made the
+      // drawer show a per-line price that did not add up to its own subtotal.
+      return getState().cart.reduce((total, item) => total + resolveUnitPrice(item) * item.quantity, 0);
     },
 
     getCartItemCount: () => {
@@ -294,7 +299,7 @@ const createCartStore = () => {
     },
 
     getSelectedTotal: () => {
-      return store.getSelectedItems().reduce((total, item) => total + item.price * item.quantity, 0);
+      return store.getSelectedItems().reduce((total, item) => total + resolveUnitPrice(item) * item.quantity, 0);
     },
 
     getSelectedCount: () => {

@@ -168,37 +168,56 @@ input[type="number"]::-webkit-outer-spin-button {
   height: 0;
 }
 
-/* Custom React-Select Styles */
+/* React-Select, dressed to match the v2 palette.
+   Loaded by the checkout address pickers. It shipped with v1 blue (#2b7fff hover,
+   #dbeafe option, 0.5rem radius) — colours that appear nowhere else in the store, on
+   the one screen where a buyer is handing over money. */
 .react-select-container {
-  font-size: 1rem !important;
+  font-size: 0.875rem !important;
 }
 .react-select__control {
   min-height: 42px !important;
-  border-radius: 0.5rem !important;
+  border-radius: 0.125rem !important;
+  border-color: #d2d2ca !important;
+  background-color: #faf6f5 !important;
+  box-shadow: none !important;
 }
 .react-select__control:hover {
-  border-color: #2b7fff !important;
+  border-color: #ba8164 !important;
 }
 .react-select__control--is-focused {
-  border-color: #2b7fff !important;
-  box-shadow: 0 0 0 2px #2b7fff !important;
+  border-color: #ba8164 !important;
+  box-shadow: 0 0 0 1px #ba8164 !important;
+}
+.react-select__control--is-disabled {
+  background-color: #f7f3f0 !important;
 }
 .react-select__indicator-separator {
   display: none !important;
 }
 .react-select__menu {
   z-index: 50 !important;
+  border-radius: 0.125rem !important;
+  border: 1px solid #d2d2ca !important;
+  box-shadow: 0 4px 16px rgba(57, 50, 44, 0.08) !important;
+}
+.react-select__option {
+  color: #39322c !important;
 }
 .react-select__option--is-focused {
-  background-color: #dbeafe !important;
+  background-color: #f7f3f0 !important;
 }
 .react-select__option--is-selected {
-  background-color: #2b7fff !important;
+  background-color: #ba8164 !important;
+  color: #faf6f5 !important;
+}
+.react-select__placeholder,
+.react-select__single-value {
+  color: #39322c !important;
 }
 .react-select__placeholder {
-  color: #9ca3af !important;
+  opacity: 0.45 !important;
 }
-
 @theme inline {
   /* ===============================
      COLORS — v2 palette (D14)
@@ -349,8 +368,5 @@ input[type="number"]::-webkit-outer-spin-button {
   }
   .pagination-ellipsis {
     @apply size-9 flex items-end justify-center pb-1.5 text-base tracking-widest text-body/35 select-none;
-  }
-  .btn-cross-border {
-    @apply absolute duration-300 right-4 sm:right-6 md:right-10 top-4 flex justify-center items-center rounded-full border-body border-2 size-8 hover:bg-body;
   }
 }

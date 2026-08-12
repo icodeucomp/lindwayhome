@@ -139,5 +139,324 @@
       "title": "Terms & Conditions — Lindway",
       "description": "The terms that apply when you order from Lindway."
     }
+  },
+  "pages": {
+    "careInstructions": {
+      "hero": {
+        "title": "Care Instructions",
+        "description": "Keep your clothes fresh and long-lasting with care that respects both your investment and the environment.",
+        "cta": "Discover Now"
+      },
+      "heading": "Garment Care Instructions",
+      "headingDescription": "Care that respects both your investment and the hands that made it.",
+      "items": {
+        "washBeforeFirstWear": {
+          "title": "Wash Before the First Wear",
+          "description": "Gently wash before first use to preserve comfort and freshness."
+        },
+        "washInsideOut": {
+          "title": "Wash Inside Out",
+          "description": "Turn the garment inside out to help protect its color and surface."
+        },
+        "gentleColdWater": {
+          "title": "Gentle Cold Water",
+          "description": "Use cold water and a gentle cycle to maintain fabric quality."
+        },
+        "handWashOnly": {
+          "title": "Hand Wash Only",
+          "description": "Carefully hand wash to preserve the garment's craftsmanship."
+        },
+        "mildDetergent": {
+          "title": "Avoid Detergents with Fragrances or Dyes",
+          "description": "Use mild detergent free from fragrances and dyes for better fabric care."
+        },
+        "noBleach": {
+          "title": "Do Not Bleach",
+          "description": "Avoid bleach to protect the fabric and maintain its original color."
+        },
+        "noTumbleDry": {
+          "title": "Do Not Tumble Dry",
+          "description": "Air dry naturally to help retain the garment's shape and texture."
+        },
+        "warmIron": {
+          "title": "Warm Iron",
+          "description": "Use a warm iron when needed to keep the garment neat and refined."
+        },
+        "noDryClean": {
+          "title": "Do Not Dry Clean",
+          "description": "Dry cleaning is not recommended for this garment."
+        }
+      }
+    },
+    "shippingDelivery": {
+      "hero": {
+        "title": "Shipping & Delivery",
+        "description": "How long your order takes, where we ship, and what happens after you pay.",
+        "cta": "Discover Now"
+      },
+      "heading": "Shipping & Delivery",
+      "headingDescription": "How long your order takes, where we ship, and what happens after you pay.",
+      "items": {
+        "processingTime": {
+          "title": "Processing Time",
+          "description": "Orders are processed within 1-3 business days."
+        },
+        "madeToOrder": {
+          "title": "Made to Order",
+          "description": "Custom-made items may take 21-30 working days, depending on the complexity."
+        },
+        "acrossIndonesia": {
+          "title": "Across Indonesia",
+          "description": "We ship nationwide from our atelier in Denpasar, Bali."
+        },
+        "international": {
+          "title": "International",
+          "description": "International delivery is available on request — message us before ordering."
+        },
+        "tracking": {
+          "title": "Tracking",
+          "description": "You'll receive a tracking number once your order is on its way."
+        },
+        "shippingCost": {
+          "title": "Shipping Cost",
+          "description": "Calculated at checkout from your delivery address and the parcel's size and weight."
+        }
+      },
+      "note": "Shipping is calculated from the distance between our Denpasar atelier and your delivery address, together with the volumetric weight of the parcel. You will see the exact amount at checkout before you pay — we never add carriage charges afterwards.",
+      "promo": {
+        "title": "Return & Exchanges",
+        "description": "What can and cannot be returned, and under which conditions.",
+        "cta": "Read the Policy"
+      }
+    },
+    "returnExchanges": {
+      "hero": {
+        "title": "Return & Exchanges",
+        "description": "Clear and straightforward return and exchange terms for your peace of mind.",
+        "cta": "Discover Now"
+      },
+      "heading": "Return and Exchanges Policies",
+      "imageAlt": "Lindway packaging",
+      "policies": {
+        "finalSale": "All items are final sale, not eligible for return",
+        "nonRefundable": "Non-refundable",
+        "nonModifiable": "Non-modifiable",
+        "nonCashable": "Non-cashable",
+        "nonExchangeable": "Non-exchangeable",
+        "nonTransferable": "Non-transferable"
+      },
+      "specialConditionsLabel": "Special Conditions:",
+      "specialConditions": "Returned or exchanged may be provided; the items have to be in the same condition as when it is purchased. Items that include a bag must be returned with it.",
+      "promo": {
+        "title": "Learn How to Shop",
+        "description": "From browsing to checkout, and where to reach us if you get stuck.",
+        "cta": "Discover Now"
+      }
+    },
+    "sizeGuide": {
+      "hero": {
+        "title": "Size Guide",
+        "description": "Find the size that fits you best — or ask us for a custom fit.",
+        "cta": "Discover Now"
+      }
+    },
+    "howToShop": {
+      "hero": {
+        "title": "How to Shop",
+        "description": "At Lindway, we aim to make your shopping experience as seamless and personal as our designs.",
+        "cta": "Discover Now"
+      }
+    },
+    "contactUs": {
+      "hero": {
+        "title": "Contact Us",
+        "description": "Our team is here to help. Leave us a message and we'll get back to you within 1–2 business days.",
+        "cta": "Get in Touch"
+      }
+    },
+    "faq": {
+      "hero": {
+        "title": "Frequently Asked Questions",
+        "description": "Answers to what we are asked most — ordering, shipping, sizing and care.",
+        "cta": "Explore Now"
+      }
+    },
+    "brandValues": {
+      "handcrafted": {
+        "title": "Handcrafted",
+        "description": "By local artisans in Bali"
+      },
+      "premiumFabrics": {
+        "title": "Premium Fabrics",
+        "description": "Carefully selected for comfort & beauty"
+      },
+      "madeToOrder": {
+        "title": "Made to Order",
+        "description": "Just for you"
+      },
+      "timelessDesign": {
+        "title": "Timeless Design",
+        "description": "Made to be loved today and forever"
+      },
+      "worldwideShipping": {
+        "title": "Worldwide Shipping",
+        "description": "Delivering joy to your door, wherever you are."
+      },
+      "sustainableFashion": {
+        "title": "Sustainable Fashion",
+        "description": "Thoughtful choices for a better tomorrow"
+      },
+      "ethicalProduction": {
+        "title": "Ethical Production",
+        "description": "Supporting local artisans and preserving heritage"
+      },
+      "exclusiveDesign": {
+        "title": "Exclusive Design",
+        "description": "Created in our Bali atelier"
+      },
+      "customerCare": {
+        "title": "Customer Care",
+        "description": "We are here to help you"
+      }
+    },
+    "about": {
+      "hero": {
+        "title": "About Us",
+        "description": "A house of artisanal fashion, built in Denpasar by the hands of local craftspeople.",
+        "cta": "Explore Now"
+      },
+      "ourStory": {
+        "heading": "Our Story",
+        "subheading": "Rooted in Bali, Inspired by Purpose",
+        "imageAlt": "Lindway atelier in Denpasar",
+        "p1": "Lindway is more than a brand—it's a lifestyle shaped by passion, purpose, and the vibrant soul of Bali. Based in Denpasar and proudly self-manufactured, Lindway is built by the hands of local artisans, blending creativity and community into every thread.",
+        "p2": "Our vision is to express beauty through thoughtful design—where color, pattern, texture, and form come together in refined harmony. Each creation is a reflection of our commitment to elegance, craftsmanship, and authentic storytelling.",
+        "p3": "We believe in fashion with intention. That means producing high-quality pieces that not only elevate personal style but also make a positive impact on our community, our environment, and the planet. Every product is made with care—thoughtfully designed, responsibly crafted, and tailored to meet both aesthetic and ethical standards.",
+        "p4": "At Lindway, fabric is treated as both material and muse. We carefully select only the finest textiles and ensure minimal waste by thoughtfully repurposing leftover fabric across our collections. It's a quiet nod to sustainability—woven into the essence of our brand.",
+        "closing": "With every piece, Lindway invites you to experience fashion that feels meaningful, mindful, and timeless."
+      },
+      "whyChooseUs": {
+        "heading": "Why Choose Us?"
+      },
+      "artisanJourney": {
+        "heading": "Our Artisan Journey",
+        "subheading": "A Celebration of Craftsmanship and Culture",
+        "imageAlt": "Lindway artisans at work",
+        "p1": "At Lindway, every piece tells a story—of heritage, artistry, and heartfelt creation. Crafted with great care and love, our collections are brought to life through the hands of local artisans, each product embodying the essence of Indonesian tradition with a modern twist.",
+        "p2": "From the refined beauty of manual and hand-guided embroidery to the expressive charm of hand-painted designs and the radiant sparkle of sequins, every Lindway creation is a tribute to traditional techniques.",
+        "p3": "Our menswear line showcases the timeless elegance of contemporary style, ornament, and the rich tradition of Bali, interpreted by local artisans. These pieces offer a fresh, sophisticated expression of cultural heritage—blending tradition with modern sensibility.",
+        "p4": "We embrace patch art using leftover materials, breathing new life into fabric remnants while committing to sustainability and honoring Indonesia's rich batik legacy.",
+        "p5": "Comfort and craftsmanship go hand in hand in our collections. Every stitch, brushstroke, and detail is infused with passion and purpose. Step into our world and discover the quiet luxury of slow fashion—where each thread carries the soul of its maker."
+      },
+      "sustainabilityPromo": {
+        "title": "Discover Our Sustainability Principles",
+        "description": "How we choose materials, treat offcuts, and pace production.",
+        "cta": "Discover Now"
+      }
+    },
+    "philosophy": {
+      "heading": "Our Philosophy",
+      "subheading": "Custom. Cultural. Conscious.",
+      "pillars": {
+        "custom": {
+          "label": "Custom",
+          "body": "Most of what we make begins as a conversation. Measurements, motifs, a colour someone remembers from a ceremony — our made-to-order pieces are cut for one person rather than for a size chart. It is slower, and that is the point: nothing leaves the atelier until it fits the person who asked for it."
+        },
+        "cultural": {
+          "label": "Cultural",
+          "body": "Every technique we use — hand-guided embroidery, hand-painted fabric, sequin work, batik — is Indonesian, and is worked by artisans who learned it here. We treat those traditions as living craft rather than decoration, which means paying properly for the time they take and naming the hands that do them."
+        },
+        "conscious": {
+          "label": "Conscious",
+          "body": "We produce in small runs, choose fabrics that outlast a season, and turn offcuts into patch art rather than waste. Fashion with intention means accounting for what a garment costs the community and the island it was made on, not only what it costs to buy."
+        }
+      }
+    },
+    "ourProduction": {
+      "hero": {
+        "title": "Our Production",
+        "description": "Skilled hands, patience and purpose — how a Lindway piece is actually made.",
+        "cta": "Discover Now"
+      },
+      "tabs": {
+        "process": "Our Process",
+        "craft": "The Art Craftmanship"
+      },
+      "processIntro": "Every Lindway piece begins with skilled hands, patience, and purpose—carefully crafted through time-honored techniques, thoughtful design, and an unwavering commitment to exceptional quality and lasting elegance.",
+      "craftIntro": "Traditional techniques, modern expression, and timeless beauty—each detail worked by an artisan who learned the craft here, in Bali.",
+      "craftImageAlt": "Craftmanship",
+      "steps": {
+        "design": {
+          "title": "Design & Consultation",
+          "body": "Every piece starts on paper and, for made-to-order work, in conversation. Silhouette, motif and fabric are agreed before a single metre is cut, so nothing is decided after the fact."
+        },
+        "fabric": {
+          "title": "Fabric Selection",
+          "body": "Textiles are chosen for how they wear over years rather than seasons. We buy in quantities we can use, and what is left over is kept for patch work instead of discarded."
+        },
+        "cutting": {
+          "title": "Cutting & Construction",
+          "body": "Patterns are cut by hand in our Denpasar atelier. Because runs are small, the same maker usually carries a garment from cut to finish — which is what keeps the fit consistent."
+        },
+        "embellishment": {
+          "title": "Embellishment",
+          "body": "Hand-guided embroidery, hand-painted fabric, sequin work and batik are added by artisans trained in each technique. This is the slowest stage and the one we never compress."
+        },
+        "finishing": {
+          "title": "Finishing & Quality Check",
+          "body": "Seams, linings and closures are checked piece by piece. Anything that does not pass goes back to the maker rather than into the box."
+        },
+        "packing": {
+          "title": "Packing & Dispatch",
+          "body": "Orders are wrapped and dispatched from Denpasar, with a tracking number sent as soon as the parcel is on its way."
+        }
+      }
+    },
+    "sustainability": {
+      "hero": {
+        "title": "Sustainability",
+        "description": "Thoughtful materials, timeless craftsmanship, and pieces built to outlast a season.",
+        "cta": "Discover Now"
+      },
+      "statement": "Fashion should leave something behind worth keeping—not unnecessary waste.",
+      "pillarsHeading": "Our Sustainability Pillars",
+      "pillarsDescription": "Our commitment to sustainability is built on thoughtful choices—from responsible materials and skilled craftsmanship to timeless designs made to last.",
+      "pillars": {
+        "materials": {
+          "title": "Thoughtful Materials",
+          "body": "We carefully select high-quality fabrics that are durable, comfortable, and made to be worn for years. Every material is chosen with longevity and responsible sourcing in mind."
+        },
+        "craftsmanship": {
+          "title": "Timeless Craftsmanship",
+          "body": "Every Lindway piece is crafted with precision and care by skilled artisans, combining traditional techniques with refined construction to create garments that stand the test of time."
+        },
+        "longevity": {
+          "title": "Conscious Longevity",
+          "body": "We believe the most sustainable wardrobe is one built to last. By creating timeless designs instead of chasing trends, we encourage mindful purchasing and lasting wear."
+        }
+      },
+      "journalHeading": "Beyond Sustainability",
+      "journalDescription": "Go beyond the label with editorial stories about craftsmanship, circular thinking, and the lasting value of timeless fashion."
+    },
+    "ourFabrics": {
+      "hero": {
+        "title": "Our Fabrics",
+        "description": "The textiles behind every Lindway piece, and what each one is best suited to.",
+        "cta": "Discover Now"
+      },
+      "intro": "At Lindway, fabric is more than just a material — it's the beginning of every story we tell. We choose each fabric with care to ensure it reflects the values of comfort, craftsmanship, and artistry that define our brand.",
+      "imageAlt": "Lindway fabric",
+      "fabrics": {
+        "cotton": "Light, airy, and breathable — ideal for warm days and flowing silhouettes. A favorite for our everyday wear collection.",
+        "cottonVoile": "Light as air and beautifully breathable, cotton voile is a semi-sheer fabric with a smooth, crisp finish. Perfect for soft linings, flowy blouses, and delicate layering—cool, comfortable, and effortlessly elegant.",
+        "cottonLining": "Our go-to choice for inner layers. Lightweight, breathable, and skin-friendly, cotton lining ensures comfort without compromising the drape or design of your outer garment.",
+        "cottonViscose": "A breathable blend that combines the softness of cotton with the graceful drape of viscose. Light, comfortable, and easy to wear—ideal for everyday pieces with a polished finish.",
+        "sifon": "Delicately sheer and feather-light, sifon (chiffon) adds a layer of softness and romance to any design. Perfect for flowy overlays, sleeves, and feminine silhouettes that move with grace.",
+        "linenCotton": "A natural blend that's breathable like linen and soft like cotton. Its slightly textured weave gives off an effortlessly relaxed charm—perfect for warm days and timeless wardrobe staples.",
+        "organzaSemiSilk": "An elevated take on classic organza—this semi-silk version is softer, smoother, and more wearable. It holds its shape while remaining gentle against the skin, making it ideal for sophisticated layering and modern kebaya styles.",
+        "brocade": "Luxurious and textured, brocade is a woven fabric rich with intricate patterns. Often used in our occasionwear, it brings a sense of tradition and grandeur—each thread telling a story.",
+        "jacquard": "Woven with detailed patterns directly into the fabric, jacquard adds subtle structure and quiet elegance. Ideal for statement pieces that stand out with refined craftsmanship."
+      }
+    }
   }
 }

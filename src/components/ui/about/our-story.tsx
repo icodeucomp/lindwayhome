@@ -2,38 +2,40 @@ import { Container, Img } from "@/components";
 
 import { SectionHeading } from "@/components/ui/storefront";
 
+import type { Dictionary } from "@/i18n/get-dictionary";
+
 import { PLACEHOLDER_IMAGE } from "@/static/images";
 
 /**
  * "Our Story" (reference/About Us.png).
  *
- * Copy carried over verbatim from v1's `about-us.tsx` — the mockup's heading and
- * subheading match it word for word, so this is a restyle rather than a rewrite.
+ * The four paragraphs are numbered keys rather than an array: they are laid out in a
+ * two-column grid, so their order is part of the design, and a key that goes missing
+ * should be a compile error rather than a silently shorter column.
  */
 
-const paragraphs = [
-  "Lindway is more than a brand—it's a lifestyle shaped by passion, purpose, and the vibrant soul of Bali. Based in Denpasar and proudly self-manufactured, Lindway is built by the hands of local artisans, blending creativity and community into every thread.",
-  "Our vision is to express beauty through thoughtful design—where color, pattern, texture, and form come together in refined harmony. Each creation is a reflection of our commitment to elegance, craftsmanship, and authentic storytelling.",
-  "We believe in fashion with intention. That means producing high-quality pieces that not only elevate personal style but also make a positive impact on our community, our environment, and the planet. Every product is made with care—thoughtfully designed, responsibly crafted, and tailored to meet both aesthetic and ethical standards.",
-  "At Lindway, fabric is treated as both material and muse. We carefully select only the finest textiles and ensure minimal waste by thoughtfully repurposing leftover fabric across our collections. It's a quiet nod to sustainability—woven into the essence of our brand.",
-];
+const PARAGRAPHS = ["p1", "p2", "p3", "p4"] as const;
 
-export const OurStory = () => (
-  <Container id="content" className="grid items-start grid-cols-1 gap-10 py-16 lg:grid-cols-3 scroll-mt-40">
-    <Img src={PLACEHOLDER_IMAGE} alt="Lindway atelier in Denpasar" className="w-full aspect-3/4 bg-footer/30" cover />
+export const OurStory = ({ dictionary: t }: { dictionary: Dictionary }) => {
+  const copy = t.pages.about.ourStory;
 
-    <div className="space-y-6 lg:col-span-2">
-      <SectionHeading title="Our Story" description="Rooted in Bali, Inspired by Purpose" />
+  return (
+    <Container id="content" className="grid items-start grid-cols-1 gap-10 py-16 lg:grid-cols-3 scroll-mt-40">
+      <Img src={PLACEHOLDER_IMAGE} alt={copy.imageAlt} className="w-full aspect-3/4 bg-footer/30" cover />
 
-      <div className="grid grid-cols-1 gap-x-10 gap-y-4 md:grid-cols-2">
-        {paragraphs.map((paragraph) => (
-          <p key={paragraph.slice(0, 32)} className="text-sm leading-relaxed text-body">
-            {paragraph}
-          </p>
-        ))}
+      <div className="space-y-6 lg:col-span-2">
+        <SectionHeading title={copy.heading} description={copy.subheading} />
+
+        <div className="grid grid-cols-1 gap-x-10 gap-y-4 md:grid-cols-2">
+          {PARAGRAPHS.map((key) => (
+            <p key={key} className="text-sm leading-relaxed text-body">
+              {copy[key]}
+            </p>
+          ))}
+        </div>
+
+        <p className="text-sm italic text-body/80">{copy.closing}</p>
       </div>
-
-      <p className="text-sm italic text-body/80">With every piece, Lindway invites you to experience fashion that feels meaningful, mindful, and timeless.</p>
-    </div>
-  </Container>
-);
+    </Container>
+  );
+};

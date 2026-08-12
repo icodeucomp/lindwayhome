@@ -20,17 +20,20 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   return localizedMetadata(lang, "/", t.meta.home);
 }
 
-export default function HomePage() {
+export default async function HomePage({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params;
+  const t = await getDictionary(isLocale(lang) ? lang : "en");
+
   return (
     <>
       <Hero />
-      <FeatureStrip items={craftValues} />
+      <FeatureStrip items={craftValues(t)} />
       <JustArrived />
       <Collections />
       <AtelierPromos />
       <Journal />
       <FabricLibraryPromo />
-      <FeatureStrip items={careValues} />
+      <FeatureStrip items={careValues(t)} />
       <EverySnap />
     </>
   );

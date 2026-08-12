@@ -139,5 +139,324 @@
       "title": "Syarat & Ketentuan — Lindway",
       "description": "Ketentuan yang berlaku saat Anda memesan dari Lindway."
     }
+  },
+  "pages": {
+    "careInstructions": {
+      "hero": {
+        "title": "Petunjuk Perawatan",
+        "description": "Jaga busana Anda tetap segar dan awet dengan perawatan yang menghargai investasi Anda sekaligus lingkungan.",
+        "cta": "Lihat Selengkapnya"
+      },
+      "heading": "Petunjuk Perawatan Busana",
+      "headingDescription": "Perawatan yang menghargai investasi Anda sekaligus tangan-tangan yang membuatnya.",
+      "items": {
+        "washBeforeFirstWear": {
+          "title": "Cuci Sebelum Pemakaian Pertama",
+          "description": "Cuci dengan lembut sebelum dipakai pertama kali agar tetap nyaman dan segar."
+        },
+        "washInsideOut": {
+          "title": "Cuci Terbalik",
+          "description": "Balik bagian dalam ke luar untuk melindungi warna dan permukaan kainnya."
+        },
+        "gentleColdWater": {
+          "title": "Air Dingin, Siklus Lembut",
+          "description": "Gunakan air dingin dan siklus lembut untuk menjaga kualitas kain."
+        },
+        "handWashOnly": {
+          "title": "Cuci Tangan Saja",
+          "description": "Cuci dengan tangan secara hati-hati agar kerajinan tangannya tetap terjaga."
+        },
+        "mildDetergent": {
+          "title": "Hindari Deterjen Berpewangi atau Berpewarna",
+          "description": "Gunakan deterjen lembut tanpa pewangi dan pewarna agar kain lebih terawat."
+        },
+        "noBleach": {
+          "title": "Jangan Diputihkan",
+          "description": "Hindari pemutih untuk melindungi kain dan menjaga warna aslinya."
+        },
+        "noTumbleDry": {
+          "title": "Jangan Dikeringkan dengan Mesin",
+          "description": "Keringkan secara alami agar bentuk dan tekstur kainnya tetap terjaga."
+        },
+        "warmIron": {
+          "title": "Setrika Hangat",
+          "description": "Gunakan setrika hangat bila perlu agar busana tetap rapi dan halus."
+        },
+        "noDryClean": {
+          "title": "Jangan Dry Clean",
+          "description": "Dry cleaning tidak disarankan untuk busana ini."
+        }
+      }
+    },
+    "shippingDelivery": {
+      "hero": {
+        "title": "Pengiriman",
+        "description": "Berapa lama pesanan Anda diproses, ke mana kami mengirim, dan apa yang terjadi setelah pembayaran.",
+        "cta": "Lihat Selengkapnya"
+      },
+      "heading": "Pengiriman & Pengantaran",
+      "headingDescription": "Berapa lama pesanan Anda diproses, ke mana kami mengirim, dan apa yang terjadi setelah pembayaran.",
+      "items": {
+        "processingTime": {
+          "title": "Waktu Proses",
+          "description": "Pesanan diproses dalam 1-3 hari kerja."
+        },
+        "madeToOrder": {
+          "title": "Dibuat Sesuai Pesanan",
+          "description": "Produk custom dapat memakan waktu 21-30 hari kerja, tergantung tingkat kerumitannya."
+        },
+        "acrossIndonesia": {
+          "title": "Seluruh Indonesia",
+          "description": "Kami mengirim ke seluruh Indonesia dari atelier kami di Denpasar, Bali."
+        },
+        "international": {
+          "title": "Internasional",
+          "description": "Pengiriman internasional tersedia atas permintaan — hubungi kami sebelum memesan."
+        },
+        "tracking": {
+          "title": "Nomor Resi",
+          "description": "Anda akan menerima nomor resi begitu pesanan dikirim."
+        },
+        "shippingCost": {
+          "title": "Ongkos Kirim",
+          "description": "Dihitung saat checkout berdasarkan alamat pengiriman serta ukuran dan berat paket."
+        }
+      },
+      "note": "Ongkos kirim dihitung dari jarak antara atelier kami di Denpasar dan alamat pengiriman Anda, digabung dengan berat volumetrik paket. Jumlah pastinya terlihat saat checkout sebelum Anda membayar — kami tidak pernah menambahkan biaya angkut setelahnya.",
+      "promo": {
+        "title": "Pengembalian & Penukaran",
+        "description": "Apa saja yang bisa dan tidak bisa dikembalikan, dan dengan syarat apa.",
+        "cta": "Baca Ketentuannya"
+      }
+    },
+    "returnExchanges": {
+      "hero": {
+        "title": "Pengembalian & Penukaran",
+        "description": "Ketentuan pengembalian dan penukaran yang jelas dan lugas, demi ketenangan Anda.",
+        "cta": "Lihat Selengkapnya"
+      },
+      "heading": "Ketentuan Pengembalian dan Penukaran",
+      "imageAlt": "Kemasan Lindway",
+      "policies": {
+        "finalSale": "Semua produk merupakan penjualan final dan tidak dapat dikembalikan",
+        "nonRefundable": "Tidak dapat direfund",
+        "nonModifiable": "Tidak dapat diubah",
+        "nonCashable": "Tidak dapat diuangkan",
+        "nonExchangeable": "Tidak dapat ditukar",
+        "nonTransferable": "Tidak dapat dipindahtangankan"
+      },
+      "specialConditionsLabel": "Ketentuan Khusus:",
+      "specialConditions": "Pengembalian atau penukaran dapat diberikan dengan syarat kondisi barang sama seperti saat dibeli. Produk yang disertai tas harus dikembalikan beserta tasnya.",
+      "promo": {
+        "title": "Pelajari Cara Belanja",
+        "description": "Dari menelusuri koleksi hingga checkout, dan ke mana menghubungi kami bila tersendat.",
+        "cta": "Lihat Selengkapnya"
+      }
+    },
+    "sizeGuide": {
+      "hero": {
+        "title": "Panduan Ukuran",
+        "description": "Temukan ukuran yang paling pas untuk Anda — atau minta ukuran khusus kepada kami.",
+        "cta": "Lihat Selengkapnya"
+      }
+    },
+    "howToShop": {
+      "hero": {
+        "title": "Cara Belanja",
+        "description": "Di Lindway, kami ingin pengalaman berbelanja Anda semulus dan sepersonal desain kami.",
+        "cta": "Lihat Selengkapnya"
+      }
+    },
+    "contactUs": {
+      "hero": {
+        "title": "Hubungi Kami",
+        "description": "Tim kami siap membantu. Tinggalkan pesan dan kami membalas dalam 1–2 hari kerja.",
+        "cta": "Hubungi Kami"
+      }
+    },
+    "faq": {
+      "hero": {
+        "title": "Tanya Jawab",
+        "description": "Jawaban atas hal yang paling sering ditanyakan — pemesanan, pengiriman, ukuran, dan perawatan.",
+        "cta": "Lihat Sekarang"
+      }
+    },
+    "brandValues": {
+      "handcrafted": {
+        "title": "Dikerjakan Tangan",
+        "description": "Oleh para pengrajin lokal di Bali"
+      },
+      "premiumFabrics": {
+        "title": "Kain Pilihan",
+        "description": "Dipilih dengan cermat demi kenyamanan & keindahan"
+      },
+      "madeToOrder": {
+        "title": "Dibuat Sesuai Pesanan",
+        "description": "Khusus untuk Anda"
+      },
+      "timelessDesign": {
+        "title": "Desain Tak Lekang Waktu",
+        "description": "Dibuat untuk dicintai hari ini dan seterusnya"
+      },
+      "worldwideShipping": {
+        "title": "Pengiriman ke Seluruh Dunia",
+        "description": "Mengantar kebahagiaan ke depan pintu Anda, di mana pun berada."
+      },
+      "sustainableFashion": {
+        "title": "Mode Berkelanjutan",
+        "description": "Pilihan yang dipikirkan demi hari esok yang lebih baik"
+      },
+      "ethicalProduction": {
+        "title": "Produksi yang Etis",
+        "description": "Mendukung pengrajin lokal dan menjaga warisan budaya"
+      },
+      "exclusiveDesign": {
+        "title": "Desain Eksklusif",
+        "description": "Diciptakan di atelier kami di Bali"
+      },
+      "customerCare": {
+        "title": "Layanan Pelanggan",
+        "description": "Kami siap membantu Anda"
+      }
+    },
+    "about": {
+      "hero": {
+        "title": "Tentang Kami",
+        "description": "Rumah mode artisanal yang dibangun di Denpasar oleh tangan para pengrajin lokal.",
+        "cta": "Lihat Sekarang"
+      },
+      "ourStory": {
+        "heading": "Kisah Kami",
+        "subheading": "Berakar di Bali, Digerakkan oleh Tujuan",
+        "imageAlt": "Atelier Lindway di Denpasar",
+        "p1": "Lindway lebih dari sekadar brand—ia adalah gaya hidup yang dibentuk oleh gairah, tujuan, dan jiwa Bali yang hidup. Berbasis di Denpasar dan diproduksi sendiri, Lindway dibangun oleh tangan para pengrajin lokal, memadukan kreativitas dan kebersamaan ke dalam setiap helai benang.",
+        "p2": "Visi kami adalah mengungkapkan keindahan melalui desain yang dipikirkan matang—tempat warna, motif, tekstur, dan bentuk berpadu dalam harmoni yang tertata. Setiap karya mencerminkan komitmen kami pada keanggunan, kualitas kerajinan tangan, dan cerita yang jujur.",
+        "p3": "Kami percaya pada mode yang punya niat. Artinya menghasilkan karya berkualitas tinggi yang tidak hanya mengangkat gaya pribadi, tetapi juga berdampak baik bagi komunitas, lingkungan, dan bumi kami. Setiap produk dibuat dengan cermat—dirancang dengan pertimbangan, dikerjakan secara bertanggung jawab, dan memenuhi standar estetika sekaligus etika.",
+        "p4": "Di Lindway, kain diperlakukan sebagai bahan sekaligus sumber inspirasi. Kami memilih hanya tekstil terbaik dan menekan limbah dengan memanfaatkan kembali sisa kain di seluruh koleksi. Sebuah penghormatan yang tenang pada keberlanjutan—terjalin dalam inti brand kami.",
+        "closing": "Lewat setiap karyanya, Lindway mengajak Anda merasakan mode yang bermakna, penuh kesadaran, dan tak lekang waktu."
+      },
+      "whyChooseUs": {
+        "heading": "Mengapa Memilih Kami?"
+      },
+      "artisanJourney": {
+        "heading": "Perjalanan Pengrajin Kami",
+        "subheading": "Perayaan Keterampilan Tangan dan Budaya",
+        "imageAlt": "Para pengrajin Lindway sedang bekerja",
+        "p1": "Di Lindway, setiap karya menyimpan cerita—tentang warisan, seni, dan penciptaan yang tulus. Dikerjakan dengan sangat teliti dan penuh kasih, koleksi kami dihidupkan oleh tangan pengrajin lokal, dan setiap produknya membawa inti tradisi Indonesia dengan sentuhan modern.",
+        "p2": "Dari keindahan bordir manual dan bordir tuntun tangan, pesona desain lukis tangan, hingga kilau payet, setiap karya Lindway adalah penghormatan pada teknik-teknik tradisional.",
+        "p3": "Lini busana pria kami menampilkan keanggunan gaya kontemporer, ornamen, dan kekayaan tradisi Bali yang ditafsirkan para pengrajin lokal. Karya-karya ini menghadirkan ungkapan warisan budaya yang segar dan berkelas—memadukan tradisi dengan kepekaan modern.",
+        "p4": "Kami merangkul patch art dari sisa bahan, meniupkan kehidupan baru pada potongan kain sekaligus menjaga komitmen pada keberlanjutan dan menghormati kekayaan warisan batik Indonesia.",
+        "p5": "Kenyamanan dan keterampilan tangan berjalan beriringan dalam koleksi kami. Setiap jahitan, sapuan kuas, dan detailnya diisi dengan gairah dan tujuan. Masuklah ke dunia kami dan temukan kemewahan yang tenang dari slow fashion—tempat setiap benang membawa jiwa pembuatnya."
+      },
+      "sustainabilityPromo": {
+        "title": "Kenali Prinsip Keberlanjutan Kami",
+        "description": "Bagaimana kami memilih bahan, memperlakukan sisa potongan, dan mengatur ritme produksi.",
+        "cta": "Lihat Selengkapnya"
+      }
+    },
+    "philosophy": {
+      "heading": "Filosofi Kami",
+      "subheading": "Custom. Kultural. Sadar.",
+      "pillars": {
+        "custom": {
+          "label": "Custom",
+          "body": "Sebagian besar karya kami berawal dari percakapan. Ukuran badan, motif, warna yang seseorang ingat dari sebuah upacara — busana made-to-order kami dipotong untuk satu orang, bukan untuk tabel ukuran. Prosesnya lebih lambat, dan justru itu maksudnya: tidak ada yang keluar dari atelier sebelum pas di badan orang yang memesannya."
+        },
+        "cultural": {
+          "label": "Kultural",
+          "body": "Setiap teknik yang kami pakai — bordir tuntun tangan, lukis tangan di atas kain, payet, batik — adalah teknik Indonesia, dan dikerjakan oleh pengrajin yang mempelajarinya di sini. Kami memperlakukan tradisi itu sebagai kriya yang hidup, bukan hiasan; artinya membayar layak untuk waktu yang dibutuhkan dan menyebut nama tangan-tangan yang mengerjakannya."
+        },
+        "conscious": {
+          "label": "Sadar",
+          "body": "Kami memproduksi dalam jumlah kecil, memilih kain yang bertahan lebih dari satu musim, dan mengolah sisa potongan menjadi patch art alih-alih membuangnya. Mode yang punya niat berarti memperhitungkan apa yang sehelai busana bebankan pada komunitas dan pulau tempat ia dibuat, bukan hanya berapa harganya."
+        }
+      }
+    },
+    "ourProduction": {
+      "hero": {
+        "title": "Produksi Kami",
+        "description": "Tangan terampil, kesabaran, dan tujuan — bagaimana sehelai busana Lindway benar-benar dibuat.",
+        "cta": "Lihat Selengkapnya"
+      },
+      "tabs": {
+        "process": "Proses Kami",
+        "craft": "Seni Kriya"
+      },
+      "processIntro": "Setiap karya Lindway berawal dari tangan terampil, kesabaran, dan tujuan—dikerjakan dengan cermat melalui teknik yang telah teruji waktu, desain yang dipikirkan matang, dan komitmen yang tak goyah pada kualitas serta keanggunan yang bertahan lama.",
+      "craftIntro": "Teknik tradisional, ungkapan modern, dan keindahan yang tak lekang waktu—setiap detailnya dikerjakan pengrajin yang mempelajari kriya ini di sini, di Bali.",
+      "craftImageAlt": "Kriya",
+      "steps": {
+        "design": {
+          "title": "Desain & Konsultasi",
+          "body": "Setiap karya dimulai di atas kertas dan, untuk pesanan khusus, dari percakapan. Siluet, motif, dan kain disepakati sebelum satu meter pun dipotong, jadi tidak ada yang diputuskan belakangan."
+        },
+        "fabric": {
+          "title": "Pemilihan Kain",
+          "body": "Tekstil dipilih berdasarkan ketahanannya bertahun-tahun, bukan semusim. Kami membeli sebanyak yang bisa kami pakai, dan sisanya disimpan untuk patch work alih-alih dibuang."
+        },
+        "cutting": {
+          "title": "Pemotongan & Penjahitan",
+          "body": "Pola dipotong dengan tangan di atelier kami di Denpasar. Karena produksinya kecil, satu pembuat biasanya membawa sehelai busana dari potong hingga selesai — dan itulah yang menjaga konsistensi jatuhnya."
+        },
+        "embellishment": {
+          "title": "Ornamen",
+          "body": "Bordir tuntun tangan, lukis tangan di atas kain, payet, dan batik dikerjakan oleh pengrajin yang terlatih pada tiap tekniknya. Ini tahap paling lambat, dan yang tidak pernah kami percepat."
+        },
+        "finishing": {
+          "title": "Penyelesaian & Pemeriksaan Mutu",
+          "body": "Jahitan, furing, dan kancing diperiksa satu per satu. Yang tidak lolos kembali ke pembuatnya, bukan masuk ke kotak."
+        },
+        "packing": {
+          "title": "Pengemasan & Pengiriman",
+          "body": "Pesanan dibungkus dan dikirim dari Denpasar, dengan nomor resi yang dikirimkan begitu paket berangkat."
+        }
+      }
+    },
+    "sustainability": {
+      "hero": {
+        "title": "Keberlanjutan",
+        "description": "Bahan yang dipikirkan, kriya yang tak lekang waktu, dan karya yang dibuat untuk bertahan lebih dari semusim.",
+        "cta": "Lihat Selengkapnya"
+      },
+      "statement": "Mode seharusnya meninggalkan sesuatu yang layak disimpan—bukan limbah yang tidak perlu.",
+      "pillarsHeading": "Pilar Keberlanjutan Kami",
+      "pillarsDescription": "Komitmen kami pada keberlanjutan dibangun dari pilihan yang dipikirkan—dari bahan yang bertanggung jawab dan kriya yang terampil hingga desain tak lekang waktu yang dibuat untuk bertahan.",
+      "pillars": {
+        "materials": {
+          "title": "Bahan yang Dipikirkan",
+          "body": "Kami memilih dengan cermat kain berkualitas tinggi yang awet, nyaman, dan dibuat untuk dipakai bertahun-tahun. Setiap bahan dipilih dengan mempertimbangkan ketahanan dan sumber yang bertanggung jawab."
+        },
+        "craftsmanship": {
+          "title": "Kriya Tak Lekang Waktu",
+          "body": "Setiap karya Lindway dikerjakan dengan presisi dan ketelitian oleh pengrajin terampil, memadukan teknik tradisional dengan konstruksi yang rapi untuk menghasilkan busana yang bertahan sepanjang waktu."
+        },
+        "longevity": {
+          "title": "Ketahanan yang Sadar",
+          "body": "Kami percaya lemari pakaian paling berkelanjutan adalah yang dibangun untuk bertahan. Dengan menciptakan desain tak lekang waktu alih-alih mengejar tren, kami mendorong pembelian yang penuh pertimbangan dan pemakaian yang panjang."
+        }
+      },
+      "journalHeading": "Melampaui Keberlanjutan",
+      "journalDescription": "Lampaui labelnya lewat cerita editorial tentang kriya, pemikiran sirkular, dan nilai bertahan dari mode yang tak lekang waktu."
+    },
+    "ourFabrics": {
+      "hero": {
+        "title": "Kain Kami",
+        "description": "Tekstil di balik setiap karya Lindway, dan untuk apa masing-masing paling cocok.",
+        "cta": "Lihat Selengkapnya"
+      },
+      "intro": "Di Lindway, kain lebih dari sekadar bahan — ia adalah awal dari setiap cerita yang kami sampaikan. Kami memilih setiap kain dengan cermat agar mencerminkan nilai kenyamanan, kualitas kerajinan tangan, dan seni yang menjadi ciri brand kami.",
+      "imageAlt": "Kain Lindway",
+      "fabrics": {
+        "cotton": "Ringan, sejuk, dan menyerap udara — cocok untuk hari-hari hangat dan siluet yang jatuh mengalir. Favorit untuk koleksi pakaian sehari-hari kami.",
+        "cottonVoile": "Seringan udara dan sangat menyerap udara, cotton voile adalah kain semi-transparan dengan permukaan halus dan rapi. Sempurna untuk furing lembut, blus yang jatuh mengalir, dan layering tipis—sejuk, nyaman, dan anggun tanpa berlebihan.",
+        "cottonLining": "Pilihan utama kami untuk lapisan dalam. Ringan, menyerap udara, dan bersahabat dengan kulit, cotton lining menjaga kenyamanan tanpa mengorbankan jatuhnya kain atau desain busana luar Anda.",
+        "cottonViscose": "Perpaduan yang menyerap udara, menggabungkan kelembutan katun dengan jatuhnya viscose yang anggun. Ringan, nyaman, dan mudah dipakai—cocok untuk busana sehari-hari dengan tampilan rapi.",
+        "sifon": "Tipis menerawang dan seringan bulu, sifon menambahkan lapisan kelembutan dan kesan romantis pada setiap desain. Sempurna untuk lapisan luar yang mengalir, lengan, dan siluet feminin yang bergerak dengan anggun.",
+        "linenCotton": "Perpaduan alami yang menyerap udara seperti linen dan lembut seperti katun. Teksturnya yang sedikit kasar memberi kesan santai yang tidak dibuat-buat—cocok untuk hari-hari hangat dan busana andalan yang tak lekang waktu.",
+        "organzaSemiSilk": "Tafsir yang lebih halus dari organza klasik—versi semi-sutra ini lebih lembut, lebih licin, dan lebih nyaman dipakai. Ia tetap menjaga bentuknya sekaligus lembut di kulit, menjadikannya ideal untuk layering yang berkelas dan gaya kebaya modern.",
+        "brocade": "Mewah dan bertekstur, brokat adalah kain tenun yang kaya motif rumit. Sering kami pakai untuk busana acara khusus, kain ini menghadirkan kesan tradisi dan kemegahan—setiap benangnya menyimpan cerita.",
+        "jacquard": "Ditenun dengan motif detail langsung pada kainnya, jacquard menambah struktur halus dan keanggunan yang tenang. Ideal untuk busana pernyataan yang menonjol lewat kerapian pengerjaannya."
+      }
+    }
   }
 }

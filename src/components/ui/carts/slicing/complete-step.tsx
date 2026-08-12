@@ -1,11 +1,20 @@
-import { Button } from "@/components";
+"use client";
 
-import { FaCheckCircle } from "react-icons/fa";
+import { StoreButton } from "@/components/ui/storefront";
 
 import { formatUnderscoreToSpace, formatIDR } from "@/utils";
 
 import { CheckoutFormData } from "@/types";
 
+import { PiCheckCircle } from "react-icons/pi";
+
+/**
+ * The closing step of the checkout wizard.
+ *
+ * It deliberately does not promise the order is paid: the receipt still has to be
+ * verified by hand before stock moves (§A5.3), and telling a buyer "payment received"
+ * a second after they upload an image would be a claim the system cannot yet make.
+ */
 
 interface CompleteStepProps {
   formData: CheckoutFormData;
@@ -14,46 +23,35 @@ interface CompleteStepProps {
   totalPurchased: number;
 }
 
-export const CompleteStep = ({ formData, totalItem, onClose, totalPurchased }: CompleteStepProps) => {
-  return (
-    <div className="text-center">
-      <div className="mb-6">
-        <FaCheckCircle size={48} className="mx-auto mb-4 text-green-500 sm:w-16 sm:h-16" />
-        <h2 className="mb-2 text-xl font-bold sm:text-2xl text-gray">Order Complete!</h2>
-        <p className="text-sm sm:text-base text-gray">
-          Thank you for your purchase! You&apos;ve successfully ordered {totalItem} item{totalItem > 1 ? "s" : ""}.
-        </p>
-      </div>
+const Row = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div className="flex items-start justify-between gap-4 py-3 border-b border-border last:border-b-0">
+    <span className="font-heading text-xxs uppercase tracking-[0.16em] text-body/55">{label}</span>
+    <span className="text-sm text-right text-body wrap-break-words">{children}</span>
+  </div>
+);
 
-      <div className="p-3 mb-6 border border-green-200 rounded-lg sm:p-4 bg-green-50">
-        <div className="space-y-2 text-sm text-left sm:text-base">
-          <div className="flex items-start justify-between">
-            <span className="text-gray">Order Total:</span>
-            <span className="font-semibold text-right">{formatIDR(totalPurchased)}</span>
-          </div>
-          <div className="flex items-start justify-between">
-            <span className="text-gray">Payment Method:</span>
-            <span className="font-semibold text-right">{formatUnderscoreToSpace(formData.paymentMethod)}</span>
-          </div>
-          <div className="flex items-start justify-between">
-            <span className="text-gray">Customer:</span>
-            <span className="font-semibold text-right wrap-break-words">{formData.fullname}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="mb-6 space-y-2">
-        <p className="text-xs sm:text-sm text-gray">
-          A confirmation email has been sent to <strong className="wrap-break-words">{formData.email}</strong>
-        </p>
-        <p className="text-xs sm:text-sm text-gray">Thank you for choosing us! 🙏</p>
-      </div>
-
-      <div className="mt-6">
-        <Button type="button" onClick={onClose} className="w-full btn-gray">
-          Continue Shopping
-        </Button>
-      </div>
+export const CompleteStep = ({ formData, totalItem, onClose, totalPurchased }: CompleteStepProps) => (
+  <div className="space-y-8">
+    <div className="space-y-3 text-center">
+      <PiCheckCircle className="mx-auto size-12 text-primary" />
+      <h2 className="text-2xl uppercase font-heading text-primary tracking-[0.06em]">Order Received</h2>
+      <p className="max-w-md mx-auto text-sm text-body/70">
+        Thank you — {totalItem} item{totalItem > 1 ? "s" : ""} {totalItem > 1 ? "are" : "is"} reserved for you. We verify every transfer by hand, usually within one working day, and email you as
+        soon as it clears.
+      </p>
     </div>
-  );
-};
+
+    <div className="border-t border-border">
+      <Row label="Order Total">
+        <span className="font-heading">{formatIDR(totalPurchased)}</span>
+      </Row>
+      <Row label="Payment Method">{formatUnderscoreToSpace(formData.paymentMethod)}</Row>
+      <Row label="Name">{formData.fullname}</Row>
+      <Row label="Confirmation Sent To">{formData.email}</Row>
+    </div>
+
+    <StoreButton onClick={onClose} className="w-full">
+      Continue Shopping
+    </StoreButton>
+  </div>
+);

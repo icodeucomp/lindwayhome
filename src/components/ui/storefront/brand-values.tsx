@@ -1,39 +1,42 @@
 import { PiCertificate, PiFlowerLotus, PiHandHeart, PiHeadset, PiScissors, PiSealCheck, PiSwatches, PiTruck, PiUsersThree } from "react-icons/pi";
 
+import type { Dictionary } from "@/i18n/get-dictionary";
+
 import type { Feature } from "./ui";
 
 /**
  * The nine brand promises. They appear as two strips on the homepage and as the
  * complete "Why Choose Us?" grid on About (reference/Homepage, About Us.png), so they
  * are declared once and sliced rather than retyped per page.
+ *
+ * Only the icon lives here; the wording is in `pages.brandValues`. Each export is a
+ * function of the dictionary rather than a ready-made array, because a module-level
+ * array would freeze whichever locale imported it first — and these are imported by
+ * pages in both languages within the same process.
  */
-const values = {
-  handcrafted: { icon: <PiScissors />, title: "Handcrafted", description: "By local artisans in Bali" },
-  premiumFabrics: { icon: <PiSwatches />, title: "Premium Fabrics", description: "Carefully selected for comfort & beauty" },
-  madeToOrder: { icon: <PiCertificate />, title: "Made to Order", description: "Just for you" },
-  timelessDesign: { icon: <PiFlowerLotus />, title: "Timeless Design", description: "Made to be loved today and forever" },
-  worldwideShipping: { icon: <PiTruck />, title: "Worldwide Shipping", description: "Delivering joy to your door, wherever you are." },
-  sustainableFashion: { icon: <PiHandHeart />, title: "Sustainable Fashion", description: "Thoughtful choices for a better tomorrow" },
-  ethicalProduction: { icon: <PiUsersThree />, title: "Ethical Production", description: "Supporting local artisans and preserving heritage" },
-  exclusiveDesign: { icon: <PiSealCheck />, title: "Exclusive Design", description: "Created in our Bali atelier" },
-  customerCare: { icon: <PiHeadset />, title: "Customer Care", description: "We are here to help you" },
-} satisfies Record<string, Feature>;
+
+type ValueKey = keyof Dictionary["pages"]["brandValues"];
+
+const ICONS: Record<ValueKey, React.ReactNode> = {
+  handcrafted: <PiScissors />,
+  premiumFabrics: <PiSwatches />,
+  madeToOrder: <PiCertificate />,
+  timelessDesign: <PiFlowerLotus />,
+  worldwideShipping: <PiTruck />,
+  sustainableFashion: <PiHandHeart />,
+  ethicalProduction: <PiUsersThree />,
+  exclusiveDesign: <PiSealCheck />,
+  customerCare: <PiHeadset />,
+};
+
+const resolve = (t: Dictionary, keys: readonly ValueKey[]): Feature[] => keys.map((key) => ({ icon: ICONS[key], ...t.pages.brandValues[key] }));
 
 /** Under the homepage hero. */
-export const craftValues: Feature[] = [values.handcrafted, values.premiumFabrics, values.madeToOrder, values.timelessDesign, values.worldwideShipping];
+export const craftValues = (t: Dictionary) => resolve(t, ["handcrafted", "premiumFabrics", "madeToOrder", "timelessDesign", "worldwideShipping"]);
 
 /** Above "Seen With Lindway". */
-export const careValues: Feature[] = [values.sustainableFashion, values.ethicalProduction, values.exclusiveDesign, values.customerCare];
+export const careValues = (t: Dictionary) => resolve(t, ["sustainableFashion", "ethicalProduction", "exclusiveDesign", "customerCare"]);
 
 /** About "Why Choose Us?" — column order in the mockup, not the declaration order. */
-export const allValues: Feature[] = [
-  values.handcrafted,
-  values.timelessDesign,
-  values.ethicalProduction,
-  values.premiumFabrics,
-  values.worldwideShipping,
-  values.exclusiveDesign,
-  values.madeToOrder,
-  values.sustainableFashion,
-  values.customerCare,
-];
+export const allValues = (t: Dictionary) =>
+  resolve(t, ["handcrafted", "timelessDesign", "ethicalProduction", "premiumFabrics", "worldwideShipping", "exclusiveDesign", "madeToOrder", "sustainableFashion", "customerCare"]);

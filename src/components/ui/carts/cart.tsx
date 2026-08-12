@@ -2,9 +2,7 @@
 
 import * as React from "react";
 
-import { useRouter } from "next/navigation";
-
-import { useCartStore, useIsHydrated, useLocaleHref } from "@/hooks";
+import { useCartStore, useIsHydrated } from "@/hooks";
 
 import toast from "react-hot-toast";
 
@@ -12,13 +10,20 @@ import { OrderSummary } from "./order-summary";
 
 import { CartCategory, CartHeader, CartSummary } from "./slicing";
 
-import { Container, Button } from "@/components";
+import { Container } from "@/components";
 
-import { FaShoppingCart } from "react-icons/fa";
+import { Breadcrumb, SectionHeading, StoreEmptyState, StoreLinkButton, StoreSkeletonGrid } from "@/components/ui/storefront";
 
+/**
+ * The cart page (F-8). Lines are grouped by brand, only *selected* lines check out, and
+ * nothing here is stored server-side — the cart lives in localStorage until the order is
+ * created (F-6).
+ *
+ * Checkout itself opens as a modal wizard (`OrderSummary`), which is where the address
+ * form, the shipping quote and the signed token live. None of that moved (D8); this file
+ * only decides what is selected and hands over the count and the subtotal.
+ */
 export const CartProduct = () => {
-  const router = useRouter();
-  const localeHref = useLocaleHref();
   const {
     cart,
     selectedItems,
@@ -39,68 +44,69 @@ export const CartProduct = () => {
   // Cart lives in localStorage, so the first paint cannot know it yet.
   const isHydrated = useIsHydrated();
 
-  const cartItems = React.useMemo(() => {
-    return Object.entries(
-      cart.reduce(
-        (acc, product) => {
-          const brand = product.brand;
-          if (!acc[brand]) {
-            acc[brand] = [];
-          }
-          acc[brand].push(product);
-          return acc;
-        },
-        {} as Record<string, typeof cart>,
+  const cartItems = React.useMemo(
+    () =>
+      Object.entries(
+        cart.reduce(
+          (acc, product) => {
+            (acc[product.brand] ??= []).push(product);
+            return acc;
+          },
+          {} as Record<string, typeof cart>,
+        ),
       ),
-    );
-  }, [cart]);
+    [cart],
+  );
 
   const handleBuyNow = React.useCallback(() => {
     if (getSelectedCount() === 0) {
-      toast.error("Please select at least one item to proceed.");
+      toast.error("Select at least one item to continue.");
       return;
     }
     setIsModalOpen(true);
   }, [getSelectedCount]);
 
+  // Confirmed because it is plural and irreversible. Removing a single line is not —
+  // it matches the drawer, where a mis-tap costs one re-add rather than the whole bag.
   const handleRemoveSelected = React.useCallback(() => {
-    if (!window.confirm("Are you sure you want to delete selected items?")) return;
+    if (!window.confirm("Remove the selected items from your bag?")) return;
     removeSelectedItems();
-    toast.success("Selected items removed from cart");
+    toast.success("Selected items removed");
   }, [removeSelectedItems]);
 
   const handleRemoveItem = React.useCallback(
     (id: string, size: string) => {
-      if (!window.confirm("Remove this item from cart?")) return;
       removeFromCart(id, size);
-      toast.success("Item removed from cart");
+      toast.success("Item removed");
     },
     [removeFromCart],
   );
 
+  const header = (
+    <>
+      <Breadcrumb tone="dark" items={[{ name: "Home", href: "/" }, { name: "Your Bag" }]} />
+      <SectionHeading title="Your Bag" description="Review your pieces, then continue to checkout." />
+    </>
+  );
+
   if (!isHydrated) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="loader"></div>
-      </div>
+      <Container className="py-12 space-y-8">
+        {header}
+        <StoreSkeletonGrid count={3} />
+      </Container>
     );
   }
 
   if (cart.length === 0) {
     return (
-      <Container className="py-10">
-        <div className="p-4 mb-4 text-center rounded-lg sm:p-8 bg-light">
-          <div className="flex flex-col items-center space-y-4">
-            <FaShoppingCart className="text-4xl sm:text-6xl text-gray/50" />
-            <div className="space-y-2">
-              <h3 className="text-lg font-medium sm:text-xl text-darker-gray">Your cart is empty</h3>
-              <p className="text-sm sm:text-base text-gray/70">Add some products to get started</p>
-            </div>
-            <Button type="button" onClick={() => router.push(localeHref("/my-lindway"))} className="px-6 py-2 mt-4 rounded-lg bg-primary hover:bg-primary/90 text-light">
-              Continue Shopping
-            </Button>
-          </div>
-        </div>
+      <Container className="py-12 space-y-8">
+        {header}
+        <StoreEmptyState
+          title="Your bag is empty"
+          description="Nothing here yet — start with the new arrivals, or browse the whole catalogue."
+          action={<StoreLinkButton href="/shop">Start Shopping</StoreLinkButton>}
+        />
       </Container>
     );
   }
@@ -109,23 +115,17 @@ export const CartProduct = () => {
   const selectedCount = getSelectedCount();
   const selectedTotal = getSelectedTotal();
 
+  const toggleAll = () => (isAllSelected ? deselectAllItems() : selectAllItems());
+
   return (
-    <Container className="py-6 sm:py-10">
+    <Container className="py-12 space-y-8">
       <OrderSummary isVisible={isModalOpen} onClose={() => setIsModalOpen(false)} price={selectedTotal} totalItem={selectedCount} />
 
-      <CartHeader
-        cart={cart}
-        isAllSelected={isAllSelected}
-        onSelectAll={() => {
-          if (isAllSelected) {
-            deselectAllItems();
-          } else {
-            selectAllItems();
-          }
-        }}
-      />
+      {header}
 
-      <div className="space-y-4 sm:space-y-6">
+      <div>
+        <CartHeader cart={cart} isAllSelected={isAllSelected} onSelectAll={toggleAll} />
+
         {cartItems.map(([brand, products]) => (
           <CartCategory
             key={brand}
@@ -140,23 +140,17 @@ export const CartProduct = () => {
             onRemoveItem={handleRemoveItem}
           />
         ))}
-      </div>
 
-      <CartSummary
-        cart={cart}
-        selectedCount={selectedCount}
-        selectedTotal={selectedTotal}
-        isAllSelected={isAllSelected}
-        onSelectAll={() => {
-          if (isAllSelected) {
-            deselectAllItems();
-          } else {
-            selectAllItems();
-          }
-        }}
-        onRemoveSelected={handleRemoveSelected}
-        onBuyNow={handleBuyNow}
-      />
+        <CartSummary
+          cart={cart}
+          selectedCount={selectedCount}
+          selectedTotal={selectedTotal}
+          isAllSelected={isAllSelected}
+          onSelectAll={toggleAll}
+          onRemoveSelected={handleRemoveSelected}
+          onBuyNow={handleBuyNow}
+        />
+      </div>
     </Container>
   );
 };

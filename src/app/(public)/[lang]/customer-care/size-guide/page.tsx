@@ -20,15 +20,20 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   return localizedMetadata(lang, "/customer-care/size-guide", t.meta.sizeGuide);
 }
 
-export default function SizeGuidePage() {
+export default async function SizeGuidePage({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params;
+  // The layout already 404s an unknown locale; falling back keeps the types honest.
+  const t = await getDictionary(isLocale(lang) ? lang : "en");
+  const copy = t.pages.sizeGuide;
+
   return (
     <>
       <PageHero
-        title="Size Guide"
-        description="Find the size that fits you best — or ask us for a custom fit."
+        title={copy.hero.title}
+        description={copy.hero.description}
         image={PLACEHOLDER_IMAGE}
         crumbs={[{ name: "Home", href: "/" }, { name: "Customer Care" }, { name: "Size Guide" }]}
-        cta="Discover Now"
+        cta={copy.hero.cta}
       />
       <SizeGuideContent />
       <EverySnap />

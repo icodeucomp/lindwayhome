@@ -20,9 +20,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 export default function CartPage() {
   return (
     <>
-      <div className="bg-muted">
-        <CartProduct />
-      </div>
+      <CartProduct />
       <EverySnap />
     </>
   );

@@ -19,15 +19,20 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   return localizedMetadata(lang, "/customer-care/how-to-shop", t.meta.howToShop);
 }
 
-export default function HowToShopPage() {
+export default async function HowToShopPage({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params;
+  // The layout already 404s an unknown locale; falling back keeps the types honest.
+  const t = await getDictionary(isLocale(lang) ? lang : "en");
+  const copy = t.pages.howToShop;
+
   return (
     <>
       <PageHero
-        title="How to Shop"
-        description="At Lindway, we aim to make your shopping experience as seamless and personal as our designs."
+        title={copy.hero.title}
+        description={copy.hero.description}
         image={PLACEHOLDER_IMAGE}
         crumbs={[{ name: "Home", href: "/" }, { name: "Customer Care" }, { name: "How to Shop" }]}
-        cta="Discover Now"
+        cta={copy.hero.cta}
       />
       <HowToShop />
       <EverySnap />

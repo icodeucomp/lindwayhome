@@ -19,17 +19,22 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   return localizedMetadata(lang, "/customer-care/return-exchanges", t.meta.returnExchanges);
 }
 
-export default function ReturnExchangesPage() {
+export default async function ReturnExchangesPage({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params;
+  // The layout already 404s an unknown locale; falling back keeps the types honest.
+  const t = await getDictionary(isLocale(lang) ? lang : "en");
+  const copy = t.pages.returnExchanges;
+
   return (
     <>
       <PageHero
-        title="Return & Exchanges"
-        description="Clear and straightforward return and exchange terms for your peace of mind."
+        title={copy.hero.title}
+        description={copy.hero.description}
         image={PLACEHOLDER_IMAGE}
         crumbs={[{ name: "Home", href: "/" }, { name: "Customer Care" }, { name: "Return & Exchanges" }]}
-        cta="Discover Now"
+        cta={copy.hero.cta}
       />
-      <ReturnExchanges />
+      <ReturnExchanges dictionary={t} />
       <EverySnap />
     </>
   );

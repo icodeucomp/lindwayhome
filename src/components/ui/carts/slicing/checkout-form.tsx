@@ -2,9 +2,11 @@
 
 import * as React from "react";
 
-import { Button, NumberInput } from "@/components";
+import { NumberInput } from "@/components";
 
-import { FaCreditCard } from "react-icons/fa";
+import { StoreButton } from "@/components/ui/storefront";
+
+import { PiLockSimple } from "react-icons/pi";
 
 import Select from "react-select";
 
@@ -212,40 +214,43 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
     onSubmit(sanitizedData, currentFormErrors);
   };
 
+  const Label = ({ id, label, required }: { id: string; label: string; required: boolean }) => (
+    <label htmlFor={id} className="mb-1.5 block font-heading text-xxs uppercase tracking-[0.16em] text-body/55">
+      {label}
+      {required && <span className="text-primary"> *</span>}
+    </label>
+  );
+
   const renderFieldText = (id: string, label: string, type: string = "text", placeholder: string = "", required: boolean = true, disabled: boolean = false) => (
     <div className="space-y-1">
-      <label htmlFor={id} className="block mb-1 text-sm font-medium">
-        {label} {required && "*"}
-      </label>
+      <Label id={id} label={label} required={required} />
       <input
         type={type}
         id={id}
         name={id}
         value={currentFormData[id as keyof typeof currentFormData] as string}
         onChange={handleChange}
-        className={`input-form w-full ${currentFormErrors[id] ? "border-red-500" : "border-gray/30"} ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+        className={`input-form w-full ${currentFormErrors[id] ? "border-primary" : ""} ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
         placeholder={placeholder}
         disabled={disabled}
       />
-      {currentFormErrors[id] && <p className="text-sm text-red-500">{currentFormErrors[id]}</p>}
+      {currentFormErrors[id] && <p className="mt-1.5 text-xs text-primary">{currentFormErrors[id]}</p>}
     </div>
   );
 
   const renderFieldNumber = (id: string, label: string, placeholder: string = "", required: boolean = true, disabled: boolean = false) => (
     <div className="space-y-1">
-      <label htmlFor={id} className="block mb-1 text-sm font-medium">
-        {label} {required && "*"}
-      </label>
+      <Label id={id} label={label} required={required} />
       <NumberInput
         id={id}
         name={id}
         value={Number(currentFormData[id as keyof typeof currentFormData]) === 0 ? "" : Number(currentFormData[id as keyof typeof currentFormData])}
         onChange={handleChange}
-        className={`input-form w-full ${currentFormErrors[id] ? "border-red-500" : "border-gray/30"} ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+        className={`input-form w-full ${currentFormErrors[id] ? "border-primary" : ""} ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
         placeholder={placeholder}
         disabled={disabled}
       />
-      {currentFormErrors[id] && <p className="text-sm text-red-500">{currentFormErrors[id]}</p>}
+      {currentFormErrors[id] && <p className="mt-1.5 text-xs text-primary">{currentFormErrors[id]}</p>}
     </div>
   );
 
@@ -281,16 +286,16 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
           className="react-select-container"
           noOptionsMessage={() => "No options available"}
         />
-        {currentFormErrors[id] && <p className="text-sm text-red-500">{currentFormErrors[id]}</p>}
+        {currentFormErrors[id] && <p className="mt-1.5 text-xs text-primary">{currentFormErrors[id]}</p>}
       </div>
     );
   };
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <h2 className="text-xl font-bold sm:text-2xl text-gray">Checkout</h2>
+      <h2 className="text-xl uppercase font-heading text-primary tracking-[0.06em]">Delivery Details</h2>
 
-      <div className="space-y-3 sm:space-y-4 text-gray">
+      <div className="space-y-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
           <div>{renderFieldText("email", "Email Address", "email", "your@email.com")}</div>
           <div>{renderFieldText("fullname", "Full Name", "text", "John Doe")}</div>
@@ -309,24 +314,20 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
       </div>
 
       {isAddressComplete && isCheckoutLoading && (
-        <div className="p-3 text-sm rounded-lg bg-gray/5 text-gray">
-          <p className="flex items-center gap-2">
-            <span className="inline-block w-4 h-4 border-2 border-gray rounded-full animate-spin border-t-transparent" />
-            Calculating shipping cost...
-          </p>
-        </div>
+        <p className="flex items-center gap-2 px-4 py-3 text-xs border border-border bg-muted text-body/70">
+          <span className="inline-block border-2 rounded-full size-3 animate-spin border-primary border-t-transparent" />
+          Calculating shipping…
+        </p>
       )}
 
       {isAddressComplete && isCheckoutError && (
-        <div className="p-3 text-sm rounded-lg bg-red-50 text-red-700">
-          <p>Unable to calculate shipping. Please verify your address details.</p>
-        </div>
+        <p className="px-4 py-3 text-xs border border-primary/40 bg-primary/5 text-primary">Unable to calculate shipping — please check the address above.</p>
       )}
 
       {isRequiredFieldsFilled && checkoutData && parameter && (
-        <div className="p-3 mb-2 rounded-lg sm:p-4 bg-gray/5 text-gray">
-          <h4 className="mb-3 text-sm font-semibold sm:text-base">Order Summary</h4>
-          <div className="space-y-2 text-sm">
+        <div className="p-5 space-y-3 border border-border bg-muted">
+          <p className="font-heading text-xxs uppercase tracking-[0.16em] text-body/55">Order Summary</p>
+          <div className="space-y-2 text-sm text-body">
             <div className="flex justify-between">
               <span>
                 Subtotal ({totalItem} item{totalItem > 1 ? "s" : ""})
@@ -334,22 +335,22 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
               <span>{formatIDR(price)}</span>
             </div>
 
-            <div className="flex items-center justify-between text-gray">
+            <div className="flex items-center justify-between">
               <span>Shipping</span>
               {isCheckoutLoading ? (
-                <span className="flex items-center gap-1 text-gray">
-                  <span className="inline-block w-3 h-3 border-2 border-gray rounded-full animate-spin border-t-transparent" />
+                <span className="flex items-center gap-1 text-body/60">
+                  <span className="inline-block border-2 rounded-full size-3 animate-spin border-primary border-t-transparent" />
                   Calculating...
                 </span>
               ) : isCheckoutError ? (
-                <span className="text-red-500">Error</span>
+                <span className="text-primary">Unavailable</span>
               ) : (
-                <span className={shippingData?.cost === 0 ? "text-green-600" : "text-red-500"}>{shippingData?.cost === 0 ? "Free" : `+${formatIDR(shippingData?.cost || 0)}`}</span>
+                <span>{shippingData?.cost === 0 ? "Free" : `+${formatIDR(shippingData?.cost || 0)}`}</span>
               )}
             </div>
 
             {shippingData && !isCheckoutLoading && !isCheckoutError && (
-              <div className="pl-4 space-y-1 text-xs text-gray/70">
+              <div className="pl-4 space-y-1 text-xs text-body/55">
                 <p>
                   Zone: {shippingData.zone} • Distance: {shippingData.distance_km.toFixed(2)} km
                 </p>
@@ -357,29 +358,29 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
               </div>
             )}
 
-            <div className="flex items-center justify-between text-gray">
+            <div className="flex items-center justify-between">
               <span>Tax</span>
-              <span className={Number(parameter.tax_rate) === 0 ? "text-green-600" : "text-red-500"}>
+              <span>
                 {Number(parameter.tax_rate) === 0 ? "Free" : parameter.tax_type === DiscountType.FIXED ? `+${formatIDR(Number(parameter.tax_rate))}` : `+${Number(parameter.tax_rate)}%`}
               </span>
             </div>
 
-            <div className="flex items-center justify-between text-gray">
+            <div className="flex items-center justify-between">
               <span>Promo</span>
-              <span className="text-green-600">
+              <span>
                 {parameter.promo_type === DiscountType.FIXED ? `-${formatIDR(Number(parameter.promotion_discount))}` : `-${Number(parameter.promotion_discount)}%`}
               </span>
             </div>
 
             {checkoutData.data.isMember && (
-              <div className="flex items-center justify-between text-gray">
+              <div className="flex items-center justify-between">
                 <span>Member Discount</span>
-                <span className="text-green-600">{parameter.member_type === DiscountType.FIXED ? `-${formatIDR(Number(parameter.member_discount))}` : `-${Number(parameter.member_discount)}%`}</span>
+                <span>{parameter.member_type === DiscountType.FIXED ? `-${formatIDR(Number(parameter.member_discount))}` : `-${Number(parameter.member_discount)}%`}</span>
               </div>
             )}
 
-            <div className="pt-2 mt-2 border-t">
-              <div className="flex justify-between text-base font-bold sm:text-lg">
+            <div className="pt-3 mt-3 border-t border-border">
+              <div className="flex justify-between text-lg font-heading">
                 <span>Total</span>
                 <span>{formatIDR(checkoutData.data.totalPurchased)}</span>
               </div>
@@ -388,19 +389,19 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
         </div>
       )}
 
-      <div className="flex flex-col-reverse items-center w-full gap-2 sm:flex-row sm:gap-4">
-        <Button type="button" onClick={onCancel} className="w-full btn-outline">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row">
+        <StoreButton type="button" variant="outline" onClick={onCancel} className="w-full">
           Cancel
-        </Button>
-        <Button type="button" onClick={handleFormSubmit} className="flex items-center justify-center w-full gap-2 btn-gray" disabled={!canSubmit}>
-          <FaCreditCard size={18} />
-          Next
-        </Button>
+        </StoreButton>
+        <StoreButton type="button" onClick={handleFormSubmit} disabled={!canSubmit} className="w-full">
+          Continue to Payment
+        </StoreButton>
       </div>
 
-      <div className="mt-4 text-center">
-        <p className="text-xs text-darker-gray">🔒 Secure checkout process</p>
-      </div>
+      <p className="flex items-center justify-center gap-1.5 text-xxs text-body/50">
+        <PiLockSimple className="size-3" />
+        Prices are re-checked on our server before your order is created.
+      </p>
     </div>
   );
 };

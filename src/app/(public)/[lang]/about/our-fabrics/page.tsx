@@ -19,17 +19,21 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   return localizedMetadata(lang, "/about/our-fabrics", t.meta.ourFabrics);
 }
 
-export default function OurFabricsPage() {
+export default async function OurFabricsPage({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params;
+  const t = await getDictionary(isLocale(lang) ? lang : "en");
+  const copy = t.pages.ourFabrics;
+
   return (
     <>
       {/* The intro sentence moved into the page body below the hero, where the design
           puts it — repeating it here would say the same thing twice in one screen. */}
       <PageHero
-        title="Our Fabrics"
-        description="The textiles behind every Lindway piece, and what each one is best suited to."
+        title={copy.hero.title}
+        description={copy.hero.description}
         image={PLACEHOLDER_IMAGE}
         crumbs={[{ name: "Home", href: "/" }, { name: "About" }, { name: "Our Fabrics" }]}
-        cta="Discover Now"
+        cta={copy.hero.cta}
       />
       <OurFabrics />
     </>

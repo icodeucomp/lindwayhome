@@ -6,13 +6,11 @@ import { useCartStore } from "@/hooks";
 
 import toast from "react-hot-toast";
 
-import { CheckoutForm, CompleteStep, PaymentStep } from "./slicing";
+import { CheckoutForm, CheckoutSteps, CompleteStep, PaymentStep, type CheckoutStep } from "./slicing";
 
 import { Modal } from "@/components";
 import { orderCheckoutApi } from "@/utils";
 import { CheckoutFormData, PaymentMethods } from "@/types";
-
-type CheckoutStep = "summary" | "payment" | "complete";
 
 const initFormData: CheckoutFormData = {
   email: "",
@@ -103,7 +101,9 @@ export const OrderSummary = ({ isVisible, onClose, price, totalItem }: OrderSumm
         onClose();
       }}
     >
-      <>
+      <div className="space-y-6">
+        <CheckoutSteps current={currentStep} />
+
         {currentStep === "summary" && (
           <CheckoutForm
             formData={formData}
@@ -119,7 +119,7 @@ export const OrderSummary = ({ isVisible, onClose, price, totalItem }: OrderSumm
           <PaymentStep formData={formData} setFormData={setFormData} onBack={() => setCurrentStep("summary")} onSubmit={handlePaymentSubmit} isLoading={createOrder.isPending} />
         )}
         {currentStep === "complete" && <CompleteStep formData={formData} totalItem={totalItem} totalPurchased={formData.totalPurchased} onClose={handleClose} />}
-      </>
+      </div>
     </Modal>
   );
 };

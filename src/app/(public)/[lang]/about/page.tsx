@@ -25,21 +25,25 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
  * sketched. Our Story and Our Artisan are sections here; Our Production, Sustainability
  * and Our Fabrics keep their own routes because they have their own mockups.
  */
-export default function AboutPage() {
+export default async function AboutPage({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params;
+  const t = await getDictionary(isLocale(lang) ? lang : "en");
+  const copy = t.pages.about;
+
   return (
     <>
       <PageHero
-        title="About Us"
-        description="A house of artisanal fashion, built in Denpasar by the hands of local craftspeople."
+        title={copy.hero.title}
+        description={copy.hero.description}
         image={PLACEHOLDER_IMAGE}
         crumbs={[{ name: "Home", href: "/" }, { name: "About" }]}
-        cta="Explore Now"
+        cta={copy.hero.cta}
       />
-      <OurStory />
+      <OurStory dictionary={t} />
       <Philosophy />
-      <WhyChooseUs />
-      <ArtisanJourney />
-      <SustainabilityPromo />
+      <WhyChooseUs dictionary={t} />
+      <ArtisanJourney dictionary={t} />
+      <SustainabilityPromo dictionary={t} />
       <EverySnap />
     </>
   );

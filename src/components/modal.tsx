@@ -4,7 +4,7 @@ import * as React from "react";
 
 import { motion } from "framer-motion";
 
-import { RxCross1 } from "react-icons/rx";
+import { PiX } from "react-icons/pi";
 
 import { ModalProps } from "@/types";
 
@@ -32,8 +32,15 @@ export const Modal = ({ isVisible, onClose, children, isSmall = false }: ModalPr
         exit={{ opacity: 0, scale: 0.8 }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
       >
-        <button className="btn-cross-border group" onClick={onClose}>
-          <RxCross1 size={20} className="text-body group-hover:text-light" />
+        {/* Square, bordered, and on-palette — the round outlined circle it replaced was
+            the only round control left in the storefront. */}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute z-10 grid transition-colors border top-4 right-4 size-9 place-items-center border-border text-body hover:border-primary hover:text-primary"
+        >
+          <PiX className="size-4" />
         </button>
         <div className="p-5 overflow-y-auto md:px-10" style={{ maxHeight: "calc(100vh - 4rem)" }}>
           {children}

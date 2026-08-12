@@ -20,17 +20,22 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   return localizedMetadata(lang, "/customer-care/shipping-delivery", t.meta.shippingDelivery);
 }
 
-export default function ShippingDeliveryPage() {
+export default async function ShippingDeliveryPage({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params;
+  // The layout already 404s an unknown locale; falling back keeps the types honest.
+  const t = await getDictionary(isLocale(lang) ? lang : "en");
+  const copy = t.pages.shippingDelivery;
+
   return (
     <>
       <PageHero
-        title="Shipping & Delivery"
-        description="How long your order takes, where we ship, and what happens after you pay."
+        title={copy.hero.title}
+        description={copy.hero.description}
         image={PLACEHOLDER_IMAGE}
         crumbs={[{ name: "Home", href: "/" }, { name: "Customer Care" }, { name: "Shipping & Delivery" }]}
-        cta="Discover Now"
+        cta={copy.hero.cta}
       />
-      <ShippingDelivery />
+      <ShippingDelivery dictionary={t} />
       <EverySnap />
     </>
   );

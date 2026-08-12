@@ -20,15 +20,20 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   return localizedMetadata(lang, "/customer-care/faq", t.meta.faq);
 }
 
-export default function FaqPage() {
+export default async function FaqPage({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params;
+  // The layout already 404s an unknown locale; falling back keeps the types honest.
+  const t = await getDictionary(isLocale(lang) ? lang : "en");
+  const copy = t.pages.faq;
+
   return (
     <>
       <PageHero
-        title="Frequently Asked Questions"
-        description="Answers to what we are asked most — ordering, shipping, sizing and care."
+        title={copy.hero.title}
+        description={copy.hero.description}
         image={PLACEHOLDER_IMAGE}
         crumbs={[{ name: "Home", href: "/" }, { name: "Customer Care" }, { name: "FAQ" }]}
-        cta="Explore Now"
+        cta={copy.hero.cta}
       />
       <FaqContent />
       <EverySnap />

@@ -1,6 +1,21 @@
+"use client";
+
 import { brandByKey, type BrandType } from "@/static/taxonomy";
+
 import { CartItems } from "./cart-items";
+
 import { ProductCartItems } from "@/types";
+
+/**
+ * One brand's worth of cart lines (F-8).
+ *
+ * The brand heading is an uppercase letterspaced eyebrow rather than a pill, matching
+ * how every other storefront section labels a group.
+ *
+ * The group checkbox carries three states: checked, unchecked, and indeterminate when
+ * only some of its lines are selected. `indeterminate` is a DOM property with no HTML
+ * attribute, so it can only be set through a ref — React will not render it from JSX.
+ */
 
 interface CartCategoryProps {
   brand: string;
@@ -15,53 +30,28 @@ interface CartCategoryProps {
 }
 
 export const CartCategory = ({ brand, products, isSelected, isPartiallySelected, selectedItems, onToggleCategory, onToggleItem, onUpdateQuantity, onRemoveItem }: CartCategoryProps) => {
-  return (
-    <div className="overflow-hidden text-sm rounded-lg bg-light text-gray">
-      <div className="p-4 border-b border-gray/30">
-        <div className="hidden grid-cols-12 gap-4 lg:grid">
-          <div className="col-span-1">
-            <input
-              type="checkbox"
-              className="rounded size-4 accent-primary"
-              checked={isSelected}
-              ref={(input) => {
-                if (input) {
-                  input.indeterminate = isPartiallySelected;
-                }
-              }}
-              onChange={onToggleCategory}
-            />
-          </div>
-          <div className="flex items-center col-span-4 space-x-2">
-            <span className="px-3 py-1 text-xs font-medium rounded-lg bg-primary/10 text-primary">{brandByKey(brand as BrandType)?.label ?? brand}</span>
-            <span className="text-sm text-gray">
-              ({products.length} item{products.length > 1 ? "s" : ""})
-            </span>
-          </div>
-        </div>
+  const label = brandByKey(brand as BrandType)?.label ?? brand;
 
-        <div className="flex items-center justify-between lg:hidden">
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              className="rounded size-4 accent-primary"
-              checked={isSelected}
-              ref={(input) => {
-                if (input) {
-                  input.indeterminate = isPartiallySelected;
-                }
-              }}
-              onChange={onToggleCategory}
-            />
-            <span className="px-3 py-1 text-xs font-medium rounded-lg bg-primary/10 text-primary">{brandByKey(brand as BrandType)?.label ?? brand}</span>
-          </div>
-          <span className="text-sm text-gray">
-            {products.length} item{products.length > 1 ? "s" : ""}
-          </span>
-        </div>
+  return (
+    <section className="border-t border-border">
+      <div className="flex items-center gap-3 py-5">
+        <input
+          type="checkbox"
+          className="rounded-none size-4 accent-primary"
+          checked={isSelected}
+          ref={(input) => {
+            if (input) input.indeterminate = isPartiallySelected;
+          }}
+          onChange={onToggleCategory}
+          aria-label={`Select all ${label} items`}
+        />
+        <p className="font-heading text-sm uppercase tracking-[0.14em] text-primary">{label}</p>
+        <span className="text-xs text-body/60">
+          {products.length} item{products.length > 1 ? "s" : ""}
+        </span>
       </div>
 
-      <div className="divide-y divide-gray/10">
+      <div className="border-t border-border">
         {products.map((product) => (
           <CartItems
             key={`${product.id}-${product.selectedSize}`}
@@ -73,6 +63,6 @@ export const CartCategory = ({ brand, products, isSelected, isPartiallySelected,
           />
         ))}
       </div>
-    </div>
+    </section>
   );
 };

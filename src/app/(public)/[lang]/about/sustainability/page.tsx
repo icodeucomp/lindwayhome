@@ -20,7 +20,10 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   return localizedMetadata(lang, "/about/sustainability", t.meta.sustainability);
 }
 
-export default function SustainabilityPage() {
+export default async function SustainabilityPage({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params;
+  const t = await getDictionary(isLocale(lang) ? lang : "en");
+
   return (
     <>
       <PageHero
@@ -31,7 +34,7 @@ export default function SustainabilityPage() {
         cta="Discover Now"
       />
       <SustainabilityContent />
-      <FeatureStrip items={careValues} />
+      <FeatureStrip items={careValues(t)} />
       <EverySnap />
     </>
   );
