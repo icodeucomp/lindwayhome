@@ -37,7 +37,7 @@ const QuantityStepper = ({ product, onUpdateQuantity }: Pick<CartItemsProps, "pr
       onClick={() => onUpdateQuantity(product.id, product.selectedSize, product.quantity - 1)}
       disabled={product.quantity <= 1}
       aria-label="Decrease quantity"
-      className="grid size-9 place-items-center text-body hover:text-primary disabled:opacity-35 disabled:hover:text-body"
+      className="grid size-9 place-items-center text-body hover:text-primary disabled:opacity-35 disabled:hover:text-body hover:cursor-pointer"
     >
       <PiMinus className="size-3" />
     </button>
@@ -46,7 +46,7 @@ const QuantityStepper = ({ product, onUpdateQuantity }: Pick<CartItemsProps, "pr
       type="button"
       onClick={() => onUpdateQuantity(product.id, product.selectedSize, product.quantity + 1)}
       aria-label="Increase quantity"
-      className="grid size-9 place-items-center text-body hover:text-primary"
+      className="grid size-9 place-items-center text-body hover:text-primary hover:cursor-pointer"
     >
       <PiPlus className="size-3" />
     </button>
@@ -61,7 +61,7 @@ export const CartItems = ({ product, isSelected, onToggleItem, onUpdateQuantity,
   const checkbox = (
     <input
       type="checkbox"
-      className="mt-1 rounded-none size-4 shrink-0 accent-primary"
+      className="mt-1 rounded-none size-4 shrink-0 accent-primary hover:cursor-pointer"
       checked={isSelected}
       onChange={() => onToggleItem(product.id, product.selectedSize)}
       aria-label={`Select ${product.name}`}
@@ -69,7 +69,7 @@ export const CartItems = ({ product, isSelected, onToggleItem, onUpdateQuantity,
   );
 
   const remove = (
-    <button type="button" onClick={() => onRemoveItem(product.id, product.selectedSize)} aria-label={`Remove ${product.name}`} className="transition-colors text-body/50 hover:text-primary">
+    <button type="button" onClick={() => onRemoveItem(product.id, product.selectedSize)} aria-label={`Remove ${product.name}`} className="transition-colors text-body/50 hover:text-primary hover:cursor-pointer">
       <PiTrash className="size-4" />
     </button>
   );

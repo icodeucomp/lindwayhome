@@ -95,7 +95,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
           type="button"
           onClick={() => wishlist.toggle(product.id)}
           aria-label={wishlist.has(product.id) ? "Remove from wishlist" : "Save to wishlist"}
-          className={`absolute grid transition-opacity size-9 place-items-center bg-light/90 text-primary ${
+          className={`absolute grid transition-opacity size-9 place-items-center bg-light/90 text-primary hover:cursor-pointer ${
             product.isPreOrder ? "top-11" : "top-2"
           } right-2 ${wishlist.has(product.id) ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100"}`}
         >
@@ -119,7 +119,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
                 disabled={!size.available}
                 onClick={() => addSize(size.code)}
                 title={size.available ? `Add size ${size.code}` : `Size ${size.code} is sold out`}
-                className={`px-2.5 py-1.5 text-xs font-heading transition-colors ${size.available ? "hover:bg-body" : "cursor-not-allowed text-light/40 line-through"}`}
+                className={`px-2.5 py-1.5 text-xs font-heading transition-colors hover:cursor-pointer ${size.available ? "hover:bg-body" : "cursor-not-allowed text-light/40 line-through"}`}
               >
                 {size.code}
               </button>

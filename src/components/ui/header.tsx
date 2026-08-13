@@ -114,14 +114,14 @@ export const Header = () => {
         <p className="hidden text-sm text-center font-heading uppercase tracking-[0.14em] text-primary lg:block">{t.header.tagline}</p>
 
         <div className="flex items-center justify-end flex-1 gap-5">
-          <LocaleLink href="/wishlist" className="flex items-center gap-2 text-sm text-body font-heading" aria-label={t.nav.wishlist}>
+          <LocaleLink href="/wishlist" className="flex items-center gap-2 text-sm text-body font-heading hover:cursor-pointer" aria-label={t.nav.wishlist}>
             <PiHeartStraight className="size-5" />
             <span className="hidden sm:inline">
               {t.nav.wishlist} <Counter value={wishlist.count()} />
             </span>
           </LocaleLink>
 
-          <button type="button" onClick={openCart} className="flex items-center gap-2 text-sm text-body font-heading" aria-label={t.header.openBag}>
+          <button type="button" onClick={openCart} className="flex items-center gap-2 text-sm text-body font-heading hover:cursor-pointer" aria-label={t.header.openBag}>
             <PiHandbagSimple className="size-5" />
             <span className="hidden sm:inline">
               {t.nav.bag} <Counter value={getCartItemByProduct()} />
@@ -139,7 +139,7 @@ export const Header = () => {
         <menu className="flex items-end gap-6 list-none lg:gap-9">
           {navEntries.map((entry) => {
             const active = isActive(entry);
-            const className = `flex items-center gap-1 border-b-2 pb-3 pt-1 text-sm font-heading uppercase tracking-[0.06em] transition-colors ${
+            const className = `flex items-center gap-1 border-b-2 pb-3 pt-1 text-sm font-heading uppercase tracking-[0.06em] transition-colors hover:cursor-pointer ${
               active ? "border-primary text-primary" : "border-transparent text-body hover:text-primary"
             }`;
 

@@ -16,15 +16,35 @@ interface CartHeaderProps {
   onSelectAll: () => void;
 }
 
-const Th = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-  <div className={`font-heading text-xxs uppercase tracking-[0.16em] text-body/55 ${className ?? ""}`}>{children}</div>
+const Th = ({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => (
+  <div
+    className={`font-heading text-xxs uppercase tracking-[0.16em] text-body/55 ${className ?? ""}`}
+  >
+    {children}
+  </div>
 );
 
-export const CartHeader = ({ cart, isAllSelected, onSelectAll }: CartHeaderProps) => (
+export const CartHeader = ({
+  cart,
+  isAllSelected,
+  onSelectAll,
+}: CartHeaderProps) => (
   <>
     <div className="hidden grid-cols-12 gap-4 pb-4 lg:grid">
       <div className="col-span-1">
-        <input type="checkbox" className="rounded-none size-4 accent-primary" checked={isAllSelected} onChange={onSelectAll} aria-label="Select all items" />
+        <input
+          type="checkbox"
+          className="rounded-none size-4 accent-primary hover:cursor-pointer"
+          checked={isAllSelected}
+          onChange={onSelectAll}
+          aria-label="Select all items"
+        />
       </div>
       <Th className="col-span-4">Product</Th>
       <Th className="col-span-2 text-center">Price</Th>
@@ -35,8 +55,15 @@ export const CartHeader = ({ cart, isAllSelected, onSelectAll }: CartHeaderProps
 
     <div className="flex items-center justify-between pb-4 lg:hidden">
       <label className="flex items-center gap-2">
-        <input type="checkbox" className="rounded-none size-4 accent-primary" checked={isAllSelected} onChange={onSelectAll} />
-        <span className="font-heading text-xxs uppercase tracking-[0.16em] text-body/55">Select All</span>
+        <input
+          type="checkbox"
+          className="rounded-none size-4 accent-primary hover:cursor-pointer"
+          checked={isAllSelected}
+          onChange={onSelectAll}
+        />
+        <span className="font-heading text-xxs uppercase tracking-[0.16em] text-body/55">
+          Select All
+        </span>
       </label>
       <span className="text-xs text-body/60">
         {cart.length} item{cart.length > 1 ? "s" : ""}

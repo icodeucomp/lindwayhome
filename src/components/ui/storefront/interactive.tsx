@@ -22,7 +22,12 @@ interface AccordionItemProps {
   tone?: "plain" | "filled";
 }
 
-export const AccordionItem = ({ title, children, defaultOpen = false, tone = "plain" }: AccordionItemProps) => {
+export const AccordionItem = ({
+  title,
+  children,
+  defaultOpen = false,
+  tone = "plain",
+}: AccordionItemProps) => {
   const [open, setOpen] = React.useState(defaultOpen);
 
   return (
@@ -31,13 +36,23 @@ export const AccordionItem = ({ title, children, defaultOpen = false, tone = "pl
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className={`flex w-full items-center justify-between gap-6 text-left ${tone === "filled" ? "px-6 py-5" : "py-5"}`}
+        className={`flex w-full items-center justify-between gap-6 text-left hover:cursor-pointer ${tone === "filled" ? "px-6 py-5" : "py-5"}`}
       >
         <span className="text-lg font-heading text-primary">{title}</span>
-        {open ? <PiMinus className="shrink-0 size-4 text-primary" /> : <PiPlus className="shrink-0 size-4 text-primary" />}
+        {open ? (
+          <PiMinus className="shrink-0 size-4 text-primary" />
+        ) : (
+          <PiPlus className="shrink-0 size-4 text-primary" />
+        )}
       </button>
 
-      {open && <div className={`text-sm text-body ${tone === "filled" ? "px-6 pb-5" : "pb-6"}`}>{children}</div>}
+      {open && (
+        <div
+          className={`text-sm text-body ${tone === "filled" ? "px-6 pb-5" : "pb-6"}`}
+        >
+          {children}
+        </div>
+      )}
     </div>
   );
 };
@@ -52,8 +67,21 @@ export interface TabItem {
 }
 
 /** Underlined tab row. Controlled, so the page owns which panel it renders. */
-export const TabBar = ({ items, active, onChange, className }: { items: TabItem[]; active: string; onChange: (key: string) => void; className?: string }) => (
-  <div className={`grid border-b border-border ${className ?? ""}`} style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
+export const TabBar = ({
+  items,
+  active,
+  onChange,
+  className,
+}: {
+  items: TabItem[];
+  active: string;
+  onChange: (key: string) => void;
+  className?: string;
+}) => (
+  <div
+    className={`grid border-b border-border ${className ?? ""}`}
+    style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+  >
     {items.map((item) => {
       const isActive = item.key === active;
       return (
@@ -64,7 +92,9 @@ export const TabBar = ({ items, active, onChange, className }: { items: TabItem[
           aria-selected={isActive}
           role="tab"
           className={`-mb-px border-b-2 pb-3 text-center text-sm font-heading uppercase tracking-[0.12em] transition-colors ${
-            isActive ? "border-primary text-primary" : "border-transparent text-body/60 hover:text-body"
+            isActive
+              ? "border-primary text-primary"
+              : "border-transparent text-body/60 hover:text-body hover:cursor-pointer"
           }`}
         >
           {item.label}
@@ -75,7 +105,15 @@ export const TabBar = ({ items, active, onChange, className }: { items: TabItem[
 );
 
 /** Convenience wrapper for the common "tabs own their own state" case. */
-export const Tabs = ({ items, children, className }: { items: TabItem[]; children: (active: string) => React.ReactNode; className?: string }) => {
+export const Tabs = ({
+  items,
+  children,
+  className,
+}: {
+  items: TabItem[];
+  children: (active: string) => React.ReactNode;
+  className?: string;
+}) => {
   const [active, setActive] = React.useState(items[0]?.key ?? "");
 
   return (
@@ -103,25 +141,50 @@ export const useCarousel = () => {
     if (!node) return;
     // One "page" is the visible width minus a card's worth of overlap, so the card
     // that was peeking becomes the first fully-visible one.
-    node.scrollBy({ left: direction * node.clientWidth * 0.8, behavior: "smooth" });
+    node.scrollBy({
+      left: direction * node.clientWidth * 0.8,
+      behavior: "smooth",
+    });
   };
 
   return { ref, scrollBy };
 };
 
-export const CarouselArrows = ({ onPrev, onNext }: { onPrev: () => void; onNext: () => void }) => (
+export const CarouselArrows = ({
+  onPrev,
+  onNext,
+}: {
+  onPrev: () => void;
+  onNext: () => void;
+}) => (
   <div className="flex items-center gap-2">
-    <button type="button" onClick={onPrev} aria-label="Previous" className="grid transition-colors size-11 place-items-center bg-primary text-light hover:bg-primary/90">
+    <button
+      type="button"
+      onClick={onPrev}
+      aria-label="Previous"
+      className="grid transition-colors size-11 place-items-center bg-primary text-light hover:bg-primary/90 hover:cursor-pointer"
+    >
       <PiArrowLeft className="size-5" />
     </button>
-    <button type="button" onClick={onNext} aria-label="Next" className="grid transition-colors size-11 place-items-center bg-primary text-light hover:bg-primary/90">
+    <button
+      type="button"
+      onClick={onNext}
+      aria-label="Next"
+      className="grid transition-colors size-11 place-items-center bg-primary text-light hover:bg-primary/90 hover:cursor-pointer"
+    >
       <PiArrowRight className="size-5" />
     </button>
   </div>
 );
 
-export const CarouselTrack = React.forwardRef<HTMLDivElement, { children: React.ReactNode; className?: string }>(({ children, className }, ref) => (
-  <div ref={ref} className={`flex gap-5 overflow-x-auto scroll-smooth pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className ?? ""}`}>
+export const CarouselTrack = React.forwardRef<
+  HTMLDivElement,
+  { children: React.ReactNode; className?: string }
+>(({ children, className }, ref) => (
+  <div
+    ref={ref}
+    className={`flex gap-5 overflow-x-auto scroll-smooth pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className ?? ""}`}
+  >
     {children}
   </div>
 ));

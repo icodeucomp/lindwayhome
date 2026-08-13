@@ -34,12 +34,12 @@ export const CartSummary = ({ cart, selectedCount, selectedTotal, isAllSelected,
     <div className="flex flex-col gap-4 py-5 md:flex-row md:items-center md:justify-between">
       <div className="flex items-center gap-6">
         <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" className="rounded-none size-4 accent-primary" checked={isAllSelected} onChange={onSelectAll} />
+          <input type="checkbox" className="rounded-none size-4 accent-primary hover:cursor-pointer" checked={isAllSelected} onChange={onSelectAll} />
           <span className="font-heading text-xxs uppercase tracking-[0.16em] text-body/70">Select All ({cart.length})</span>
         </label>
 
         {selectedCount > 0 && (
-          <button type="button" onClick={onRemoveSelected} className="flex items-center gap-2 text-xs transition-colors text-body/60 hover:text-primary">
+          <button type="button" onClick={onRemoveSelected} className="flex items-center gap-2 text-xs transition-colors text-body/60 hover:text-primary hover:cursor-pointer">
             <PiTrash className="size-4" />
             Remove ({selectedCount})
           </button>

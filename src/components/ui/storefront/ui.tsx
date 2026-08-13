@@ -99,7 +99,7 @@ export const StoreButton = ({
 }: { children: React.ReactNode; variant?: StoreButtonVariant } & React.ButtonHTMLAttributes<HTMLButtonElement>) => (
   <button
     {...props}
-    className={`inline-flex items-center justify-center px-6 py-3.5 text-xs font-heading uppercase tracking-[0.16em] transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${buttonStyles[variant]} ${className ?? ""}`}
+    className={`inline-flex items-center justify-center px-6 py-3.5 text-xs font-heading uppercase tracking-[0.16em] transition-colors disabled:cursor-not-allowed disabled:opacity-50 hover:cursor-pointer ${buttonStyles[variant]} ${className ?? ""}`}
   >
     {children}
   </button>

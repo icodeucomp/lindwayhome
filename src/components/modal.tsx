@@ -38,7 +38,7 @@ export const Modal = ({ isVisible, onClose, children, isSmall = false }: ModalPr
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="absolute z-10 grid transition-colors border top-4 right-4 size-9 place-items-center border-border text-body hover:border-primary hover:text-primary"
+          className="absolute z-10 grid transition-colors border top-4 right-4 size-9 place-items-center border-border text-body hover:border-primary hover:text-primary hover:cursor-pointer"
         >
           <PiX className="size-4" />
         </button>

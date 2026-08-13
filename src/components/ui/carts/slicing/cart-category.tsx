@@ -37,7 +37,7 @@ export const CartCategory = ({ brand, products, isSelected, isPartiallySelected,
       <div className="flex items-center gap-3 py-5">
         <input
           type="checkbox"
-          className="rounded-none size-4 accent-primary"
+          className="rounded-none size-4 accent-primary hover:cursor-pointer"
           checked={isSelected}
           ref={(input) => {
             if (input) input.indeterminate = isPartiallySelected;

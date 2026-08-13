@@ -32,7 +32,7 @@ export const LanguageSwitch = ({ className }: { className?: string }) => {
 
   return (
     <div ref={ref} className={`relative ${className ?? ""}`}>
-      <button type="button" onClick={toggleState} aria-expanded={open} aria-haspopup="listbox" className="flex items-center gap-2 text-sm font-heading text-primary">
+      <button type="button" onClick={toggleState} aria-expanded={open} aria-haspopup="listbox" className="flex items-center gap-2 text-sm font-heading text-primary hover:cursor-pointer">
         {localeLabels[active]}
         <PiCaretDownBold className={`size-3 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>

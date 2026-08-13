@@ -29,7 +29,13 @@ import { IMAGE_FALLBACK, StoreButton } from "./ui";
  */
 export const CartDrawer = () => {
   const { isOpen, close } = useCartDrawer();
-  const { cart, updateQuantity, removeFromCart, getCartTotal, getCartItemCount } = useCartStore();
+  const {
+    cart,
+    updateQuantity,
+    removeFromCart,
+    getCartTotal,
+    getCartItemCount,
+  } = useCartStore();
 
   const router = useRouter();
   const localeHref = useLocaleHref();
@@ -92,7 +98,12 @@ export const CartDrawer = () => {
               <h2 className="text-2xl uppercase font-heading text-primary">
                 Your Cart <span className="text-body">({itemCount} items)</span>
               </h2>
-              <button type="button" onClick={close} aria-label="Close cart" className="transition-colors text-primary hover:text-body">
+              <button
+                type="button"
+                onClick={close}
+                aria-label="Close cart"
+                className="transition-colors text-primary hover:text-body hover:cursor-pointer"
+              >
                 <PiX className="size-6" />
               </button>
             </div>
@@ -100,7 +111,9 @@ export const CartDrawer = () => {
 
             {cart.length === 0 ? (
               <div className="flex flex-col items-center justify-center flex-1 gap-6 px-6 text-center">
-                <p className="text-2xl uppercase font-heading text-primary">Your cart is empty</p>
+                <p className="text-2xl uppercase font-heading text-primary">
+                  Your cart is empty
+                </p>
                 <p className="text-2xl leading-snug font-heading text-body">
                   Looks like your
                   <br />
@@ -117,32 +130,59 @@ export const CartDrawer = () => {
                     const brand = brandByKey(item.brand);
 
                     return (
-                      <div key={`${item.id}-${item.selectedSize}`} className="flex gap-4 py-5">
-                        <Img src={item.images?.[0]?.url ?? IMAGE_FALLBACK} alt={item.name} className="w-24 shrink-0 aspect-3/4 bg-footer/30" cover />
+                      <div
+                        key={`${item.id}-${item.selectedSize}`}
+                        className="flex gap-4 py-5"
+                      >
+                        <Img
+                          src={item.images?.[0]?.url ?? IMAGE_FALLBACK}
+                          alt={item.name}
+                          className="w-24 shrink-0 aspect-3/4 bg-footer/30"
+                          cover
+                        />
 
                         <div className="flex-1 space-y-1.5">
-                          <p className="text-sm uppercase font-heading text-body tracking-[0.04em]">{item.name}</p>
-                          <p className="text-xs text-body/70">
-                            {brand?.label ?? item.brand} &middot; {item.selectedSize}
+                          <p className="text-sm uppercase font-heading text-body tracking-[0.04em]">
+                            {item.name}
                           </p>
-                          <p className="text-sm text-body">{formatIDR(item.discountedPrice)}</p>
+                          <p className="text-xs text-body/70">
+                            {brand?.label ?? item.brand} &middot;{" "}
+                            {item.selectedSize}
+                          </p>
+                          <p className="text-sm text-body">
+                            {formatIDR(item.discountedPrice)}
+                          </p>
 
                           <div className="flex items-center gap-3 pt-1">
                             <div className="flex items-center border border-border">
                               <button
                                 type="button"
-                                onClick={() => updateQuantity(item.id, item.selectedSize, item.quantity - 1)}
+                                onClick={() =>
+                                  updateQuantity(
+                                    item.id,
+                                    item.selectedSize,
+                                    item.quantity - 1,
+                                  )
+                                }
                                 aria-label="Decrease quantity"
-                                className="grid size-8 place-items-center text-body hover:text-primary"
+                                className="grid size-8 place-items-center text-body hover:text-primary hover:cursor-pointer"
                               >
                                 <PiMinus className="size-3" />
                               </button>
-                              <span className="w-8 text-sm text-center text-body">{item.quantity}</span>
+                              <span className="w-8 text-sm text-center text-body">
+                                {item.quantity}
+                              </span>
                               <button
                                 type="button"
-                                onClick={() => updateQuantity(item.id, item.selectedSize, item.quantity + 1)}
+                                onClick={() =>
+                                  updateQuantity(
+                                    item.id,
+                                    item.selectedSize,
+                                    item.quantity + 1,
+                                  )
+                                }
                                 aria-label="Increase quantity"
-                                className="grid size-8 place-items-center text-body hover:text-primary"
+                                className="grid size-8 place-items-center text-body hover:text-primary hover:cursor-pointer"
                               >
                                 <PiPlus className="size-3" />
                               </button>
@@ -150,15 +190,19 @@ export const CartDrawer = () => {
 
                             <button
                               type="button"
-                              onClick={() => removeFromCart(item.id, item.selectedSize)}
+                              onClick={() =>
+                                removeFromCart(item.id, item.selectedSize)
+                              }
                               aria-label={`Remove ${item.name}`}
-                              className="transition-colors text-body/60 hover:text-primary"
+                              className="transition-colors text-body/60 hover:text-primary hover:cursor-pointer"
                             >
                               <PiTrash className="size-4" />
                             </button>
                           </div>
 
-                          <p className="pt-1 text-sm font-heading text-body">{formatIDR(item.discountedPrice * item.quantity)}</p>
+                          <p className="pt-1 text-sm font-heading text-body">
+                            {formatIDR(item.discountedPrice * item.quantity)}
+                          </p>
                         </div>
                       </div>
                     );
@@ -169,12 +213,19 @@ export const CartDrawer = () => {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-xl font-heading text-body">Subtotal</p>
-                      <p className="max-w-56 text-xs text-body/70">Taxes included. Shipping calculated at checkout.</p>
+                      <p className="max-w-56 text-xs text-body/70">
+                        Taxes included. Shipping calculated at checkout.
+                      </p>
                     </div>
-                    <p className="text-2xl font-heading text-body">{formatIDR(getCartTotal())}</p>
+                    <p className="text-2xl font-heading text-body">
+                      {formatIDR(getCartTotal())}
+                    </p>
                   </div>
 
-                  <StoreButton onClick={goToCheckout} className="w-full py-4 text-sm">
+                  <StoreButton
+                    onClick={goToCheckout}
+                    className="w-full py-4 text-sm hover:cursor-pointer"
+                  >
                     Checkout
                   </StoreButton>
                 </div>
