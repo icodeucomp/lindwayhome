@@ -1,5 +1,7 @@
 export * from "./checkout-steps";
 export * from "./checkout-form";
+export * from "./address-map";
+export * from "./service-picker";
 export * from "./complete-step";
 export * from "./payment-step";
 export * from "./cart-category";

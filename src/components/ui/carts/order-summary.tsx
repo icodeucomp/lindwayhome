@@ -26,6 +26,17 @@ const initFormData: CheckoutFormData = {
   whatsappNumber: "",
   instagram: "",
   reference: "",
+
+  // The courier destination. Zeroed rather than omitted so the form's controlled
+  // inputs never flip between uncontrolled and controlled on first keystroke.
+  province: "",
+  district: "",
+  sub_district: "",
+  village: "",
+  addressNote: "",
+  latitude: 0,
+  longitude: 0,
+  isPinned: false,
 };
 
 interface OrderSummaryProps {

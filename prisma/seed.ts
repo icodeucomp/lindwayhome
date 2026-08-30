@@ -226,7 +226,7 @@ async function seedSizes() {
 async function seedConfig() {
   console.log("⚙️  config parameters…");
 
-  const shipping = await ConfigService.createConfigGroup({ name: "shipping", label: "Shipping Calculation", description: "Rates, origin and zone multipliers used by the checkout", order: 1 });
+  const shipping = await ConfigService.createConfigGroup({ name: "shipping", label: "Shipping (Paxel)", description: "Pickup address and courier services offered at checkout", order: 1 });
   const dimensions = await ConfigService.createConfigGroup({ name: "package_dimensions", label: "Package Dimensions", description: "Default parcel dimensions per size, overridable per product variant", order: 2 });
   const tax = await ConfigService.createConfigGroup({ name: "tax", label: "Tax", description: "Store-wide tax rate", order: 3 });
   const promotions = await ConfigService.createConfigGroup({ name: "promotions", label: "Promotion", description: "One store-wide promotional discount", order: 4 });
@@ -235,29 +235,47 @@ async function seedConfig() {
   const store = await ConfigService.createConfigGroup({ name: "store_profile", label: "Store Profile", description: "Bank accounts and contact details shown to buyers", order: 7 });
   const media = await ConfigService.createConfigGroup({ name: "media", label: "Media", description: "Images shown on the storefront", order: 8 });
 
-  // ── Shipping ──────────────────────────────────────────────────────────────
-  const shippingKeys: { key: string; label: string; description: string; value: Prisma.InputJsonValue; type: "NUMBER" | "DECIMAL" | "JSON" }[] = [
-    { key: "volume_divider", label: "Volume Divider", description: "Divisor converting cm³ to volumetric kg", value: 6000, type: "NUMBER" },
-    { key: "price_per_kg", label: "Price per Kg", description: "Charge per rounded kilogram", value: 5000, type: "DECIMAL" },
-    { key: "price_per_km", label: "Price per Km", description: "Charge per kilometre of haversine distance", value: 1000, type: "DECIMAL" },
-    { key: "base_price", label: "Base Price", description: "Flat amount added to every shipment", value: 10000, type: "DECIMAL" },
-    { key: "min_shipping", label: "Minimum Shipping", description: "Floor applied after all multipliers", value: 15000, type: "DECIMAL" },
-    // Denpasar, where the brand actually operates. v1 shipped with Jakarta here,
-    // which silently mispriced every order (A9.11).
-    { key: "origin_lat", label: "Origin Latitude", description: "Latitude the distance is measured from", value: -8.6705, type: "DECIMAL" },
-    { key: "origin_long", label: "Origin Longitude", description: "Longitude the distance is measured from", value: 115.2126, type: "DECIMAL" },
-    { key: "earth_radius_km", label: "Earth Radius (km)", description: "Constant used by the haversine formula", value: 6371, type: "DECIMAL" },
+  // ── Shipping — the Paxel pickup address and service allowlist ─────────────
+  //
+  // The distance/zone keys this group used to hold (volume_divider, price_per_kg,
+  // price_per_km, base_price, min_shipping, earth_radius_km, shipping_zones) are
+  // gone: the courier prices the shipment now, so keeping a second formula would
+  // mean the number shown to the buyer and the number Paxel bills us could differ.
+  //
+  // These values are the ORIGIN Paxel collects from, and every one of them is
+  // required — `getShippingOrigin` throws rather than falling back, which is how v1
+  // came to ship with Jakarta coordinates while the brand operates from Denpasar.
+  const shippingKeys: { key: string; label: string; description: string; value: Prisma.InputJsonValue; type: "TEXT" | "NUMBER" | "DECIMAL" | "BOOLEAN" | "JSON" }[] = [
+    { key: "origin_name", label: "Pickup Contact Name", description: "Who the courier asks for at pickup", value: "Lindway Home", type: "TEXT" },
+    { key: "origin_phone", label: "Pickup Phone", description: "Reachable at pickup time. Sent to Paxel as 62…", value: "6281338080808", type: "TEXT" },
+    { key: "origin_email", label: "Pickup Email", description: "Optional, forwarded to the courier", value: "hello@lindwayhome.com", type: "TEXT" },
+    { key: "origin_address", label: "Pickup Address", description: "Street address the courier drives to (max 350 chars)", value: "Jl. Tukad Balian No. 78, Renon", type: "TEXT" },
+    { key: "origin_note", label: "Pickup Note", description: "Directions for the courier (max 150 chars)", value: "Ruko depan, pintu kaca", type: "TEXT" },
+    { key: "origin_province", label: "Pickup Province", description: "Provinsi", value: "Bali", type: "TEXT" },
+    // Paxel's `city` is our `district` column — kabupaten/kota.
+    { key: "origin_city", label: "Pickup City / Regency", description: "Kabupaten or Kota — Paxel's `city` field", value: "Kota Denpasar", type: "TEXT" },
+    { key: "origin_district", label: "Pickup District", description: "Kecamatan — Paxel's `district` field", value: "Denpasar Selatan", type: "TEXT" },
+    { key: "origin_village", label: "Pickup Village", description: "Kelurahan or Desa — Paxel's `village` field", value: "Renon", type: "TEXT" },
+    { key: "origin_zip_code", label: "Pickup Postal Code", description: "Five digits", value: "80226", type: "TEXT" },
+    // Denpasar, where the brand actually operates.
+    { key: "origin_lat", label: "Pickup Latitude", description: "Exact pickup point", value: -8.6705, type: "DECIMAL" },
+    { key: "origin_long", label: "Pickup Longitude", description: "Exact pickup point", value: 115.2126, type: "DECIMAL" },
     {
-      key: "shipping_zones",
-      label: "Shipping Zones",
-      description: "Distance bands and their multipliers",
-      value: [
-        { zone: "Z1", label: "Local", max_km: 10, multiplier: 1, price_override: null },
-        { zone: "Z2", label: "Nearby", max_km: 30, multiplier: 1.2, price_override: null },
-        { zone: "Z3", label: "Regional", max_km: 100, multiplier: 1.5, price_override: null },
-        { zone: "Z4", label: "Long Distance", max_km: null, multiplier: 2, price_override: null },
-      ],
+      key: "enabled_services",
+      label: "Courier Services Offered",
+      description: "Which Paxel services a buyer may choose from. Order in the checkout follows SAMEDAY, NEXTDAY, REGULAR, INSTANT regardless of the order here.",
+      value: ["SAMEDAY", "NEXTDAY", "REGULAR", "INSTANT"],
       type: "JSON",
+    },
+    { key: "item_category", label: "Courier Item Category", description: "Declared goods category on every parcel", value: "Fashion", type: "TEXT" },
+    { key: "need_insurance", label: "Insure Shipments", description: "Adds Paxel's insurance to every booking", value: false, type: "BOOLEAN" },
+    { key: "pickup_lead_minutes", label: "Pickup Lead Time (minutes)", description: "Earliest pickup offered, counted from now", value: 120, type: "NUMBER" },
+    {
+      key: "shipping_timezone",
+      label: "Store Timezone",
+      description: "Pickup times are sent to Paxel as a local wall clock with no offset, so this is what turns them into the right instant",
+      value: "Asia/Makassar",
+      type: "TEXT",
     },
   ];
 

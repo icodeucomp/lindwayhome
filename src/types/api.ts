@@ -123,6 +123,13 @@ export interface QueryParams {
   village?: string;
   email?: string;
   type?: string;
+  /** Checkout quote: sharpen the courier's destination pin and address line. */
+  address?: string;
+  postalCode?: number | string;
+  latitude?: number;
+  longitude?: number;
+  /** Pickup list: YYYY-MM-DD. */
+  date?: string;
   items?: {
     productId: string;
     selectedSize: string;
@@ -514,6 +521,20 @@ export interface Order {
   address: string;
   postalCode: number;
 
+  /** The courier destination. `district` is the kabupaten/kota, `sub_district` the kecamatan. */
+  province: string;
+  district: string;
+  sub_district: string;
+  village: string;
+  addressNote: string | null;
+
+  latitude: number;
+  longitude: number;
+  /** true = the buyer placed the map pin themselves; false = village centroid. */
+  isPinned: boolean;
+
+  shippingServiceType: ShippingServiceType;
+
   memberId: string | null;
   isMember: boolean;
 
@@ -533,14 +554,15 @@ export interface Order {
   reference: string | null;
 
   items: OrderItem[];
+  shipments?: Shipment[];
   createdAt: string;
   updatedAt: string;
 }
 
 /**
  * Prices are absent on purpose. The server takes `shippingCost`, `purchased`,
- * `totalPurchased` and `totalItemsSold` from the signed checkout token and ignores
- * anything the client sends for them (§A5.2).
+ * `totalPurchased`, `totalItemsSold` and now `shippingServiceType` from the signed
+ * checkout token and ignores anything the client sends for them (§A5.2).
  */
 export interface CreateOrder {
   email: string;
@@ -548,6 +570,16 @@ export interface CreateOrder {
   whatsappNumber: string;
   address: string;
   postalCode: number;
+
+  province: string;
+  district: string;
+  sub_district: string;
+  village: string;
+  addressNote?: string;
+  latitude: number;
+  longitude: number;
+  isPinned?: boolean;
+
   receiptImage?: Files;
   isMember: boolean;
   instagram?: string;
@@ -557,6 +589,116 @@ export interface CreateOrder {
   checkoutToken: string;
 }
 
+// =============================================================================
+// Shipment (Paxel)
+// =============================================================================
+
+export type ShippingServiceType = "SAMEDAY" | "NEXTDAY" | "REGULAR" | "INSTANT";
+
+export type ShipmentStatus = "BOOKED" | "PICKED_UP" | "IN_TRANSIT" | "DELIVERED" | "CANCELLED" | "FAILED";
+
+export interface ShipmentLog {
+  created_datetime: string;
+  name?: string;
+  address?: string;
+  note?: string;
+  status: string;
+}
+
+export interface Shipment {
+  id: string;
+  orderId: string;
+  airwaybillCode: string;
+  serviceType: ShippingServiceType;
+  status: ShipmentStatus;
+  /** Paxel's own code (RTP, PAPV, PDO …), stored unmapped. */
+  latestStatus: string | null;
+  shippingCost: number;
+  pickupDatetime: string;
+  estimatedPickupDate: string | null;
+  estimatedPickupMinTime: string | null;
+  estimatedPickupMaxTime: string | null;
+  estimatedArrivalDate: string | null;
+  estimatedArrivalMinTime: string | null;
+  estimatedArrivalMaxTime: string | null;
+  deliveredAt: string | null;
+  cancelledAt: string | null;
+  cancellationReason: string | null;
+  photoUrl: string | null;
+  signatureUrl: string | null;
+  logs: ShipmentLog[] | null;
+  lastTrackedAt: string | null;
+  /** true = answered by the local mock transport, not Paxel. */
+  isMock: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PickupWindow {
+  date: string;
+  startTime: string;
+  endTime: string;
+}
+
+/** One courier option as the checkout quote returns it. */
+export type ServiceQuote =
+  | {
+      serviceType: ShippingServiceType;
+      available: true;
+      cost: number;
+      totalPurchased: number;
+      etaLabel?: string;
+      pickupWindows?: PickupWindow[];
+      isMock?: boolean;
+      /** Price-locked for this service and this address, for 15 minutes. */
+      checkoutToken: string;
+    }
+  | {
+      serviceType: ShippingServiceType;
+      available: false;
+      reason: string;
+    };
+
+export interface ConsolidatedParcel {
+  weightG: number;
+  lengthCm: number;
+  widthCm: number;
+  heightCm: number;
+  dimension: string;
+}
+
+export interface CheckoutQuote {
+  parameter: ConfigParameterData;
+  parcel: ConsolidatedParcel;
+  /** Village centroid — where the checkout map opens before the buyer moves the pin. */
+  destination: { latitude: number; longitude: number };
+  services: ServiceQuote[];
+  purchased: number;
+  totalItemsSold: number;
+  isMember: boolean;
+  expiresAt: number;
+}
+
+export interface BookShipmentPayload {
+  pickupDate: string;
+  pickupTime: string;
+  serviceType?: ShippingServiceType;
+  note?: string;
+}
+
+export interface PickupListEntry extends Shipment {
+  order: Pick<Order, "id" | "fullname" | "email" | "village" | "sub_district" | "district" | "totalItemsSold">;
+  liveStatus: string | null;
+  liveStatusLabel: string;
+}
+
+export interface PickupList {
+  date: string;
+  remoteError: string | null;
+  isMock: boolean;
+  shipments: PickupListEntry[];
+}
+
 /**
  * State shared by the three checkout steps. It was declared separately in each of
  * them, so the four copies drifted and TypeScript treated them as unrelated types.
@@ -564,6 +706,10 @@ export interface CreateOrder {
 export interface CheckoutFormData extends CreateOrder {
   /** Display only — the server takes the authoritative total from the signed token. */
   totalPurchased: number;
+  /** Display only, same reason. */
+  shippingCost?: number;
+  /** Which courier option the buyer picked. Carried so the payment step can show it. */
+  shippingServiceType?: ShippingServiceType;
 }
 
 export interface EditOrder {

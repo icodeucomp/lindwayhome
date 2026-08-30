@@ -27,7 +27,7 @@ Defining decisions:
 - **Guest-only checkout.** No customer accounts. Each completed checkout writes one `Guest` row — `Guest` *is* the order. Repeat buyers correlate only by email string.
 - **Manual payment confirmation.** No payment gateway. Buyer transfers via bank or QRIS, uploads a receipt, an admin later verifies and flips the order to purchased.
 - **Config-driven pricing.** Tax, promo, member discount, shipping rates, zone multipliers, per-size parcel dimensions live in `ConfigParameter` rows, editable from the admin Parameters page.
-- **Distance-based shipping.** Haversine distance from a configured origin to the buyer's village, combined with volumetric weight and a zone multiplier. No courier API.
+- **Courier-quoted shipping.** Rates, bookings, tracking and cancellations go through the Paxel eCommerce API (D28, §B6.5). v1 computed a haversine distance and applied zone multipliers; that formula is deleted.
 - **Three product lines** as the `Categories` enum and as separate routes.
 
 ### A1.1 Users
@@ -69,7 +69,7 @@ Header has two nav bands: `navFeatureLists` (hardcoded in `header.tsx`, the 3 br
 
 **Cart** — F-6 hand-rolled subscribe/`forceUpdate` store persisted to `localStorage` with a TTL wrapper (`lindway_cart`, `lindway_cart_selection`, 1-day); nothing is stored server-side before checkout · F-7 items keyed `${id}-${selectedSize}` · F-8 grouped by product line, only *selected* items check out, with per-item / per-category / select-all toggles and bulk removal.
 
-**Checkout** — F-9 cascading province → district → sub-district → village picker · F-10 shipping and price calculation (§A5.1) · F-11 server-signed `checkoutToken` (§A5.2) · F-12 QRIS or bank transfer, receipt required for **both** · F-13 order creation in a transaction · F-14 Resend confirmation email.
+**Checkout** — F-9 cascading province → district → sub-district → village picker, plus a map pin for the exact coordinate (D29) · F-10 courier quoting per service (§B6.5) · F-11 server-signed `checkoutToken` (§A5.2) · F-12 QRIS or bank transfer, receipt required for **both** · F-13 order creation in a transaction · F-14 Resend confirmation email.
 
 **Membership** — F-15 activation via `PATCH /api/guests/membership/[id]` from the post-order page · F-16 member discount applies if *any* prior `Guest` with the same email has `isMember: true`.
 
@@ -79,32 +79,26 @@ Header has two nav bands: `navFeatureLists` (hardcoded in `header.tsx`, the 3 br
 
 ## A5. Key flows `[SHIPPED]`
 
-### A5.1 Shipping & price calculation — `GET /api/guests/checkout`
+### A5.1 Shipping & price calculation — **superseded**
 
-Inputs: destination, `email`, `items`, `purchased` subtotal, `totalItemsSold`.
+v1 priced shipping itself: haversine distance from a configured origin, per-line volumetric weight, a zone multiplier, floored at `min_shipping`. All of it is deleted. Shipping is quoted by the courier now — see **§B6.5** for what replaced it and **D28** for why.
 
-1. Validate via `ShippingCalculateSchema`.
-2. In parallel: member lookup by email; pricing config (`tax_rate`, `tax_type`, `promotion_discount`, `promo_type`, `member_discount`, `member_type`); shipping config; shipping zones.
-3. Destination coordinates from `Location` (404 if the village is absent).
-4. Haversine distance from `origin_lat`/`origin_long` using `earth_radius_km`.
-5. Per item, parcel dimensions by size from the `product_dimensions` config group (404 if that size has no row).
-6. `calculateShippingCost` — actual vs volumetric weight (`volume_divider`), then `price_per_kg`, `price_per_km`, `base_price`, zone multiplier or `price_override`, floored at `min_shipping`.
-7. `calculateTotalPrice` — member discount, promo, tax (each `PERCENTAGE` or `FIXED`), then add shipping.
-8. Sign a `checkoutToken` and return it with the breakdown.
-
-Every step emits `logCalculation`.
+The discount arithmetic that followed it (member → promo → tax → add shipping) is unchanged and is described in §B6.3.
 
 ### A5.2 Price integrity — the checkout token
 
 `src/utils/checkout-token.ts`. Base64url of `{ data, sig }` where `sig` is HMAC-SHA256 over:
 
 ```ts
-{ shippingCost, totalPurchased, purchased, totalItemsSold, itemsHash, expiresAt }  // 15-minute window
+{ shippingCost, totalPurchased, purchased, totalItemsSold,
+  itemsHash, serviceType, destinationHash, expiresAt }   // 15-minute window
 ```
 
-`hashItems` normalizes to a sorted `productId:size:quantity` string and HMACs it. `POST /api/guests/checkout` requires the token, verifies signature and expiry, recomputes `hashItems(items)` and rejects on mismatch, then builds `Guest` with prices taken **only** from the payload.
+`hashItems` normalizes to a sorted `productId:size:quantity` string and HMACs it; `hashDestination` does the same for the four administrative levels plus the postcode. `POST /api/orders/checkout` requires the token, verifies signature and expiry, recomputes both hashes and rejects on mismatch, then builds `Order` with prices taken **only** from the payload.
 
-> **KNOWN DEFECT — see A9.1.** The `purchased` subtotal is supplied by the client and signed without being checked against database prices. The token is authoritative but its input is not. Fixed in v2 (§B6.3).
+`serviceType` and `destinationHash` are the D28 additions; the rest is v1's. A token that fails to verify returns 400 — v1 returned 500, which told a buyer whose 15 minutes had expired that the site was broken.
+
+> **A9.1 is closed.** `purchased` and `totalItemsSold` are derived from database prices and no longer read from the query string (F-51).
 
 ### A5.3 Order lifecycle & stock
 
@@ -171,12 +165,16 @@ All responses are `{ success, message?, data?, pagination? }`. "Admin" means the
 | `POST /api/auth/register` | **public** | create admin user — see A9.2 |
 | `GET /api/products` · `GET /api/products/[id]` | public | list / detail |
 | `POST /api/products` · `PUT`·`DELETE /api/products/[id]` | admin | create / update / delete (+ image folder) |
-| `GET /api/guests/checkout` | public | calculate + issue `checkoutToken` |
+| `GET /api/orders/checkout` | public | quote every courier service + issue a `checkoutToken` each |
 | `POST /api/guests/checkout` | public | create order (token-verified) |
 | `GET /api/guests` · `GET`·`PUT /api/guests/[id]` | admin | list / detail / update (+ stock decrement) |
 | `PATCH /api/guests/membership/[id]` | **public** | activate membership |
 | `GET /api/locations/checkout` | public | cascading dropdown options |
 | `GET`·`POST /api/locations` · `GET`·`PUT`·`DELETE /api/locations/[id]` | admin | location CRUD |
+| `POST /api/orders/[id]/shipment` | admin | book a Paxel pickup |
+| `GET /api/shipments/[airwaybill]` | admin | refresh tracking from Paxel |
+| `POST /api/shipments/[airwaybill]/cancel` | admin | cancel a booked pickup |
+| `GET /api/shipments/pickups?date=` | admin | the day's pickups |
 | `GET`·`PUT /api/config/parameters` | admin | full tree / bulk update |
 | `GET /api/config/parameters/public` | public | `?keyParams=` allowlist |
 | `GET /api/dashboard` | admin | metrics |
@@ -209,7 +207,7 @@ Two further defects were found by `smoke:checkout` during the phase, both invisi
 5. **Admin dashboard guard is client-side only.**
 6. **Uploads served outside Next's static pipeline by default** — a misconfigured deployment yields broken image URLs rather than an error.
 7. **No `SUPER_ADMIN`-gated route exists** despite the hierarchy.
-8. **Missing shipping config rows fail silently** into hardcoded defaults in `ShippingService`, so a partially-seeded database produces plausible but wrong prices. The Jakarta coordinates still live there as the fallback. **→ phase 5.**
+8. ~~**Missing shipping config rows fail silently** into hardcoded defaults in `ShippingService`.~~ **Closed by D28.** The fallbacks are gone along with the formula they fed: `getShippingOrigin` throws and names the missing keys, and `db:check` reports them before a buyer finds out.
 
 ---
 
@@ -300,7 +298,7 @@ The sidebar grows past a flat list and is grouped:
 Overview   Dashboard
            Contact Inbox        ← standalone top-level item, badge = count of status NEW
 Catalog    Products · Sizes · Size Guides
-Sales      Orders · Members
+Sales      Orders · Pickups · Members
 Content    Articles · Article Categories · FAQ
 Settings   Parameters · Locations
 ```
@@ -836,7 +834,7 @@ enum ParameterType { TEXT  NUMBER  DECIMAL  BOOLEAN  SELECT  MULTI_SELECT  IMAGE
 
 ### B4.10 Table count
 
-**21 models**, up from 7. Five are translation tables — the cost of bilingual content.
+**22 models**, up from 7. Five are translation tables — the cost of bilingual content.
 
 | Group | Models |
 | --- | --- |
@@ -844,7 +842,7 @@ enum ParameterType { TEXT  NUMBER  DECIMAL  BOOLEAN  SELECT  MULTI_SELECT  IMAGE
 | Taxonomy | *(none — three enums, D25)* |
 | Sizing | `Size`, `SizeGuide`, `SizeGuideRow`, `SizeGuideTranslation` |
 | Catalog | `Product`, `ProductVariant`, `ProductTranslation` |
-| Orders | `Order`, `OrderItem` *(renamed from Guest / Cart)* |
+| Orders | `Order`, `OrderItem` *(renamed from Guest / Cart)*, `Shipment` |
 | Members | `Member` |
 | Content | `ArticleCategory`, `ArticleCategoryTranslation`, `Article`, `ArticleTranslation`, `Faq`, `FaqTranslation`, `ContactInquiry` |
 | Settings | `ConfigParameterGroup`, `ConfigParameter`, `Location` *(unchanged)* |
@@ -918,7 +916,7 @@ ProductVariant.packageDimensions                    per product × size
 
 `ShippingService.getProductDimensionsBySize(size)` becomes `getPackageDimensions(productId, sizeCode)`.
 
-### B6.3 Price pipeline — the two frozen-zone exceptions
+### B6.3 Price pipeline — the frozen-zone exceptions
 
 The token invariant is unchanged and strengthened: **prices reach `Order` only from the signed token.** What changes is how the signed numbers are produced.
 
@@ -929,17 +927,89 @@ for each cart line:
 subtotal = Σ line                      ← computed server-side from the DB (F-51)
          − member_discount             ← config rate, if the buyer is an active Member
          + tax                         ← config rate
-         + shippingCost
-sign token { shippingCost, totalPurchased, purchased, totalItemsSold, itemsHash, expiresAt }
+         + shippingCost                ← Paxel's fixed_price for the chosen service (D28)
+sign token { shippingCost, totalPurchased, purchased, totalItemsSold,
+             itemsHash, serviceType, destinationHash, expiresAt }
 ```
 
-This is v1's arithmetic (§A5.1 step 7). Only **one** thing changes, and it is the fix for gap A9.1:
+The discount arithmetic is v1's (§A5.1 step 7). Three things changed, and each is listed here so the frozen zone stays legible:
 
-> `GET /api/orders/checkout` stops accepting `purchased` and `totalItemsSold` from the client and derives them from database prices. Everything else — `hashItems`, the 15-minute window, HMAC signing, the POST verification order, the stock transaction — stays byte-identical.
+> **1 — F-51.** `GET /api/orders/checkout` stops accepting `purchased` and `totalItemsSold` from the client and derives them from database prices. This is the fix for gap A9.1.
+>
+> **2 — D28.** `shippingCost` is Paxel's `fixed_price` rather than the haversine/zone formula. The GET returns one quote *per courier service*, each with its own token, so the option the buyer clicks is already price-locked.
+>
+> **3 — D28.** The payload gains `serviceType` and `destinationHash`. Signing the amount alone would leave both free: a buyer could take the REGULAR quote and submit asking for INSTANT, or replay a Denpasar-local price against an address in Papua. Binding them means the signed price is a price *for something, to somewhere*.
 
-Because `discountedPrice` is a stored column rather than something resolved per request, there is no second place where a price could be computed differently, and no way for a line snapshot to disagree with the signed total. Both of those were real risks in the `Discount`-table draft; dropping it removed them (D22).
+`hashItems`, the 15-minute window, HMAC signing, the POST verification order and the stock transaction are unchanged.
 
-`logCalculation` keeps its v1 coverage.
+One POST behaviour was corrected while the file was open: a token that fails to verify now returns **400**, not 500. v1 told a buyer whose 15 minutes had run out that the site was broken. A failed confirmation email likewise no longer 500s an order that is already committed — the buyer would re-submit and pay twice.
+
+Because `discountedPrice` is a stored column rather than something resolved per request, there is no second place where a *product* price could be computed differently. Shipping now has the same property for a different reason: there is only one source for it, and it is the courier.
+
+`logCalculation` keeps its v1 coverage, and `quoteServices` adds one line per quote naming the parcel, the destination and each service's outcome.
+
+### B6.5 Shipping — Paxel `[SHIPPED]`
+
+Shipping is quoted, booked, tracked and cancelled through Paxel's eCommerce API. The distance/zone formula, `shipping_zones`, `calculateShippingCost`, `resolveZone`, `DEFAULT_SHIPPING_ZONES` and `calculateDistance` are **deleted** (D28).
+
+| Concern | Module |
+| --- | --- |
+| Wire types, verbatim from the published contract | [`src/types/paxel.ts`](src/types/paxel.ts) |
+| HTTP, signing, error mapping — the only module that speaks Paxel's format | [`src/services/paxel.ts`](src/services/paxel.ts) |
+| Local stand-in used when no API key is set | [`src/services/paxel-mock.ts`](src/services/paxel-mock.ts) |
+| Our vocabulary: origin config, address mapping, quoting, booking, tracking | [`src/services/shipment.ts`](src/services/shipment.ts) |
+| Cart → one parcel | [`src/utils/parcel.ts`](src/utils/parcel.ts) |
+
+**Endpoints used.** All four service types share one endpoint set, differing only in the `service_type` field:
+
+| Ours | Paxel | Auth |
+| --- | --- | --- |
+| quote at checkout | `POST /v1/rates/city`, or `/v1/rates/instant` for INSTANT | key |
+| `POST /api/orders/[id]/shipment` | `POST /v1/shipments` | key + **signature** |
+| `POST /api/shipments/[airwaybill]/cancel` | `POST /v1/shipments/:awb/cancel` | key + **signature** |
+| `GET /api/shipments/[airwaybill]` | `GET /v1/shipments/:awb` | key |
+| `GET /api/shipments/pickups?date=` | `GET /v1/shipments/:date/list` | key |
+
+**The signature is the sharp edge.** A bare SHA-256 over characters sliced out of the body in a fixed order:
+
+```
+create: sha256( invoice_number[0..2] + origin.name[0..2] + destination.name[0..2] + items[0].name[0..2] + secret )
+cancel: sha256( airwaybill_code[-6..] + cancellation_reason[0..2] + secret )
+```
+
+Nothing about it is self-checking — get the order wrong and the string still hashes, Paxel just answers 403 with no clue which of the four inputs was wrong. **`npm run paxel:check`** asserts both formulas against the three hashes published in the documentation, and greps `paxel.ts` to confirm the shipped code still uses them. It needs no database, network or key.
+
+**One parcel, not a basket.** A rate request carries a single `weight` and a single `dimension` string, because a shipment is one box. `consolidateParcel` stacks the lines flat (`length = max`, `width = max`, `height = Σ`), reflowing into side-by-side columns past 50 cm. It is deliberately pessimistic: Paxel reweighs at pickup and bills the merchant the difference, after the buyer has been charged a price we can no longer change. Limits are 50 cm a side and 5 kg (25 kg for INSTANT), checked before the call so an oversized cart gets a sentence instead of Paxel's empty-bodied 400.
+
+**Coverage is a normal outcome, not an error.** A service Paxel will not price comes back `available: false` with a reason, and the checkout shows it greyed out rather than hiding it — a buyer whose cart is too heavy for same-day should be told so. If *no* service is available the checkout blocks with 422 (D28); it does not fall back to a formula, because a quote we cannot book is worse than no quote.
+
+**Mock mode.** With `PAXEL_API_KEY` unset — or `PAXEL_MODE=mock` — every call is answered locally in the documented shape. It models coverage faithfully on purpose (SAMEDAY and INSTANT quote only within one city) so the unavailable-service path is reachable in development, and it advances a booked shipment through the real status sequence as time passes so the tracking panel actually moves. Every mock payload carries `is_mock`, `Shipment.isMock` stores it, and the admin badges it — a mock airwaybill is otherwise indistinguishable from a real one, and an admin waiting on a courier that was never called is a bad afternoon.
+
+### B6.6 Destination accuracy `[SHIPPED]`
+
+Two different things are needed, and they come from two different places (D29):
+
+- **The administrative levels** — province, kabupaten/kota, kecamatan, kelurahan — come from the existing `Location` cascade. These are what Paxel matches rates on, and our own table is more canonical for Indonesian kelurahan names than a geocoder's variants would be. Note the rename: our `district` is Paxel's `city`, our `sub_district` is their `district`. The mapping lives in `toPaxelAddress` and nowhere else.
+- **The coordinate** comes from a Leaflet + OpenStreetMap pin the buyer drags onto their building. `Location.approx_lat/long` is a village centroid, so a courier navigating to it arrives at the kelurahan office. The centroid is the map's starting position; `Order.isPinned` records whether the buyer actually moved it, and the admin order detail says which.
+
+No geocoding API, no key, no billing. `leaflet` reads `window` at module scope, so the map lives in [`address-map-inner.tsx`](src/components/ui/carts/slicing/address-map-inner.tsx) behind a `dynamic(() => import(…), { ssr: false })` wrapper — `ssr: false` alone does not stop a static import from being evaluated on the server, and with the imports in the wrapper file the build died prerendering `/id/cart`.
+
+### B6.7 Booking lifecycle `[SHIPPED]`
+
+```
+admin verifies payment   isPurchased false → true, stock decremented (unchanged)
+  → POST /orders/[id]/shipment    admin picks a pickup window; Paxel books;
+                                  airwaybill → Order.trackingNumber; PAID → SHIPPED
+  → GET  /shipments/[awb]         refresh tracking; PDO → order COMPLETED
+  → POST /shipments/[awb]/cancel  before pickup only; order SHIPPED → PAID,
+                                  trackingNumber cleared, ready to re-book
+```
+
+Booking is a **separate action** from verifying payment, deliberately. Verification runs the transaction that decrements stock and increments `soldCount`; a courier call folded into it could roll that back on a timeout, or half-apply it. Kept apart, a failed booking is simply retried and the admin chooses the pickup window rather than having one guessed.
+
+Cancelling returns the order to `PAID`, not `CANCELLED` — the buyer has paid and the stock has moved; only the courier booking was undone. `Shipment` rows are kept rather than replaced, so a re-booked order carries its history.
+
+Tracking is pull-on-demand. Paxel publishes webhooks, but registering one needs a public URL and an account that does not exist yet; adding the receiver later makes this cheaper without replacing it, since an admin will always want a refresh button that answers now.
 
 ### B6.4 Membership
 
@@ -973,7 +1043,8 @@ Each phase ends with `npx tsc --noEmit` clean, `npm run build` clean, and the af
 | **2a — Admin catalog** ✅ **DONE** | Admin design system (§C2) · product list with search, taxonomy filters, grid/list and paging · product form: size guide → variants → package dimensions, images, 5 Tiptap fields behind an EN\|ID tab · product **soft delete** (A9.13) | No dependency on the public design, and nothing else can be built against an empty catalog |
 | **2b — Public catalog** ✅ **DONE** | Storefront kit (§C5) · header/footer shell in the layout · homepage · listings per axis · collection pages · product detail · cart drawer · wishlist · Journal · About · every Customer Care page · FAQ and Contact vertical slices | Implemented from the mockups in [`reference/`](reference/) |
 | **3a — Member registry** ✅ **DONE** | `Member` CRUD (F-48): grant, revoke, reinstate, per-member order stats (§C9). F-51 and F-55 already landed in phase 1 | Reads the checkout path but does not change it |
-| **3 — Orders & pricing** | `OrderStatus` + tracking number in the admin order screen | Touches the checkout path, so it runs alone |
+| **3 — Orders & pricing** | `OrderStatus` + tracking number in the admin order screen. **Delivered by 3b**: the tracking number is the Paxel airwaybill, and `SHIPPED`/`COMPLETED` are driven by the courier rather than typed in | Touches the checkout path, so it runs alone |
+| **3b — Paxel shipping** ✅ **CODE DONE, MIGRATION PENDING** | Replace the distance/zone formula with the Paxel eCommerce API (D28, §B6.5–B6.7): wire types · signed client + mock transport · shipment service · parcel consolidation · per-service quoting with a token each · buyer-dragged map pin (D29) · admin book/cancel/track panel · Pickups-by-date screen · `paxel:check` · 4 new `db:check` invariants | Rewrites the one thing D8 froze, so it runs alone. Blocked on the schema migration — see §C10 |
 | **4a — Journal admin** ✅ **DONE** | `Article` + `ArticleCategory` CRUD: zod, types, API routes, client hooks, list and form screens, seed | Independent of 2b and 3 |
 | **4b — FAQ admin** ✅ **DONE** | `Faq` CRUD on the same vertical-slice pattern, grouped by `topic` (§C7) | The public half shipped with 2b; the admin half did not |
 | **4c — Contact inbox** ✅ **DONE** | `ContactInquiry` admin queue with status workflow, handling note and sidebar badge (F-47, §C8) | Same — the storefront form came with 2b |
@@ -1183,6 +1254,33 @@ The member registry (F-48). D19 is the whole point of this screen, so it is what
 - **Order stats come from one `groupBy` per page**, not per row, and count only verified orders — an unverified order has not been paid, and showing it as spend overstates what a member is worth.
 - **Order count links to the Orders screen filtered by email** rather than duplicating a list. Its search already matches on email, so there is nothing new to build or keep in sync.
 
+## C10. Phase 3b work order `[SHIPPED — pending migration]`
+
+Paxel shipping. The design is §B6.5–B6.7 and D28/D29; this is what was actually built and what still has to happen.
+
+**Built and verified without a database:** `npx tsc --noEmit` clean · `npm run lint` clean (0 problems — the `carts/cart.tsx` baseline error went with the checkout-form rewrite) · `npm run build` clean, 123 static pages · `npm run paxel:check` green on all five checks.
+
+**The migration has not been run.** PostgreSQL was not reachable while this was built — `localhost:5432` refused, no service registered, no Docker daemon, no install on the machine. Until it is applied, **every order-related route fails at runtime**, because the generated client expects columns the database does not have.
+
+The migration itself is written and tracked: [`prisma/migrations/20260813120000_paxel_shipping/`](prisma/migrations/20260813120000_paxel_shipping/migration.sql), generated offline with `prisma migrate diff` against the committed schema, then hand-edited in exactly one respect. `prisma migrate dev` emits a bare `ADD COLUMN … NOT NULL` for the six new required columns, which refuses to run on a populated `orders` table. The shipped version adds them with a temporary default and drops it immediately — identical resulting definition, so no drift, but it applies either way. Rows backfilled that way carry empty administrative levels and 0/0 coordinates and **cannot be shipped**; `db:check` names every one of them rather than letting them sit there looking fine.
+
+To finish:
+
+```bash
+# 1. Start PostgreSQL, then:
+npm run db:migrate      # requires PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION (§E1)
+npm run db:seed         # rewrites the `shipping` config group for Paxel
+npm run db:check        # 11 invariants, 4 of them new
+npm run dev             # then npm run smoke:checkout in a second terminal
+```
+
+**`smoke:checkout` was rewritten for this phase** and now covers the courier path too: it asserts a token exists per service and that they differ, that a quote replayed against a different village is refused, that the service stored on the order came from the token rather than the request body, and then books a pickup, tracks it, finds it in the day's list, refuses a second concurrent booking, cancels it, and checks the order returns to `PAID` with the tracking number cleared. Every assertion is counted and the script exits non-zero on any failure — the old version printed ✓/✗ and always exited 0. **It has not been executed**, because that needs a running database.
+
+**Two things deliberately not built:**
+
+- **The webhook receiver.** Paxel publishes one per status code. Registering it needs a public URL and an account that does not exist yet, and tracking-on-demand is correct until then (§B6.5).
+- **PAXEL AMPLOP and PAXELBIG.** Documents and oversized freight; neither fits a clothing order.
+
 ---
 
 # PART D — Locked decisions
@@ -1198,7 +1296,7 @@ Agreed in discussion. Do not reopen without a new decision recorded here.
 | **D5** | One brand (required), one clothing, many audiences | Supports unisex products without over-modeling |
 | **D6** | `product_dimensions` → `package_dimensions`. Body measurements live on `SizeGuideRow`; package dimensions live on `ProductVariant`, defaulting to config | Measurements belong to the pattern and are shared; packing belongs to the individual product. Storing packing on the guide would force a fork of the whole guide on every dimension tweak and fill the database with near-duplicates |
 | **D7** | All models use `cuid()` | Matches the existing codebase; overrides the `uuid()` in the source notes |
-| **D8** | Checkout token, shipping/zone calculation, order lifecycle, upload pipeline, config parameters, guest checkout, membership, logging, auth, and handler conventions are preserved — except the two exceptions in §B6.3 | The pricing path is the most delicate code in the repo |
+| **D8** | Checkout token, order lifecycle, upload pipeline, config parameters, guest checkout, membership, logging, auth, and handler conventions are preserved — except the exceptions listed in §B6.3. *(Shipping/zone calculation was on this list until D28 replaced it wholesale.)* | The pricing path is the most delicate code in the repo |
 | **D9** | Four content fields have global `{ en, id }` defaults in config; products store only overrides, resolved through a four-level chain | Admin edits the default once instead of filling every product |
 | **D10** | Tiptap stores **JSON**, through one shared `tiptap-editor.tsx` | Structured storage; one component keeps behavior consistent |
 | **D11** | `isFavorite` keeps its v1 meaning (admin-featured, shown on the brand page). Wishlist is `localStorage`-only. Our Fabrics stays static, moving to `/about/our-fabrics` | Wishlist is per-visitor and cannot reuse a shared product flag |
@@ -1217,6 +1315,8 @@ Agreed in discussion. Do not reopen without a new decision recorded here.
 | **D27** | **Only `Size`, `ConfigParameter` and `ConfigParameterGroup` keep an explicit `order` column.** `SizeGuide`, `ArticleCategory` and `Faq` lose theirs and sort by `createdAt`. `Size.order` is assigned `max(order) + 1` on create when the payload omits it | An `order` column earns its place only where nothing else encodes the sequence. For sizes nothing does — `code` sorts into nonsense (`L, M, S, XL, XS`; `0-6-12M` before `1Y`) — and D21 already removed `SizeGuideRow.order` so `size.order` is the single source; removing it would mean either wrong ordering everywhere or two competing sources again. For the other three, creation order is a faithful stand-in and the admin sets it by adding things in the order they want. Deliberately **not** alphabetical: the title/name of all three is translated, so alphabetical sorting is locale-dependent and the list would reshuffle when a visitor switches language. The auto-assign fixes a real latent bug rather than being convenience only — every row defaulted to `0`, so rows created without an explicit position all tied, and `ORDER BY "order"` with ties returns an arbitrary and unstable sequence |
 | **D26** | **`Product.name` is a plain column, not translated.** One name in both languages, like the slug. `ProductTranslation` keeps only the five rich-text fields, all nullable, so a product may have no translation rows at all. `Article`, `FAQ` and `SizeGuide` are unaffected — their title *is* the translation | Product names are brand and clothing language ("Melati Embroidered Kebaya"), which reads the same in both locales, so translating them bought nothing and cost everywhere: `Product` had no name column, which made a nameless product possible, forced search to join the translation table on the active locale *plus* EN, put the name behind a locale tab in the admin form, and — because the API required a `name` on every translation row — made an ID row carrying only a description impossible to submit. All four problems are structural consequences of that one field, and all four disappear with it. Superseding consequence: **an EN translation row is no longer required for products**; requiring one would only force an all-null row, since the four defaulted fields fall back to config with or without it. ID-without-EN is still refused, because the per-field fallback runs ID → EN |
 | **D24** | `Product.stock` is maintained by a Postgres trigger, shipped as a migration rather than application code | It is the number that gates overselling. A trigger makes drift structurally impossible rather than merely unlikely — any write path that forgot to recompute would otherwise let the store sell stock it does not have, silently. Consequence: application code must never write `stock` |
+| **D28** | **Shipping is Paxel, and Paxel only.** The haversine/zone formula and the whole `shipping_zones` config are deleted. The checkout quotes every *enabled* service in parallel and returns one signed token each; the buyer picks; `serviceType` and `destinationHash` join the token payload. If no service can be quoted the checkout **blocks** (422) rather than falling back to a formula. Booking is an explicit admin action after payment verification, never a side effect of it | One price source means the price shown, the price charged and the price the courier bills are the same number. A fallback formula would reintroduce exactly the two-places-computing-a-price hazard D22 was written to remove — and worse, would produce a quote that cannot actually be booked. `serviceType` in the token is not optional: quoting four prices and signing only the amount leaves the service free, so a REGULAR quote could be submitted asking for INSTANT. `destinationHash` closes the same hole on the address. Booking is separate because verification runs the stock transaction, and a courier timeout must not be able to roll that back |
+| **D29** | **Administrative levels come from the `Location` cascade; the coordinate comes from a buyer-dragged Leaflet/OpenStreetMap pin.** No geocoding API. `Order` gains `province`, `district`, `sub_district`, `village`, `addressNote`, `latitude`, `longitude`, `isPinned` | Paxel matches rates on the administrative names, and our own table is more canonical for Indonesian kelurahan than a geocoder's variants — so the cascade was already right for that half. It was only ever wrong about *coordinates*: `approx_lat/long` is a village centroid, which sends a courier to the kelurahan office. A free map pin fixes precisely that, with no key and no billing, and `isPinned` makes the difference between a real coordinate and a centroid visible to the admin before dispatch. Google Places was considered and rejected as an upgrade path, not a requirement. v1 collected the four levels at checkout and discarded them, which left a stored order impossible to ship or re-quote |
 | **D21** | Field audit removed seven columns that produced nothing: `code` on the three taxonomy tables *(since superseded — the tables themselves are gone, D25)*, `SizeGuide.isActive`, `SizeGuideRow.order`, `Product.productionNotes`, `Member.joinedAt`. Ruling principle: **`isActive` is a manual switch, `publishedAt` / date windows are a schedule** — a model needs both only when it needs both behaviours | Each removal deleted a second source of truth: `code` duplicated `slug`, `isActive` beside `publishedAt` had no defined combination, a row `order` could contradict `size.order`, `productionNotes` duplicated the translated `notes`, and `joinedAt` duplicated `createdAt` |
 
 ---
@@ -1238,6 +1338,7 @@ npm run db:studio      # prisma studio
 npm run db:reset       # migrate reset --force (DESTRUCTIVE — confirm first)
 npm run smoke:checkout # drive a real checkout against a running dev server
 npm run db:check       # report violations of the §B4 invariants (exits 1 on failure)
+npm run paxel:check    # assert the Paxel request signatures still match the documented vectors
 ```
 
 **`prisma/migrations/` is tracked.** Anything the schema cannot express — the stock trigger (D24) — ships as a hand-written migration, so `migrate deploy` installs it in every environment including production, exactly once and in order. There is no separate apply step to forget.
@@ -1260,7 +1361,9 @@ npm run db:seed
 
 ## E2. Environment variables
 
-`DATABASE_URL`, `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_JWT_SECRET`, `NEXT_PUBLIC_CHECKOUT_TOKEN`, `NEXT_PUBLIC_UPLOADS_PATH`, `RESEND_API_KEY`, `RESEND_EMAIL_FROM`, `CRON_SECRET`.
+`DATABASE_URL`, `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_JWT_SECRET`, `NEXT_PUBLIC_CHECKOUT_TOKEN`, `NEXT_PUBLIC_UPLOADS_PATH`, `RESEND_API_KEY`, `RESEND_EMAIL_FROM`, `CONTACT_INBOX_EMAIL`, `CRON_SECRET`.
+
+Shipping adds `PAXEL_BASE_URL`, `PAXEL_API_KEY`, `PAXEL_API_SECRET`, `PAXEL_MODE`, `PAXEL_TIMEOUT_MS` — deliberately **without** the `NEXT_PUBLIC_` prefix, since `PAXEL_API_SECRET` signs shipment requests. With `PAXEL_API_KEY` unset the app runs in mock mode (§B6.5); it never falls back to a hardcoded credential.
 
 The two signing secrets lose their `NEXT_PUBLIC_` prefix in phase 5 (F-54). Do not add new secrets with that prefix.
 

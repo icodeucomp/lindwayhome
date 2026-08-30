@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { z } from "zod";
 
-import { ConfigService, ShippingService } from "@/services";
+import { ConfigService, PaxelError, ShippingService, ShippingDestination, getShippingOrigin, quoteServices } from "@/services";
 
 import { errorMessage, getClientIp, logCalculation, logError, logger, logRequest, logResponse, prisma, resolveFiles, sendOrderConfirmation } from "@/lib";
 
-import { API_BASE_URL, calculateDistance, calculateShippingCost, calculateTotalPrice, hashItems, resolveUnitPrice, signCheckoutToken, toRupiah, verifyCheckoutToken, ShippingItem } from "@/utils";
+import { API_BASE_URL, ParcelItem, calculateTotalPrice, consolidateParcel, hashDestination, hashItems, resolveUnitPrice, signCheckoutToken, toRupiah, verifyCheckoutToken } from "@/utils";
 
 import { CartSchema, CreateOrderSchema, DiscountType, ShippingCalculateSchema } from "@/types";
+
+import { PAXEL_SERVICE_TYPES, PaxelServiceType } from "@/types/paxel";
 
 /**
  * Looks up the buyer's live membership. v1 asked "does any past order by this email
@@ -21,7 +23,54 @@ const findActiveMember = async (email: string | null) => {
   return member?.isActive ? member : null;
 };
 
-// GET - Calculate shipping & price, and issue the checkout token
+/**
+ * Prices every line from the database and collects its parcel dimensions.
+ *
+ * Shared by GET and POST so the subtotal is computed once, in one place. Two
+ * implementations would be two chances for the price shown and the price charged to
+ * drift apart (F-49).
+ */
+type PricedCart = { ok: true; purchased: number; totalItemsSold: number; parcelItems: ParcelItem[] } | { ok: false; status: number; message: string; detail: string };
+
+const priceCart = async (items: { productId: string; selectedSize: string; quantity: number }[]): Promise<PricedCart> => {
+  const parcelItems: ParcelItem[] = [];
+  let purchased = 0;
+  let totalItemsSold = 0;
+
+  for (const item of items) {
+    const product = await prisma.product.findUnique({
+      where: { id: item.productId },
+      select: { id: true, isActive: true, name: true, sku: true, price: true, discountedPrice: true },
+    });
+
+    if (!product || !product.isActive) {
+      return { ok: false, status: 404, message: "A product in your cart is no longer available.", detail: `Product "${item.productId}" is not available` };
+    }
+
+    const unitPrice = resolveUnitPrice(product);
+    purchased += unitPrice * item.quantity;
+    totalItemsSold += item.quantity;
+
+    const dimensions = await ShippingService.getPackageDimensions(item.productId, item.selectedSize);
+
+    if (!dimensions) {
+      return {
+        ok: false,
+        status: 404,
+        message: `Dimensions for size "${item.selectedSize}" not found in configuration.`,
+        detail: `Dimensions for size "${item.selectedSize}" not found`,
+      };
+    }
+
+    logCalculation("Line priced", { productId: item.productId, name: product.name, size: item.selectedSize, quantity: item.quantity, unitPrice });
+
+    parcelItems.push({ ...dimensions, quantity: item.quantity });
+  }
+
+  return { ok: true, purchased, totalItemsSold, parcelItems };
+};
+
+// GET - Quote every courier service, and issue a checkout token per service
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
 
@@ -31,25 +80,22 @@ export async function GET(request: NextRequest) {
   const village = searchParams.get("village");
   const email = searchParams.get("email");
   const itemsParam = searchParams.get("items");
+  const address = searchParams.get("address");
+  const postalCode = searchParams.get("postalCode");
+  const latitude = searchParams.get("latitude");
+  const longitude = searchParams.get("longitude");
 
   const pathAPI = `GET /orders/checkout/${email}`;
 
   const startTime = Date.now();
 
   try {
-    logCalculation("Request received", {
-      province,
-      district,
-      sub_district,
-      village,
-      email,
-      itemsCount: itemsParam ? JSON.parse(itemsParam).length : 0,
-    });
+    logCalculation("Request received", { province, district, sub_district, village, email, itemsCount: itemsParam ? JSON.parse(itemsParam).length : 0 });
 
     // ── 1. Validate required params ──────────────────────────────────────────
     // `purchased` and `totalItemsSold` are deliberately NOT read from the query
-    // string any more. v1 signed whatever subtotal the client claimed, so a buyer
-    // could name their own total (A9.1). Both are derived below.
+    // string. v1 signed whatever subtotal the client claimed, so a buyer could name
+    // their own total (A9.1). Both are derived below.
     if (!province || !district || !sub_district || !village || !itemsParam) {
       logger.error(`${pathAPI} error`, { error: "Missing required parameters" });
       return NextResponse.json({ success: false, message: "Missing required parameters" }, { status: 400 });
@@ -60,126 +106,150 @@ export async function GET(request: NextRequest) {
       district,
       sub_district,
       village,
+      address: address ?? undefined,
+      postalCode: postalCode ?? undefined,
+      latitude: latitude ?? undefined,
+      longitude: longitude ?? undefined,
       items: JSON.parse(itemsParam),
     });
 
-    // ── 2. Parallel DB fetches ───────────────────────────────────────────────
-    const [member, configParameters, config, zones] = await Promise.all([
+    // ── 2. Parallel fetches ──────────────────────────────────────────────────
+    const [member, configParameters, origin] = await Promise.all([
       findActiveMember(email),
       ConfigService.getConfigValue(["tax_rate", "tax_type", "promotion_discount", "promo_type", "member_discount", "member_type"]),
-      ShippingService.getShippingConfig(),
-      ShippingService.getShippingZones(),
+      getShippingOrigin(),
     ]);
 
     logCalculation("Email validation", { email, isMember: Boolean(member) });
 
-    if (!config) {
-      logger.error(`${pathAPI} error`, { error: "Shipping configuration not found" });
-      return NextResponse.json({ success: false, message: "Shipping configuration not found" }, { status: 404 });
-    }
-
     // ── 3. Destination coordinates ───────────────────────────────────────────
-    const destinationCoords = await ShippingService.getDestinationCoordinates(validatedData.province, validatedData.district, validatedData.sub_district, validatedData.village);
+    // The buyer's own map pin wins. The village centroid is the fallback for a
+    // buyer who never touched the map, and its absence means we do not recognise
+    // the address at all.
+    let coordinates = validatedData.latitude != null && validatedData.longitude != null ? { lat: validatedData.latitude, long: validatedData.longitude } : null;
 
-    if (!destinationCoords) {
+    if (!coordinates) {
+      coordinates = await ShippingService.getDestinationCoordinates(validatedData.province, validatedData.district, validatedData.sub_district, validatedData.village);
+    }
+
+    if (!coordinates) {
       logger.error(`${pathAPI} error`, { error: "Destination coordinates not found" });
-      return NextResponse.json({ success: false, message: "Destination coordinates not found" }, { status: 404 });
+      return NextResponse.json({ success: false, message: "We do not recognise that address yet. Please pick your village from the list again." }, { status: 404 });
     }
 
-    // ── 4. Calculate distance ────────────────────────────────────────────────
-    const distance_km = calculateDistance(config.origin_lat, config.origin_long, destinationCoords.lat, destinationCoords.long, config.earth_radius_km);
+    // ── 4. Server-side subtotal + parcel dimensions (F-51) ───────────────────
+    const priced = await priceCart(validatedData.items);
 
-    // ── 5. Server-side subtotal + parcel dimensions (F-51) ───────────────────
-    const itemsWithDimensions: ShippingItem[] = [];
-    let purchased = 0;
-    let totalItemsSold = 0;
-
-    for (const item of validatedData.items) {
-      const product = await prisma.product.findUnique({
-        where: { id: item.productId },
-        select: { id: true, isActive: true, name: true, price: true, discountedPrice: true },
-      });
-
-      if (!product || !product.isActive) {
-        logger.error(`${pathAPI} error`, { error: `Product "${item.productId}" is not available` });
-        return NextResponse.json({ success: false, message: `A product in your cart is no longer available.` }, { status: 404 });
-      }
-
-      const unitPrice = resolveUnitPrice(product);
-      purchased += unitPrice * item.quantity;
-      totalItemsSold += item.quantity;
-
-      const dimensions = await ShippingService.getPackageDimensions(item.productId, item.selectedSize);
-
-      if (!dimensions) {
-        logger.error(`${pathAPI} error`, { error: `Dimensions for size "${item.selectedSize}" not found` });
-        return NextResponse.json({ success: false, message: `Dimensions for size "${item.selectedSize}" not found in configuration.` }, { status: 404 });
-      }
-
-      logCalculation("Line priced", { productId: item.productId, name: product.name, size: item.selectedSize, quantity: item.quantity, unitPrice });
-
-      itemsWithDimensions.push({ ...dimensions, quantity: item.quantity });
+    if (!priced.ok) {
+      logger.error(`${pathAPI} error`, { error: priced.detail });
+      return NextResponse.json({ success: false, message: priced.message }, { status: priced.status });
     }
+
+    const { purchased, totalItemsSold, parcelItems } = priced;
 
     logCalculation("Subtotal derived from database prices", { purchased, totalItemsSold });
 
-    // ── 6. Calculate shipping ────────────────────────────────────────────────
-    const calculation = calculateShippingCost(itemsWithDimensions, distance_km, config, zones);
-    const shippingCost = toRupiah(calculation.shipping_final);
+    // ── 5. Pack the cart into one parcel ─────────────────────────────────────
+    // Paxel prices a shipment, not a basket: one weight, one LxWxH. v1 summed a
+    // volumetric cost per line, which has no equivalent here.
+    const parcel = consolidateParcel(parcelItems);
 
-    // ── 7. Calculate total price ─────────────────────────────────────────────
-    const totalPurchased = toRupiah(
-      calculateTotalPrice({
-        basePrice: purchased,
-        member: member ? (configParameters.member_discount as number) : 0,
-        memberType: configParameters.member_type as DiscountType,
-        promo: configParameters.promotion_discount as number,
-        promoType: configParameters.promo_type as DiscountType,
-        tax: configParameters.tax_rate as number,
-        taxType: configParameters.tax_type as DiscountType,
-        shipping: shippingCost,
-      }),
-    );
+    // ── 6. Quote every enabled service ───────────────────────────────────────
+    const destination: ShippingDestination = {
+      province: validatedData.province,
+      district: validatedData.district,
+      sub_district: validatedData.sub_district,
+      village: validatedData.village,
+      address: validatedData.address ?? `${validatedData.village}, ${validatedData.sub_district}`,
+      postalCode: validatedData.postalCode ?? 0,
+      latitude: coordinates.lat,
+      longitude: coordinates.long,
+    };
 
-    // ── 8. Sign checkout token (locks prices server-side for 15 min) ─────────
+    const { quotes } = await quoteServices(destination, parcel, origin);
+
+    const destinationHash = hashDestination({
+      province: validatedData.province,
+      district: validatedData.district,
+      sub_district: validatedData.sub_district,
+      village: validatedData.village,
+      postalCode: validatedData.postalCode ?? 0,
+    });
+
     const itemsHash = hashItems(validatedData.items.map((i) => ({ productId: i.productId, selectedSize: i.selectedSize, quantity: i.quantity })));
 
-    const checkoutToken = signCheckoutToken({
-      shippingCost,
-      totalPurchased,
-      purchased,
-      totalItemsSold,
-      itemsHash,
-      expiresAt: Date.now() + 15 * 60 * 1000,
+    const expiresAt = Date.now() + 15 * 60 * 1000;
+
+    // ── 7. Price and sign each available service ─────────────────────────────
+    // One token per service, so choosing a different one costs no round trip and
+    // every option the buyer can click is already price-locked.
+    const services = quotes.map((quote) => {
+      if (!quote.available || quote.cost == null) {
+        return { serviceType: quote.serviceType, available: false as const, reason: quote.reason ?? "Not available for this address." };
+      }
+
+      const shippingCost = quote.cost;
+
+      const totalPurchased = toRupiah(
+        calculateTotalPrice({
+          basePrice: purchased,
+          member: member ? (configParameters.member_discount as number) : 0,
+          memberType: configParameters.member_type as DiscountType,
+          promo: configParameters.promotion_discount as number,
+          promoType: configParameters.promo_type as DiscountType,
+          tax: configParameters.tax_rate as number,
+          taxType: configParameters.tax_type as DiscountType,
+          shipping: shippingCost,
+        }),
+      );
+
+      return {
+        serviceType: quote.serviceType,
+        available: true as const,
+        cost: shippingCost,
+        totalPurchased,
+        etaLabel: quote.etaLabel,
+        pickupWindows: quote.pickupWindows,
+        isMock: quote.isMock,
+        checkoutToken: signCheckoutToken({ shippingCost, totalPurchased, purchased, totalItemsSold, itemsHash, serviceType: quote.serviceType, destinationHash, expiresAt }),
+      };
     });
 
-    logCalculation("Request completed", {
-      pathAPI,
-      processingTime: Date.now() - startTime,
-      finalTotal: totalPurchased,
-      zone: calculation.zone,
-      distance_km: calculation.distance_km.toFixed(2),
-    });
+    const available = services.filter((service) => service.available);
+
+    // Blocking rather than falling back to a distance formula is deliberate: one
+    // price source means the price shown is the price charged and the price the
+    // courier bills us. A quote we cannot book is worse than no quote.
+    if (available.length === 0) {
+      const reasons = services.map((service) => (service.available ? "" : service.reason)).filter(Boolean);
+      logger.error(`${pathAPI} error`, { error: "No courier service available", reasons });
+
+      return NextResponse.json(
+        {
+          success: false,
+          message: reasons[0] ?? "We cannot ship to this address yet. Please contact us and we will arrange it for you.",
+          data: { services, parcel },
+        },
+        { status: 422 },
+      );
+    }
+
+    logCalculation("Request completed", { pathAPI, processingTime: Date.now() - startTime, parcel: parcel.dimension, available: available.length });
 
     return NextResponse.json(
       {
         success: true,
         data: {
           parameter: { ...configParameters },
-          shipping: {
-            cost: shippingCost,
-            zone: calculation.zone,
-            zone_label: calculation.zone_label,
-            distance_km: parseFloat(calculation.distance_km.toFixed(2)),
-            weight_kg: calculation.rounded_weight_kg,
-            multiplier: calculation.multiplier,
-            price_override: calculation.price_override,
-          },
+          parcel,
+          // The village centroid, so the checkout map has somewhere to open. It is
+          // the starting pin, not the answer — the buyer drags it onto their door.
+          destination: { latitude: coordinates.lat, longitude: coordinates.long },
+          services,
           purchased,
           totalItemsSold,
-          totalPurchased,
           isMember: Boolean(member),
-          checkoutToken,
+          expiresAt,
         },
       },
       { status: 200 },
@@ -188,6 +258,12 @@ export async function GET(request: NextRequest) {
     if (error instanceof z.ZodError) {
       logError(`${pathAPI} zod error`, Date.now() - startTime, error);
       return NextResponse.json({ success: false, message: error.issues }, { status: 400 });
+    }
+
+    // A courier outage is not our bug and must not read like one.
+    if (error instanceof PaxelError) {
+      logError(`${pathAPI} paxel error`, Date.now() - startTime, error);
+      return NextResponse.json({ success: false, message: error.userMessage }, { status: 502 });
     }
 
     logError(`${pathAPI} error`, Date.now() - startTime, error);
@@ -237,7 +313,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Checkout token is required. Please complete the order summary step first." }, { status: 400 });
     }
 
-    let trustedPrices: { shippingCost: number; totalPurchased: number; purchased: number; totalItemsSold: number };
+    let trustedPrices: { shippingCost: number; totalPurchased: number; purchased: number; totalItemsSold: number; serviceType: PaxelServiceType };
 
     try {
       const payload = verifyCheckoutToken(body.checkoutToken);
@@ -249,15 +325,40 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, message: "Cart items changed since checkout was calculated. Please go back and recalculate." }, { status: 400 });
       }
 
+      // The quote was priced for one destination and one service. Re-deriving both
+      // hashes here is what stops a cheap quote being replayed against a far address
+      // or against a dearer service.
+      const currentDestinationHash = hashDestination({
+        province: body.province,
+        district: body.district,
+        sub_district: body.sub_district,
+        village: body.village,
+        postalCode: body.postalCode,
+      });
+
+      if (currentDestinationHash !== payload.destinationHash) {
+        logger.error(`${pathAPI} error`, { error: "Shipping address changed since checkout was calculated." });
+        return NextResponse.json({ success: false, message: "Your shipping address changed since the price was calculated. Please go back and recalculate." }, { status: 400 });
+      }
+
+      if (!PAXEL_SERVICE_TYPES.includes(payload.serviceType as PaxelServiceType)) {
+        logger.error(`${pathAPI} error`, { error: `Unknown service type in token: ${payload.serviceType}` });
+        return NextResponse.json({ success: false, message: "That delivery service is no longer offered. Please recalculate your order." }, { status: 400 });
+      }
+
       trustedPrices = {
         shippingCost: payload.shippingCost,
         totalPurchased: payload.totalPurchased,
         purchased: payload.purchased,
         totalItemsSold: payload.totalItemsSold,
+        serviceType: payload.serviceType as PaxelServiceType,
       };
     } catch (error) {
-      logError(`${pathAPI} error`, Date.now() - startTime, error);
-      return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
+      // An expired or forged token is a client-side condition, not a server fault.
+      // v1 returned 500 here, which told a buyer whose 15 minutes had run out that
+      // the site was broken.
+      logError(`${pathAPI} token error`, Date.now() - startTime, error);
+      return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 400 });
     }
 
     // ── 3. Merge trusted prices, link the member, move the receipt out of temp ──
@@ -269,6 +370,7 @@ export async function POST(request: NextRequest) {
       totalPurchased: trustedPrices.totalPurchased,
       purchased: trustedPrices.purchased,
       totalItemsSold: trustedPrices.totalItemsSold,
+      shippingServiceType: trustedPrices.serviceType,
       isMember: Boolean(member),
     });
 
@@ -331,7 +433,9 @@ export async function POST(request: NextRequest) {
       return { order, lines };
     });
 
-    // ── 5. Send confirmation email (non-fatal) ───────────────────────────────
+    // ── 5. Send confirmation email ───────────────────────────────────────────
+    // The order is already committed at this point, so a failed email must not be
+    // reported as a failed order — the buyer would re-submit and pay twice.
     try {
       await sendOrderConfirmation({
         orderId: result.order.id,
@@ -355,7 +459,6 @@ export async function POST(request: NextRequest) {
       });
     } catch (error) {
       logError("Send Order Confirmation failed with order ID: " + result.order.id, Date.now() - startTime, error);
-      return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 500 });
     }
 
     // ── 6. Success response ──────────────────────────────────────────────────

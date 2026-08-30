@@ -237,12 +237,20 @@ interface ConfirmDialogProps {
   confirmLabel?: string;
   cancelLabel?: string;
   isPending?: boolean;
+  /**
+   * Blocks confirmation without claiming work is in flight. `isPending` renders a
+   * spinner and "Working…", which is a lie when the real reason is an empty
+   * required field.
+   */
+  confirmDisabled?: boolean;
   tone?: "danger" | "primary";
   onConfirm: () => void;
   onClose: () => void;
+  /** Optional input the confirmation depends on — a cancellation reason, say. */
+  children?: React.ReactNode;
 }
 
-export const ConfirmDialog = ({ isVisible, title, description, confirmLabel = "Confirm", cancelLabel = "Cancel", isPending, tone = "danger", onConfirm, onClose }: ConfirmDialogProps) => (
+export const ConfirmDialog = ({ isVisible, title, description, confirmLabel = "Confirm", cancelLabel = "Cancel", isPending, confirmDisabled, tone = "danger", onConfirm, onClose, children }: ConfirmDialogProps) => (
   <Modal isVisible={isVisible} onClose={onClose} isSmall>
     <div className="pr-8">
       <p className="admin-eyebrow">{tone === "danger" ? "Confirm removal" : "Confirm"}</p>
@@ -250,11 +258,13 @@ export const ConfirmDialog = ({ isVisible, title, description, confirmLabel = "C
       <p className="mt-2 text-sm text-body/60">{description}</p>
     </div>
 
+    {children && <div className="mt-5">{children}</div>}
+
     <div className="flex flex-col-reverse gap-2 pt-5 mt-6 border-t sm:flex-row sm:justify-end border-border">
       <AdminButton type="button" onClick={onClose} disabled={isPending}>
         {cancelLabel}
       </AdminButton>
-      <AdminButton type="button" variant={tone === "danger" ? "danger" : "solid"} onClick={onConfirm} disabled={isPending}>
+      <AdminButton type="button" variant={tone === "danger" ? "danger" : "solid"} onClick={onConfirm} disabled={isPending || confirmDisabled}>
         {isPending && <Spinner className={tone === "danger" ? "border-red-700/30 border-t-red-700" : "border-light/40 border-t-light"} />}
         {isPending ? "Working…" : confirmLabel}
       </AdminButton>

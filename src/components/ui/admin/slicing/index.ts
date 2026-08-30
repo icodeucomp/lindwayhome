@@ -11,5 +11,7 @@ export * from "./products-lists";
 export * from "./articles-lists";
 
 export * from "./orders-lists";
+export * from "./shipment-panel";
+export * from "./pickups-lists";
 export * from "./locations-lists";
 export * from "./config-field";

@@ -29,9 +29,11 @@ import {
   UpdateContactInquiry,
   CreateMember,
   UpdateMember,
+  Shipment,
+  BookShipmentPayload,
 } from "@/types";
 
-import { QueryKey, useMutation, UseMutationOptions, useQuery } from "@tanstack/react-query";
+import { QueryKey, useMutation, UseMutationOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import toast from "react-hot-toast";
 
@@ -317,7 +319,16 @@ export const ordersApi = {
 };
 
 export const orderCheckoutApi = {
-  useGetOrderCheckout: <T>({ key, params = {}, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+  /**
+   * The courier quote.
+   *
+   * Deliberately does NOT use the 6-hour `staleTime`/`gcTime` the rest of this file
+   * defaults to: every token it returns expires in 15 minutes, and a cached quote
+   * outliving its own token is how a buyer who lingers on the payment step gets
+   * "checkout session expired" on submit. Five minutes leaves room to finish, and
+   * `retry: 1` keeps an out-of-coverage address from being asked three times.
+   */
+  useGetOrderCheckout: <T>({ key, params = {}, gcTime = 5 * 60 * 1000, staleTime = 5 * 60 * 1000, enabled = true }: FetchOptions) => {
     return useQuery<T, Error>({
       queryKey: key,
       queryFn: async () => {
@@ -327,6 +338,10 @@ export const orderCheckoutApi = {
         if (params.sub_district) searchParams.append("sub_district", params.sub_district);
         if (params.village) searchParams.append("village", params.village);
         if (params.email) searchParams.append("email", params.email);
+        if (params.address) searchParams.append("address", params.address);
+        if (params.postalCode) searchParams.append("postalCode", String(params.postalCode));
+        if (params.latitude != null) searchParams.append("latitude", String(params.latitude));
+        if (params.longitude != null) searchParams.append("longitude", String(params.longitude));
         if (params.items) searchParams.append("items", JSON.stringify(params.items));
         const { data } = await api.get(`/orders/checkout?${searchParams.toString()}`);
         return data;
@@ -334,7 +349,7 @@ export const orderCheckoutApi = {
       gcTime,
       staleTime,
       enabled,
-      retry: RETRY_TIMES,
+      retry: 1,
     });
   },
   useCreateOrder: ({ ...mutationOptions }: UseMutationOptions<Order, Error, CreateOrder>) => {
@@ -362,6 +377,100 @@ export const orderCheckoutApi = {
         toast.error(errorMessage);
       },
       ...mutationOptions,
+    });
+  },
+};
+
+/**
+ * Shipments (Paxel).
+ *
+ * Every hook here invalidates `["orders"]` as well as its own key, because booking
+ * or cancelling a pickup changes the order's status and tracking number too — and
+ * an admin looking at a stale "Awaiting pickup" badge would book it twice.
+ */
+export const shipmentsApi = {
+  useBookShipment: ({ ...mutationOptions }: UseMutationOptions<Shipment, Error, { orderId: string; payload: BookShipmentPayload }>) => {
+    const queryClient = useQueryClient();
+    return useMutation({
+      mutationFn: async ({ orderId, payload }) => {
+        try {
+          const { data } = await api.post(`/orders/${orderId}/shipment`, payload);
+          toast.success(data.message || "Pickup booked");
+          return data.data;
+        } catch (error) {
+          throw new Error(axios.isAxiosError(error) ? error.response?.data?.message || "An error occurred" : "An unexpected error occurred");
+        }
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["orders"] });
+        queryClient.invalidateQueries({ queryKey: ["pickups"] });
+      },
+      onError: (error: unknown) => toast.error(error instanceof Error ? error.message : "An unknown error occurred"),
+      ...mutationOptions,
+    });
+  },
+
+  useCancelShipment: ({ ...mutationOptions }: UseMutationOptions<Shipment, Error, { airwaybillCode: string; cancellationReason: string }>) => {
+    const queryClient = useQueryClient();
+    return useMutation({
+      mutationFn: async ({ airwaybillCode, cancellationReason }) => {
+        try {
+          const { data } = await api.post(`/shipments/${encodeURIComponent(airwaybillCode)}/cancel`, { cancellationReason });
+          toast.success(data.message || "Shipment cancelled");
+          return data.data;
+        } catch (error) {
+          throw new Error(axios.isAxiosError(error) ? error.response?.data?.message || "An error occurred" : "An unexpected error occurred");
+        }
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["orders"] });
+        queryClient.invalidateQueries({ queryKey: ["pickups"] });
+      },
+      onError: (error: unknown) => toast.error(error instanceof Error ? error.message : "An unknown error occurred"),
+      ...mutationOptions,
+    });
+  },
+
+  /**
+   * Refreshing tracking is a mutation, not a query, even though it is a GET: it
+   * writes the latest status onto our `Shipment` row. Modelling it as a query would
+   * let TanStack refetch it on window focus and hammer the courier's API.
+   */
+  useRefreshTracking: ({ ...mutationOptions }: UseMutationOptions<Shipment, Error, string>) => {
+    const queryClient = useQueryClient();
+    return useMutation({
+      mutationFn: async (airwaybillCode: string) => {
+        try {
+          const { data } = await api.get(`/shipments/${encodeURIComponent(airwaybillCode)}`);
+          return data.data;
+        } catch (error) {
+          throw new Error(axios.isAxiosError(error) ? error.response?.data?.message || "An error occurred" : "An unexpected error occurred");
+        }
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["orders"] });
+        queryClient.invalidateQueries({ queryKey: ["pickups"] });
+      },
+      onError: (error: unknown) => toast.error(error instanceof Error ? error.message : "An unknown error occurred"),
+      ...mutationOptions,
+    });
+  },
+
+  useGetPickups: <T>({ key, params = {}, gcTime = GC_TIME, staleTime = 0, enabled = true }: FetchOptions) => {
+    return useQuery<T, Error>({
+      queryKey: key,
+      queryFn: async () => {
+        const searchParams = new URLSearchParams();
+        if (params.date) searchParams.append("date", params.date);
+        const { data } = await api.get(`/shipments/pickups?${searchParams.toString()}`);
+        return data;
+      },
+      gcTime,
+      // Zero: this screen exists to answer "is the courier coming today", and a
+      // six-hour-old answer to that question is worse than no answer.
+      staleTime,
+      enabled,
+      retry: 1,
     });
   },
 };

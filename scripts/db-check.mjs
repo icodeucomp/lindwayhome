@@ -1,5 +1,5 @@
 /**
- * Reports violations of the four rules Prisma cannot express (CLAUDE.md §B4).
+ * Reports violations of the rules Prisma cannot express (CLAUDE.md §B4).
  *
  * This repo has no test framework, so this script is the only automated guard on
  * data integrity. Each rule is a class of silent bug: nothing errors when it is
@@ -77,6 +77,64 @@ const checks = [
             FROM products p
            WHERE p.stock <> COALESCE((SELECT SUM(v.quantity) FROM product_variants v WHERE v."productId" = p.id), 0)
            ORDER BY p.sku`,
+  },
+  {
+    // The origin is the address a courier is sent to collect from, and every field
+    // of it is required by Paxel. v1's shipping service filled gaps from hardcoded
+    // defaults, which is how it shipped with Jakarta coordinates while the brand
+    // operates from Denpasar (A9.11). `getShippingOrigin` now throws instead — this
+    // finds the same problem before a buyer does.
+    name: "The Paxel pickup origin is fully configured",
+    why: "A missing key makes every checkout quote fail with 'Shipping origin is not configured'",
+    sql: `SELECT required.key AS detail
+            FROM (VALUES ('origin_name'),('origin_phone'),('origin_address'),('origin_province'),('origin_city'),
+                         ('origin_district'),('origin_village'),('origin_zip_code'),('origin_lat'),('origin_long'),
+                         ('enabled_services'),('shipping_timezone')) AS required(key)
+           WHERE NOT EXISTS (
+             SELECT 1 FROM config_parameters cp
+               JOIN config_parameter_groups g ON g.id = cp."groupId"
+              WHERE g.name = 'shipping' AND cp.key = required.key AND cp."isActive"
+                AND cp.value IS NOT NULL AND cp.value::text NOT IN ('""', 'null'))
+           ORDER BY 1`,
+  },
+  {
+    // `enabled_services` is what the checkout iterates. A value Paxel does not
+    // publish is dropped silently at quote time, so the option simply never appears
+    // and nobody can tell whether that is a config typo or a coverage gap.
+    name: "Every enabled_services entry is a real Paxel service",
+    why: "An unrecognised service is dropped at quote time, so the option silently never appears at checkout",
+    sql: `SELECT service AS detail
+            FROM config_parameters cp
+            JOIN config_parameter_groups g ON g.id = cp."groupId"
+            CROSS JOIN LATERAL jsonb_array_elements_text(cp.value::jsonb) AS service
+           WHERE g.name = 'shipping' AND cp.key = 'enabled_services'
+             AND jsonb_typeof(cp.value::jsonb) = 'array'
+             AND service NOT IN ('SAMEDAY','NEXTDAY','REGULAR','INSTANT')
+           ORDER BY 1`,
+  },
+  {
+    // An order with no coordinates cannot be booked: Paxel takes lat/long on the
+    // destination, and a courier navigating by the text address alone in Indonesia
+    // is how parcels end up at the kelurahan office.
+    name: "Every order carries a destination the courier can be sent to",
+    why: "Booking a pickup needs province/city/district/village and coordinates — an order missing them can never ship",
+    sql: `SELECT o.id AS detail
+            FROM orders o
+           WHERE o.province = '' OR o.district = '' OR o.sub_district = '' OR o.village = ''
+              OR o.latitude = 0 OR o.longitude = 0
+           ORDER BY o."createdAt" DESC`,
+  },
+  {
+    // Two live bookings for one order means two couriers arrive and we are billed
+    // twice. The book endpoint refuses it; this catches anything that got past it.
+    name: "No order has more than one active shipment",
+    why: "Two live bookings means two couriers dispatched, and two charges, for one parcel",
+    sql: `SELECT s."orderId" || ' (' || COUNT(*) || ' active)' AS detail
+            FROM shipments s
+           WHERE s.status NOT IN ('CANCELLED', 'FAILED')
+           GROUP BY s."orderId"
+          HAVING COUNT(*) > 1
+           ORDER BY 1`,
   },
   {
     name: "The stock trigger is installed",

@@ -4,11 +4,15 @@ import * as React from "react";
 
 import { PiReceipt } from "react-icons/pi";
 
+import { useQueryClient } from "@tanstack/react-query";
+
 import { Img, Modal } from "@/components";
 
 import type { ViewMode } from "@/hooks";
 
 import { orderStatusColors, orderStatusLabels } from "@/static/order";
+
+import { shippingServiceLabels } from "@/static/shipment";
 
 import { paymentMethodColors, paymentMethodLabels } from "@/static/payment";
 
@@ -17,6 +21,7 @@ import { convertDate, formatIDR, ordersApi } from "@/utils";
 import { ApiResponse, Order } from "@/types";
 
 import { Badge, EmptyState, ErrorState, LoadingState, Panel, RowAction, TableShell, Td, Th } from "./ui";
+import { ShipmentPanel } from "./shipment-panel";
 
 interface OrdersListsProps {
   orders: Order[];
@@ -48,9 +53,17 @@ const DetailRow = ({ label, children }: { label: string; children: React.ReactNo
 /* -------------------------------------------------------------------------- */
 
 const OrderDetail = ({ orderId, onClose }: { orderId: string | null; onClose: () => void }) => {
+  const queryClient = useQueryClient();
+
   const { data, isLoading, isError } = ordersApi.useGetOrder<ApiResponse<Order>>({ key: ["order", orderId], id: orderId ?? "", enabled: orderId !== null });
 
   const order = data?.data;
+
+  // Booking, cancelling and tracking all write to this order, and the panel below
+  // shows what it reads back — so it has to refetch, not just the list behind it.
+  const refetchOrder = React.useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["order", orderId] });
+  }, [queryClient, orderId]);
 
   return (
     <Modal isVisible={orderId !== null} onClose={onClose}>
@@ -73,8 +86,28 @@ const OrderDetail = ({ orderId, onClose }: { orderId: string | null; onClose: ()
               <DetailRow label="WhatsApp">{order.whatsappNumber}</DetailRow>
               <DetailRow label="Address">
                 {order.address}
-                <span className="block text-body/50">{order.postalCode}</span>
+                <span className="block text-body/50">
+                  {order.village}, {order.sub_district}
+                </span>
+                <span className="block text-body/50">
+                  {order.district}, {order.province} {order.postalCode}
+                </span>
+                {order.addressNote && <span className="block mt-1 text-body/50">Note: {order.addressNote}</span>}
               </DetailRow>
+              <DetailRow label="Map pin">
+                <a
+                  href={`https://www.openstreetmap.org/?mlat=${order.latitude}&mlon=${order.longitude}#map=17/${order.latitude}/${order.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline text-primary underline-offset-2"
+                >
+                  {Number(order.latitude).toFixed(5)}, {Number(order.longitude).toFixed(5)}
+                </a>
+                {/* An unpinned order carries the village centroid, which can be a
+                    kilometre off. Worth flagging before a courier is sent to it. */}
+                <span className="block text-body/50">{order.isPinned ? "Pinned by the buyer" : "Village centre — the buyer did not move the pin"}</span>
+              </DetailRow>
+              <DetailRow label="Delivery service">{shippingServiceLabels[order.shippingServiceType]}</DetailRow>
               <DetailRow label="Tracking number">{order.trackingNumber}</DetailRow>
               <DetailRow label="Instagram">{order.instagram}</DetailRow>
               <DetailRow label="Heard about us">{order.reference}</DetailRow>
@@ -124,6 +157,10 @@ const OrderDetail = ({ orderId, onClose }: { orderId: string | null; onClose: ()
                 <span className="admin-section-label">Total</span>
                 <span className="text-base text-body tabular-nums">{formatIDR(order.totalPurchased)}</span>
               </div>
+            </div>
+
+            <div className="pt-6 mt-8 border-t border-border">
+              <ShipmentPanel order={order} onChanged={refetchOrder} />
             </div>
           </div>
         </div>

@@ -13,6 +13,8 @@ export const DiscountEnum = z.enum(["PERCENTAGE", "FIXED"]);
 export const OrderStatusEnum = z.enum(["AWAITING_PAYMENT", "PAID", "SHIPPED", "COMPLETED", "CANCELLED"]);
 export const InquiryTypeEnum = z.enum(["PRODUCT_INQUIRY", "ORDER_SUPPORT", "CUSTOM_ORDER", "WHOLESALE_B2B", "PARTNERSHIP", "OTHER"]);
 export const InquiryStatusEnum = z.enum(["NEW", "IN_PROGRESS", "HANDLED", "ARCHIVED"]);
+export const ShippingServiceEnum = z.enum(["SAMEDAY", "NEXTDAY", "REGULAR", "INSTANT"]);
+export const ShipmentStatusEnum = z.enum(["BOOKED", "PICKED_UP", "IN_TRANSIT", "DELIVERED", "CANCELLED", "FAILED"]);
 
 // =============================================================================
 // Shared
@@ -162,10 +164,27 @@ export const OrderSchema = z.object({
   address: z.string().min(1, "Address is required"),
   postalCode: z.number().int().min(1, "Postal code is required"),
 
+  // The four administrative levels the courier books against. v1 collected these
+  // and discarded them, which left a stored order impossible to ship or re-quote.
+  province: z.string().min(1, "Province is required"),
+  district: z.string().min(1, "City / regency is required"),
+  sub_district: z.string().min(1, "District is required"),
+  village: z.string().min(1, "Village is required"),
+  addressNote: z.string().max(150, "Delivery note must be 150 characters or fewer").nullish(),
+
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  isPinned: z.boolean().optional(),
+
+  shippingServiceType: ShippingServiceEnum.optional(),
+
   memberId: z.string().nullish(),
   isMember: z.boolean().optional(),
 
-  shippingCost: z.number().min(0).positive("Shipping cost must be positive"),
+  // A courier quote of exactly 0 is legitimate (a promotion, or a pickup-in-store
+  // arrangement), so this is `nonnegative` rather than v1's `.positive()`, which
+  // made the "Free" case the UI already rendered impossible to actually submit.
+  shippingCost: z.number().nonnegative("Shipping cost cannot be negative"),
   purchased: z.number().min(0).positive("Purchased must be positive"),
   totalPurchased: z.number().min(0).positive("Total purchased must be positive"),
   totalItemsSold: z.number().min(0).positive("Total items sold must be positive"),
@@ -425,6 +444,16 @@ export const ShippingCalculateSchema = z.object({
   district: z.string().min(1, "District is required"),
   sub_district: z.string().min(1, "Sub-district is required"),
   village: z.string().min(1, "Village is required"),
+
+  // Optional, because a buyer gets a quote as soon as the village is chosen —
+  // before they have finished typing the street. The courier prices on the
+  // administrative levels above, so the quote is already correct without them;
+  // these only sharpen the pin and the address line sent at booking.
+  address: z.string().optional(),
+  postalCode: z.coerce.number().int().nonnegative().optional(),
+  latitude: z.coerce.number().min(-90).max(90).optional(),
+  longitude: z.coerce.number().min(-180).max(180).optional(),
+
   items: z
     .array(
       z.object({
@@ -434,6 +463,32 @@ export const ShippingCalculateSchema = z.object({
       }),
     )
     .min(1, "At least one item is required"),
+});
+
+// =============================================================================
+// Shipment (Paxel)
+// =============================================================================
+
+export const BookShipmentSchema = z.object({
+  /** YYYY-MM-DD, taken from a pickup window the rate call offered */
+  pickupDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pickup date must be YYYY-MM-DD"),
+  /** HH:mm */
+  pickupTime: z.string().regex(/^\d{2}:\d{2}$/, "Pickup time must be HH:mm"),
+  /**
+   * Optional override. Absent means "book the service the buyer paid for", which is
+   * the only correct default — booking a dearer service silently eats the margin,
+   * and a cheaper one delivers later than the buyer was told.
+   */
+  serviceType: ShippingServiceEnum.optional(),
+  note: z.string().max(150, "Courier note must be 150 characters or fewer").optional(),
+});
+
+export const CancelShipmentSchema = z.object({
+  cancellationReason: z.string().trim().min(1, "A cancellation reason is required").max(150, "Cancellation reason must be 150 characters or fewer"),
+});
+
+export const PickupListQuerySchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
 });
 
 // =============================================================================

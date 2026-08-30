@@ -42,6 +42,9 @@ export const contactInquiryInclude = {
 /** Standard shape for reading an order with its lines. */
 export const orderInclude = {
   member: true,
+  // Newest first: a re-booked order has more than one, and the current parcel is
+  // the one an admin is looking for.
+  shipments: { orderBy: { createdAt: "desc" } },
   items: {
     include: {
       product: {
