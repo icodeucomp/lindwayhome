@@ -457,6 +457,119 @@
         "brocade": "Luxurious and textured, brocade is a woven fabric rich with intricate patterns. Often used in our occasionwear, it brings a sense of tradition and grandeur—each thread telling a story.",
         "jacquard": "Woven with detailed patterns directly into the fabric, jacquard adds subtle structure and quiet elegance. Ideal for statement pieces that stand out with refined craftsmanship."
       }
+    },
+    "ourWorld": {
+      "hero": {
+        "title": "Our World",
+        "description": "Where Indonesian craft meets contemporary life.",
+        "cta": "Discover Our World"
+      },
+      "sections": {
+        "opener": {
+          "eyebrow": "Our World",
+          "title": "Where Indonesian Craft Meets Contemporary Life",
+          "body": "Lindway is a growing world of fashion, craft and creative expression, rooted in Indonesian artistry and shaped for the way we live today.",
+          "body2": "From intricate embroidery and hand-finished kebaya to batik, crochet, contemporary Balinese graphics and creative collaborations, each expression of Lindway carries its own character while sharing a belief in thoughtful design and meaningful craftsmanship.",
+          "cta": "Discover Our World"
+        },
+        "craft": {
+          "eyebrow": "Behind the Craft",
+          "title": "Made by Hands. Shaped by Detail.",
+          "body": "Craft takes many forms at Lindway. A line of embroidery. The placement of hand-applied beadwork. The character of batik. The rhythm of crochet. A Balinese motif reimagined through contemporary graphic design.",
+          "body2": "Across our collections, traditional techniques and creative processes become part of something made for today.",
+          "cta": "Explore the Craft"
+        },
+        "artistry": {
+          "eyebrow": "Indonesian Artistry",
+          "title": "Rooted Here. Reimagined for Today.",
+          "body": "Indonesia is not simply where we make. It is part of how we see. Textiles, techniques, motifs and generations of craftsmanship inspire a contemporary language of dressing — sometimes intricate, sometimes understated, always evolving.",
+          "body2": "From the refinement of kebaya to a Balinese motif translated onto an everyday piece, heritage becomes something to experience, wear and carry forward.",
+          "cta": "Discover Indonesian Artistry"
+        },
+        "labels": {
+          "eyebrow": "The Lindway Brands",
+          "title": "Different Expressions. One Creative World.",
+          "body": "",
+          "body2": "",
+          "cta": "Explore the Brands"
+        },
+        "materials": {
+          "eyebrow": "Material Stories",
+          "title": "From Texture to Story",
+          "body": "Batik. Cotton. Threads. Beads. Crochet. Embroidery. Materials are where many Lindway stories begin.",
+          "body2": "We explore texture, colour and craftsmanship not simply as decoration, but as part of the character of each piece — allowing materials to guide how a collection feels, moves and is worn.",
+          "cta": "Explore Materials & Details"
+        },
+        "stories": {
+          "eyebrow": "Stories We Wear",
+          "title": "Made by Us. Made Yours by You.",
+          "body": "Our pieces find their meaning in the lives of the people who wear them.",
+          "body2": "Across celebrations, travels, family moments and everyday rituals, Lindway moves beyond the studio and becomes part of stories unfolding around the world.",
+          "cta": "Explore Lindway Stories"
+        },
+        "collaborations": {
+          "eyebrow": "Creative Collaborations",
+          "title": "Ideas Are Better When Shared.",
+          "body": "Lindway collaborates with designers, makers and like-minded brands whose worlds naturally meet ours.",
+          "body2": "From fashion and craft to movement and wellness, each collaboration creates space for new ideas while remaining connected through thoughtful design.",
+          "cta": "Discover Lindway × AWP"
+        },
+        "making": {
+          "eyebrow": "Thoughtful Making",
+          "title": "Made with Consideration",
+          "body": "We believe in making with purpose rather than simply making more.",
+          "body2": "Through made-to-order pieces, considered quantities and thoughtful use of materials, we aim to create with greater care — including finding new possibilities for beautiful remnants whenever we can.",
+          "cta": "Our Approach"
+        },
+        "journal": {
+          "eyebrow": "The Journal",
+          "title": "Inside the World of Lindway",
+          "body": "Stories of craft, culture, people and creative life.",
+          "body2": "Explore the making of our collections, Indonesian artistry, contemporary design, collaborations and the people who bring Lindway into their own world.",
+          "cta": "Read the Journal"
+        },
+        "closing": {
+          "eyebrow": "",
+          "title": "Rooted in craft. Open to what comes next.",
+          "body": "",
+          "body2": "",
+          "cta": "Explore Lindway",
+          "heading": "Best Sellers",
+          "description": "The pieces our customers return to most.",
+          "emptyTitle": "Nothing to show yet",
+          "emptyDescription": "Our best sellers appear here as orders come in."
+        }
+      },
+      "labels": {
+        "myLindway": {
+          "name": "My Lindway",
+          "tagline": "Artisanal Couture",
+          "body": "Artisanal kebaya, batik and occasion pieces shaped by embroidery, beadwork and Indonesian craftsmanship."
+        },
+        "simplyLindway": {
+          "name": "Simply Lindway",
+          "tagline": "Everyday Heritage",
+          "body": "Relaxed pieces created from beautiful fabrics and remnants, bringing the Lindway language into everyday dressing."
+        },
+        "lure": {
+          "name": "Lure by Lindway",
+          "tagline": "Crochet Atelier",
+          "body": "A tactile exploration of crochet, handwork and relaxed contemporary craft."
+        },
+        "studio": {
+          "name": "Studio by Lindway",
+          "tagline": "Balinese Contemporary",
+          "body": "Contemporary pieces translating Balinese motifs, forms and visual culture through graphic-led design."
+        }
+      },
+      "collaboration": {
+        "badge": "Featured Collaboration",
+        "awp": {
+          "name": "Lindway × AWP",
+          "tagline": "Wellness, Made Wearable.",
+          "body": "A collaborative collection bringing together Lindway's approach to thoughtful design with AWP's world of movement and wellness — creating pieces designed for movement, everyday rituals and life beyond the studio."
+        }
+      }
     }
   }
 }

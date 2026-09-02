@@ -33,7 +33,9 @@ export const Philosophy = () => {
   const current = copy.pillars[active];
 
   return (
-    <Container className="py-16 space-y-8">
+    /* `id` is the landing point for Our World §8 "Our Approach" — that section is about
+       how Lindway chooses to make things, which is what these three pillars say. */
+    <Container id="philosophy" className="py-16 space-y-8 scroll-mt-40">
       <SectionHeading title={copy.heading} description={copy.subheading} />
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">

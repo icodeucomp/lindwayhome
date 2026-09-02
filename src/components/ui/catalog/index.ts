@@ -6,3 +6,4 @@ export * from "./collection-favorites";
 export * from "./product-detail";
 export * from "./related-products";
 export * from "./wishlist";
+export * from "./best-sellers-carousel";

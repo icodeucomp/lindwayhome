@@ -6,6 +6,7 @@ export * from "./return-exchanges";
 export * from "./care-instructions";
 export * from "./how-to-shop";
 export * from "./our-fabrics";
+export * from "./our-world";
 export * from "./membership-confirm";
 export * from "./language-switch";
 export * from "./page-placeholder";

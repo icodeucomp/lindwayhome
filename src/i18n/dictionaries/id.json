@@ -457,6 +457,119 @@
         "brocade": "Mewah dan bertekstur, brokat adalah kain tenun yang kaya motif rumit. Sering kami pakai untuk busana acara khusus, kain ini menghadirkan kesan tradisi dan kemegahan—setiap benangnya menyimpan cerita.",
         "jacquard": "Ditenun dengan motif detail langsung pada kainnya, jacquard menambah struktur halus dan keanggunan yang tenang. Ideal untuk busana pernyataan yang menonjol lewat kerapian pengerjaannya."
       }
+    },
+    "ourWorld": {
+      "hero": {
+        "title": "Dunia Kami",
+        "description": "Tempat kriya Indonesia bertemu kehidupan masa kini.",
+        "cta": "Jelajahi Dunia Kami"
+      },
+      "sections": {
+        "opener": {
+          "eyebrow": "Dunia Kami",
+          "title": "Tempat Kriya Indonesia Bertemu Kehidupan Masa Kini",
+          "body": "Lindway adalah dunia mode, kriya, dan ekspresi kreatif yang terus tumbuh — berakar pada keahlian tangan Indonesia dan dibentuk untuk cara kita hidup hari ini.",
+          "body2": "Dari bordir yang rumit dan kebaya yang diselesaikan dengan tangan hingga batik, rajut, grafis Bali kontemporer, dan kolaborasi kreatif, setiap wujud Lindway membawa karakternya sendiri namun berbagi keyakinan yang sama pada desain yang dipikirkan matang dan kriya yang bermakna.",
+          "cta": "Jelajahi Dunia Kami"
+        },
+        "craft": {
+          "eyebrow": "Di Balik Kriya",
+          "title": "Dibuat dengan Tangan. Dibentuk oleh Detail.",
+          "body": "Kriya hadir dalam banyak wujud di Lindway. Segaris bordir. Penempatan payet yang dipasang tangan. Karakter sehelai batik. Irama rajutan. Motif Bali yang ditafsirkan ulang lewat desain grafis kontemporer.",
+          "body2": "Di seluruh koleksi kami, teknik tradisional dan proses kreatif menjadi bagian dari sesuatu yang dibuat untuk hari ini.",
+          "cta": "Jelajahi Kriyanya"
+        },
+        "artistry": {
+          "eyebrow": "Keahlian Tangan Indonesia",
+          "title": "Berakar di Sini. Ditafsirkan untuk Hari Ini.",
+          "body": "Indonesia bukan sekadar tempat kami membuat. Ia bagian dari cara kami memandang. Tekstil, teknik, motif, dan keahlian yang diwariskan lintas generasi mengilhami bahasa berbusana yang kontemporer — kadang rumit, kadang bersahaja, selalu berkembang.",
+          "body2": "Dari kehalusan kebaya hingga motif Bali yang dipindahkan ke busana sehari-hari, warisan menjadi sesuatu yang dialami, dikenakan, dan diteruskan.",
+          "cta": "Kenali Keahlian Tangan Indonesia"
+        },
+        "labels": {
+          "eyebrow": "Brand-Brand Lindway",
+          "title": "Ekspresi yang Berbeda. Satu Dunia Kreatif.",
+          "body": "",
+          "body2": "",
+          "cta": "Jelajahi Brand Kami"
+        },
+        "materials": {
+          "eyebrow": "Cerita Bahan",
+          "title": "Dari Tekstur Menjadi Cerita",
+          "body": "Batik. Katun. Benang. Payet. Rajut. Bordir. Bahan adalah tempat banyak cerita Lindway bermula.",
+          "body2": "Kami menelusuri tekstur, warna, dan kriya bukan semata sebagai hiasan, melainkan sebagai bagian dari karakter setiap karya — membiarkan bahan menuntun bagaimana sebuah koleksi terasa, bergerak, dan dikenakan.",
+          "cta": "Jelajahi Bahan & Detail"
+        },
+        "stories": {
+          "eyebrow": "Cerita yang Kami Kenakan",
+          "title": "Kami yang Membuat. Anda yang Memaknai.",
+          "body": "Karya kami menemukan maknanya dalam kehidupan orang-orang yang mengenakannya.",
+          "body2": "Lewat perayaan, perjalanan, momen keluarga, dan ritual sehari-hari, Lindway melangkah keluar dari studio dan menjadi bagian dari cerita yang terus berjalan di berbagai penjuru dunia.",
+          "cta": "Lihat Cerita Lindway"
+        },
+        "collaborations": {
+          "eyebrow": "Kolaborasi Kreatif",
+          "title": "Gagasan Jadi Lebih Baik Saat Dibagi.",
+          "body": "Lindway berkolaborasi dengan desainer, pembuat, dan brand sepemikiran yang dunianya bertemu secara alami dengan dunia kami.",
+          "body2": "Dari mode dan kriya hingga gerak dan kebugaran, setiap kolaborasi membuka ruang bagi gagasan baru sambil tetap terhubung lewat desain yang dipikirkan matang.",
+          "cta": "Kenali Lindway × AWP"
+        },
+        "making": {
+          "eyebrow": "Membuat dengan Sadar",
+          "title": "Dibuat dengan Pertimbangan",
+          "body": "Kami percaya pada membuat dengan tujuan, bukan sekadar membuat lebih banyak.",
+          "body2": "Lewat karya made-to-order, jumlah yang terukur, dan pemakaian bahan yang dipikirkan, kami berupaya mencipta dengan lebih hati-hati — termasuk mencari kemungkinan baru bagi sisa kain yang masih indah, kapan pun kami bisa.",
+          "cta": "Pendekatan Kami"
+        },
+        "journal": {
+          "eyebrow": "Jurnal",
+          "title": "Di Dalam Dunia Lindway",
+          "body": "Cerita tentang kriya, budaya, orang, dan kehidupan kreatif.",
+          "body2": "Telusuri proses pembuatan koleksi kami, keahlian tangan Indonesia, desain kontemporer, kolaborasi, dan orang-orang yang membawa Lindway ke dalam dunia mereka sendiri.",
+          "cta": "Baca Jurnal"
+        },
+        "closing": {
+          "eyebrow": "",
+          "title": "Berakar pada kriya. Terbuka pada apa yang akan datang.",
+          "body": "",
+          "body2": "",
+          "cta": "Jelajahi Lindway",
+          "heading": "Paling Laris",
+          "description": "Karya yang paling sering dipilih pelanggan kami.",
+          "emptyTitle": "Belum ada yang bisa ditampilkan",
+          "emptyDescription": "Karya terlaris kami akan muncul di sini seiring pesanan yang masuk."
+        }
+      },
+      "labels": {
+        "myLindway": {
+          "name": "My Lindway",
+          "tagline": "Artisanal Couture",
+          "body": "Kebaya, batik, dan busana acara khusus yang dibentuk oleh bordir, payet, dan keahlian tangan Indonesia."
+        },
+        "simplyLindway": {
+          "name": "Simply Lindway",
+          "tagline": "Everyday Heritage",
+          "body": "Busana bersahaja dari kain-kain indah dan sisa potongannya, membawa bahasa Lindway ke dalam keseharian."
+        },
+        "lure": {
+          "name": "Lure by Lindway",
+          "tagline": "Crochet Atelier",
+          "body": "Penjelajahan tekstur lewat rajutan, pengerjaan tangan, dan kriya kontemporer yang santai."
+        },
+        "studio": {
+          "name": "Studio by Lindway",
+          "tagline": "Balinese Contemporary",
+          "body": "Busana kontemporer yang menerjemahkan motif, bentuk, dan budaya visual Bali lewat desain berbasis grafis."
+        }
+      },
+      "collaboration": {
+        "badge": "Kolaborasi Pilihan",
+        "awp": {
+          "name": "Lindway × AWP",
+          "tagline": "Wellness, Made Wearable.",
+          "body": "Koleksi kolaboratif yang mempertemukan pendekatan Lindway pada desain yang dipikirkan matang dengan dunia gerak dan kebugaran milik AWP — menghasilkan busana untuk bergerak, untuk ritual harian, dan untuk hidup di luar studio."
+        }
+      }
     }
   }
 }

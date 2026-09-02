@@ -4,15 +4,23 @@ import { IMAGE_FALLBACK } from "@/components/ui/storefront";
 
 import type { BrandEntry } from "@/static/taxonomy";
 
+/** The layout is a fixed four-tile composition, not a list — see the note below. */
+const GALLERY_SLOTS = 4;
+
 /**
  * The copy-and-gallery block under a collection hero (reference/Collections Details.png).
  *
  * The mockup lays out four images in a 2×2 whose tiles are deliberately unequal — the
- * top-left is tall, the top-right short. Fewer than four images degrades gracefully
- * because the grid is defined by the tiles that exist, not by a fixed template.
+ * top-left is tall, the top-right short.
+ *
+ * The four slots are always rendered. An earlier version fell back to a single image
+ * when a brand had no gallery, which left Studio by Lindway and Lindway × AWP — the two
+ * still waiting on photography — looking like a different page from the other three.
+ * Padding keeps the block one shape for every brand, and the padding disappears on its
+ * own as real images arrive.
  */
 export const CollectionIntro = ({ entry }: { entry: BrandEntry }) => {
-  const gallery = entry.gallery.length > 0 ? entry.gallery : [IMAGE_FALLBACK];
+  const gallery = Array.from({ length: GALLERY_SLOTS }, (_, index) => entry.gallery[index] || IMAGE_FALLBACK);
 
   return (
     <Container className="grid items-center grid-cols-1 gap-12 py-16 lg:grid-cols-2">
@@ -30,7 +38,7 @@ export const CollectionIntro = ({ entry }: { entry: BrandEntry }) => {
         {/* Keyed by position, not by URL: the gallery is a fixed four-slot layout that
             never reorders, and two slots may legitimately hold the same image — as they
             all do while PLACEHOLDER_IMAGE stands in for the client's photography. */}
-        {gallery.slice(0, 4).map((image, index) => (
+        {gallery.map((image, index) => (
           <Img
             key={index}
             src={image}
