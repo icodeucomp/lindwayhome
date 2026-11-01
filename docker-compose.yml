@@ -5,13 +5,13 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-lindway}
+      POSTGRES_USER: ${POSTGRES_USER:-lindwayhome}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-lindway}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lindway} -d ${POSTGRES_DB:-lindway}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lindwayhome} -d ${POSTGRES_DB:-lindway}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -28,11 +28,11 @@ services:
     env_file: .env
     environment:
       # Overrides any DATABASE_URL in .env: inside the network the host is `db`.
-      DATABASE_URL: postgresql://${POSTGRES_USER:-lindway}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-lindway}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-lindwayhome}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-lindway}
       UPLOADS_PATH: /data/uploads
       SEED_ON_START: ${SEED_ON_START:-}
     ports:
-      - "${APP_PORT:-3000}:3000"
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
     volumes:
       - uploads:/data/uploads
       - logs:/app/logs

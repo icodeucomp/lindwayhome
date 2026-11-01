@@ -82,6 +82,6 @@ Layout afterwards: `/opt/lindway/{bin/, .env, current/, previous/}`. A forced-co
 
 ### What a deploy does
 
-Unpack to `/opt/lindway/next` → keep the live copy as `previous` → swap the new one in as `current` → `docker compose up -d --build` → poll `GET /api` on port **18083** (set in `deploy.sh`; point the reverse proxy there). If the build or health check fails, `previous` is restored and rebuilt automatically. The database, uploads and logs are docker volumes (project name pinned to `lindway`), so swapping folders never touches data.
+Unpack to `/opt/lindway/next` → keep the live copy as `previous` → swap the new one in as `current` → `docker compose up -d --build` → poll `GET /api` on port **18084** (set in `deploy.sh`; point the reverse proxy there). If the build or health check fails, `previous` is restored and rebuilt automatically. The database, uploads and logs are docker volumes (project name pinned to `lindway`), so swapping folders never touches data.
 
 Files intended for local tooling only (`CLAUDE.md`, `.claude/`) are not tracked by git, so they never reach GitHub, the deploy archive or the Docker image.
