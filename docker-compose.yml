@@ -32,7 +32,7 @@ services:
       UPLOADS_PATH: /data/uploads
       SEED_ON_START: ${SEED_ON_START:-}
     ports:
-      - "127.0.0.1:${APP_PORT:-18084}:4790"
+      - "127.0.0.1:${APP_PORT:-18090}:4790"
     volumes:
       - uploads:/data/uploads
       - logs:/app/logs

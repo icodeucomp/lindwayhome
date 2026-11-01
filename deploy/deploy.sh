@@ -21,7 +21,7 @@
 set -euo pipefail
 
 root=/opt/lindway
-port=18084
+port=18090
 
 # Only one app lives here; the argument is checked so a typo in the workflow fails
 # loudly instead of deploying something unintended.

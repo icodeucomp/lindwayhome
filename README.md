@@ -35,7 +35,7 @@ cp .env.example .env     # fill in secrets; see comments in the file
 docker compose up -d --build
 ```
 
-- On every start the container runs `prisma migrate deploy`, then serves on host port `APP_PORT` (default 18084, localhost only), which maps to port 4790 inside the container.
+- On every start the container runs `prisma migrate deploy`, then serves on host port `APP_PORT` (default 18090, localhost only), which maps to port 4790 inside the container.
 - Set `SEED_ON_START=true` for **one** start on a fresh database to load seed data, then remove it.
 - `NEXT_PUBLIC_BASE_URL` is inlined into the client bundle at build time; changing it needs `--build`.
 - Volumes: `pgdata` (database), `uploads` (product/article images, served at `/uploads/*`), `logs`.
@@ -80,8 +80,19 @@ command="/opt/lindway/bin/deploy-gate.sh",no-port-forwarding,no-X11-forwarding,n
 
 Layout afterwards: `/opt/lindway/{bin/, .env, current/, previous/}`. A forced-command key cannot open a shell, so test it with `ssh -i key root@host "deploy lindway" < /dev/null` (it will try to deploy an empty archive and fail), not `echo ok`.
 
+### Run it as a systemd service (shows in Cockpit)
+
+Do this **after** the first successful deploy, because the unit never builds.
+
+```bash
+cp deploy/app-lindway.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now app-lindway
+journalctl -u app-lindway -f      # container logs
+```
+
 ### What a deploy does
 
-Unpack to `/opt/lindway/next` → keep the live copy as `previous` → swap the new one in as `current` → `docker compose up -d --build` → poll `GET /api` on port **18084** (set in `deploy.sh`; point the reverse proxy there). If the build or health check fails, `previous` is restored and rebuilt automatically. The database, uploads and logs are docker volumes (project name pinned to `lindway`), so swapping folders never touches data.
+Unpack to `/opt/lindway/next` → keep the live copy as `previous` → swap the new one in as `current` → `docker compose up -d --build` → poll `GET /api` on port **18090** (set in `deploy.sh`; point the reverse proxy there). If the build or health check fails, `previous` is restored and rebuilt automatically. The database, uploads and logs are docker volumes (project name pinned to `lindway`), so swapping folders never touches data.
 
 Files intended for local tooling only (`CLAUDE.md`, `.claude/`) are not tracked by git, so they never reach GitHub, the deploy archive or the Docker image.
