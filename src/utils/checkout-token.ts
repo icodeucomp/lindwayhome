@@ -1,8 +1,12 @@
 import { createHmac } from "crypto";
 
-const SECRET = process.env.CHECKOUT_TOKEN_SECRET;
-if (!SECRET) {
-  throw new Error("CHECKOUT_TOKEN_SECRET is not set");
+// Read on use, not at import. This file is re-exported by the `@/utils` barrel, which
+// client components also import; a module-level throw ran in the browser, where a
+// non-NEXT_PUBLIC_ variable is always undefined, and crashed the whole bundle.
+function getSecret(): string {
+  const secret = process.env.CHECKOUT_TOKEN_SECRET;
+  if (!secret) throw new Error("CHECKOUT_TOKEN_SECRET is not set");
+  return secret;
 }
 
 /**
@@ -35,7 +39,7 @@ export interface CheckoutTokenPayload {
 
 export const signCheckoutToken = (payload: CheckoutTokenPayload): string => {
   const data = JSON.stringify(payload);
-  const sig = createHmac("sha256", SECRET).update(data).digest("hex");
+  const sig = createHmac("sha256", getSecret()).update(data).digest("hex");
   return Buffer.from(JSON.stringify({ data, sig })).toString("base64url");
 };
 
@@ -49,7 +53,7 @@ export const verifyCheckoutToken = (token: string): CheckoutTokenPayload => {
   }
 
   const { data, sig } = parsed;
-  const expected = createHmac("sha256", SECRET).update(data).digest("hex");
+  const expected = createHmac("sha256", getSecret()).update(data).digest("hex");
 
   if (sig !== expected) {
     throw new Error("Invalid checkout token signature");
@@ -69,7 +73,7 @@ export const hashItems = (items: { productId: string; selectedSize: string; quan
     .sort((a, b) => a.productId.localeCompare(b.productId))
     .map((i) => `${i.productId}:${i.selectedSize}:${i.quantity}`)
     .join("|");
-  return createHmac("sha256", SECRET).update(normalized).digest("hex");
+  return createHmac("sha256", getSecret()).update(normalized).digest("hex");
 };
 
 export interface DestinationFingerprint {
@@ -99,5 +103,5 @@ export const hashDestination = (destination: DestinationFingerprint): string => 
         .toUpperCase(),
     )
     .join("|");
-  return createHmac("sha256", SECRET).update(normalized).digest("hex");
+  return createHmac("sha256", getSecret()).update(normalized).digest("hex");
 };

@@ -15,4 +15,4 @@
  * script, so it is paired there with a CSP that forbids exactly that. Both should come
  * back out with this constant.
  */
-export const PLACEHOLDER_IMAGE = "https://placehold.net/default.svg";
+export const PLACEHOLDER_IMAGE = "/images/placeholder.svg";

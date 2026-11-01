@@ -35,20 +35,23 @@ export const verifyPassword = async (password: string, hashedPassword: string): 
   return bcrypt.compare(password, hashedPassword);
 };
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-  throw new Error("JWT_SECRET is not set");
+// Read on use, not at import: a barrel re-export can pull this into the client bundle,
+// where a module-level throw would crash the page (see checkout-token.ts).
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error("JWT_SECRET is not set");
+  return secret;
 }
 
 export const generateToken = (userId: string): string => {
-  return jwt.sign({ userId }, JWT_SECRET, {
+  return jwt.sign({ userId }, getJwtSecret(), {
     expiresIn: "1d",
   });
 };
 
 export const verifyToken = (token: string): TokenPayload | null => {
   try {
-    return jwt.verify(token, JWT_SECRET) as TokenPayload;
+    return jwt.verify(token, getJwtSecret()) as TokenPayload;
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       throw new Error(`Invalid token: ${error.message}`);
