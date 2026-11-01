@@ -10,7 +10,7 @@ npm run db:generate      # generated/prisma is gitignored, so a fresh clone must
 cp .env.example .env     # then fill in DATABASE_URL and the secrets
 npm run db:migrate
 npm run db:seed
-npm run dev              # http://localhost:3000
+npm run dev              # http://localhost:4790
 ```
 
 Paxel and Xendit run in **mock mode** while `PAXEL_API_KEY` / `XENDIT_SECRET_KEY` are empty, so checkout, booking and tracking work without any account.
@@ -35,7 +35,7 @@ cp .env.example .env     # fill in secrets; see comments in the file
 docker compose up -d --build
 ```
 
-- On every start the container runs `prisma migrate deploy`, then serves on port `APP_PORT` (default 3000).
+- On every start the container runs `prisma migrate deploy`, then serves on host port `APP_PORT` (default 18084, localhost only), which maps to port 4790 inside the container.
 - Set `SEED_ON_START=true` for **one** start on a fresh database to load seed data, then remove it.
 - `NEXT_PUBLIC_BASE_URL` is inlined into the client bundle at build time; changing it needs `--build`.
 - Volumes: `pgdata` (database), `uploads` (product/article images, served at `/uploads/*`), `logs`.

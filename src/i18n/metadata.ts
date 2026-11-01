@@ -18,7 +18,7 @@ import { defaultLocale, locales, type Locale } from "./config";
  * pairing wrong.
  */
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:4790";
 
 const localizedPath = (locale: Locale, path: string) => (path === "/" ? `/${locale}` : `/${locale}${path}`);
 

@@ -34,7 +34,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
 
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
-    PORT=3000 \
+    PORT=4790 \
     HOSTNAME=0.0.0.0 \
     UPLOADS_PATH=/data/uploads
 
@@ -51,7 +51,7 @@ COPY --chown=node:node docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh && mkdir -p /data/uploads /app/logs && chown -R node:node /data /app/logs
 
 USER node
-EXPOSE 3000
-HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=5 CMD wget -qO- http://127.0.0.1:3000/api >/dev/null || exit 1
+EXPOSE 4790
+HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=5 CMD wget -qO- http://127.0.0.1:4790/api >/dev/null || exit 1
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["npx", "next", "start"]

@@ -25,7 +25,7 @@
  * confirmation logic. It cannot exercise the real webhook, since that needs a
  * genuine callback token.
  */
-const BASE = "http://localhost:3000/api";
+const BASE = "http://localhost:4790/api";
 
 let failures = 0;
 
