@@ -257,17 +257,24 @@ model Order {
   trackingNumber String? // the storefront promises buyers one
   cancelledAt    DateTime?
 
-  paymentMethod PaymentMethod @default(BANK_TRANSFER)
-  receiptImage  Json
-  instagram     String?
-  reference     String?
+  // Xendit's own channel vocabulary ("BANK_TRANSFER","QRIS","EWALLET",...), copied
+  // from the winning PaymentTransaction once settled — not our enum, because we do
+  // not control that vocabulary and it can grow without our involvement. Null until
+  // a payment actually settles.
+  paymentMethod String?
+  // No receipt for a gateway payment — nullable now that Xendit confirms payment
+  // itself instead of an admin eyeballing an uploaded screenshot.
+  receiptImage Json?
+  instagram    String?
+  reference    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  member    Member?     @relation(fields: [memberId], references: [id])
-  items     OrderItem[]
-  shipments Shipment[]
+  member              Member?              @relation(fields: [memberId], references: [id])
+  items               OrderItem[]
+  shipments           Shipment[]
+  paymentTransactions PaymentTransaction[]
 
   @@index([email]) // member lookup by email runs on every checkout
   @@index([status])
@@ -298,6 +305,49 @@ model OrderItem {
   @@index([orderId])
   @@index([productId])
   @@map("order_items")
+}
+
+// =============================================================================
+// PAYMENT TRANSACTIONS  (Xendit)
+// One row per Invoice attempt, not one per order — same reasoning as `Shipment`:
+// a checkout that was abandoned and retried leaves two rows, which is what makes
+// "did the buyer ever actually get a working payment link" answerable afterwards,
+// instead of one row silently overwriting itself.
+// =============================================================================
+
+model PaymentTransaction {
+  id      String @id @default(cuid())
+  orderId String
+
+  gateway String @default("XENDIT")
+  // Sent to Xendit as `external_id`. Their contract requires this to be globally
+  // unique forever, so it is `order.id` for the first attempt and "<order.id>-2",
+  // "-3", … for a retry after the previous attempt expired or failed to initiate.
+  gatewayOrderId String  @unique
+  transactionId  String? // Xendit's own Invoice id, assigned once they accept the charge
+  redirectUrl    String? // the hosted Xendit Invoice URL the buyer pays at
+  // Xendit's own vocabulary verbatim ("BANK_TRANSFER","QRIS","EWALLET",...) — see
+  // the comment on Order.paymentMethod for why this is a string, not our enum.
+  paymentType String?
+
+  status      PaymentTransactionStatus @default(PENDING)
+  grossAmount Decimal                  @db.Decimal(12, 2)
+  // The last callback payload received, kept verbatim for forensics — a payment
+  // dispute needs to be explainable after the fact, the same reason OrderItem
+  // snapshots its price.
+  rawNotification Json?
+
+  paidAt    DateTime?
+  expiredAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([status])
+  @@map("payment_transactions")
 }
 
 // =============================================================================
@@ -610,9 +660,18 @@ enum Role {
   ADMIN
 }
 
-enum PaymentMethod {
-  BANK_TRANSFER
-  QRIS
+// Our coarse lifecycle for a payment attempt, mapped from Xendit's own Invoice
+// `status` (see `mapXenditStatus` in `src/services/payment.ts`) — mirrors how
+// `ShipmentStatus` is our coarse read of Paxel's status codes. DENIED and REFUNDED
+// are reachable only through an admin action today — a basic Invoice callback
+// itself only ever reports PENDING, PAID/SETTLED or EXPIRED.
+enum PaymentTransactionStatus {
+  PENDING
+  SETTLED
+  EXPIRED
+  CANCELLED
+  DENIED
+  REFUNDED
 }
 
 enum DiscountType {

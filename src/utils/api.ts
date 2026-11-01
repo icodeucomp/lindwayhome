@@ -10,6 +10,7 @@ import {
   Files,
   ProductsQueryParams,
   CreateOrder,
+  CreateOrderResult,
   EditOrder,
   Order,
   EditConfigParameter,
@@ -316,6 +317,29 @@ export const ordersApi = {
       ...mutationOptions,
     });
   },
+  /** Asks Xendit directly — the manual counterpart to waiting for its webhook. */
+  useCheckPaymentStatus: ({ ...mutationOptions }: UseMutationOptions<Order, Error, string>) => {
+    return useMutation({
+      mutationFn: async (id: string) => {
+        try {
+          const { data } = await api.get(`/orders/${id}/payment-status`);
+          toast.success(data.message || "Payment status refreshed");
+          return data.data;
+        } catch (error) {
+          if (axios.isAxiosError(error)) {
+            const responseMessage = error.response?.data.message;
+            throw new Error(responseMessage || "An error occurred");
+          }
+          throw new Error("An unexpected error occurred");
+        }
+      },
+      onError: (error: unknown) => {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+        toast.error(errorMessage);
+      },
+      ...mutationOptions,
+    });
+  },
 };
 
 export const orderCheckoutApi = {
@@ -352,7 +376,7 @@ export const orderCheckoutApi = {
       retry: 1,
     });
   },
-  useCreateOrder: ({ ...mutationOptions }: UseMutationOptions<Order, Error, CreateOrder>) => {
+  useCreateOrder: ({ ...mutationOptions }: UseMutationOptions<CreateOrderResult, Error, CreateOrder>) => {
     return useMutation({
       mutationFn: async (order: CreateOrder) => {
         try {

@@ -2,123 +2,64 @@
 
 import * as React from "react";
 
-import toast from "react-hot-toast";
+import { StoreButton } from "@/components/ui/storefront";
 
-import { Img, ProgressBar } from "@/components";
+import { formatIDR } from "@/utils";
 
-import { StoreButton, useStoreProfile } from "@/components/ui/storefront";
+import { CheckoutFormData } from "@/types";
 
-import { formatIDR, filesApi, configParametersApi } from "@/utils";
-
-import { CheckoutFormData, PaymentMethods, ConfigParameterData, ApiResponse } from "@/types";
-
-import { PiArrowLeft, PiBank, PiQrCode, PiUploadSimple, PiX } from "react-icons/pi";
+import { PiArrowLeft, PiArrowSquareOut } from "react-icons/pi";
 
 /**
- * Step 2 — how the buyer pays, and the receipt that proves they did.
+ * Step 2 — payment.
  *
- * There is no payment gateway: both methods are manual, an admin verifies the receipt
- * afterwards, and that is why a receipt is required for *both* (F-12).
+ * There is no method picker and no receipt upload any more (v1 had both — see git
+ * history). Xendit's hosted Invoice page covers QRIS, bank transfer/VA, e-wallets
+ * and retail outlets behind one link, and confirms payment itself via webhook
+ * instead of an admin eyeballing a screenshot (§B6.3). This step's only job is:
+ * create the order, open the invoice in a new tab, and let the buyer tell us when
+ * they're done — NOT whether payment actually settled, which is still only known
+ * once the webhook lands (see CompleteStep).
  *
- * Bank details come from the `store_profile` config group, not from this file. They were
- * hardcoded here in v1 (A9.12), and the hardcoded desktop table had drifted: it printed
- * BCA's SWIFT code (CENAIDJA) under a "MANDIRI Bank" heading, so anyone sending an
- * international transfer read the wrong code off the screen. Reading config also means
- * How to Shop and this step cannot disagree.
+ * A new tab rather than an in-page popup: Xendit's Invoice is a normal hosted page,
+ * not a JS widget like Midtrans's Snap, so there is no `onSuccess`/`onPending`
+ * callback available to this page. Keeping the checkout wizard open behind it is
+ * what lets the buyer come straight back to "I've Completed Payment" instead of
+ * losing their place.
  */
 
 interface PaymentStepProps {
   formData: CheckoutFormData;
-  setFormData: React.Dispatch<React.SetStateAction<CheckoutFormData>>;
   onBack: () => void;
-  onSubmit: (data: CheckoutFormData) => void;
-  isLoading: boolean;
+  /** Creates the order and its Xendit invoice — does not itself open the invoice. */
+  onPayNow: () => void;
+  /** The buyer says they finished paying. Does not mean payment settled — the webhook still owns that (§B6.3). */
+  onPaid: () => void;
+  isCreatingOrder: boolean;
 }
 
-interface Upload {
-  isUploading: boolean;
-  uploadProgress: number;
-}
+export const PaymentStep = ({ formData, onBack, onPayNow, onPaid, isCreatingOrder }: PaymentStepProps) => {
+  const openedUrlRef = React.useRef<string | null>(null);
 
-const METHODS = [
-  { value: PaymentMethods.BANK_TRANSFER, icon: PiBank, label: "Bank Transfer", hint: "Transfer to one of our accounts, then upload the receipt." },
-  { value: PaymentMethods.QRIS, icon: PiQrCode, label: "QRIS", hint: "Scan the code with any banking or e-wallet app." },
-];
+  const openInvoice = React.useCallback((url: string) => {
+    window.open(url, "_blank", "noopener,noreferrer");
+  }, []);
 
-export const PaymentStep = ({ formData, setFormData, onBack, onSubmit, isLoading }: PaymentStepProps) => {
-  const { data: parameter } = configParametersApi.useGetConfigParametersPublic<ApiResponse<ConfigParameterData>>({
-    key: ["config-parameters-public"],
-    keyParams: ["qris_image"],
-  });
+  // Opens automatically the moment a fresh invoice URL lands, so clicking "Pay Now"
+  // only ever takes one click. `openedUrlRef` stops it firing twice for the same
+  // invoice (a re-render, or React Strict Mode's dev double-invoke) — it only
+  // re-opens when the URL itself changes, e.g. after a fresh order is created.
+  React.useEffect(() => {
+    if (!formData.invoiceUrl) return;
+    if (openedUrlRef.current === formData.invoiceUrl) return;
+    openedUrlRef.current = formData.invoiceUrl;
+    openInvoice(formData.invoiceUrl);
+  }, [formData.invoiceUrl, openInvoice]);
 
-  const { bankAccounts } = useStoreProfile();
-
-  const [upload, setUpload] = React.useState<Upload>({ isUploading: false, uploadProgress: 0 });
-
-  const imageInputRef = React.useRef<HTMLInputElement | null>(null);
-
-  const handleImagesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files ? Array.from(e.target.files) : [];
-    if (!files.length) return;
-
-    const file = files[0];
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("File size must be less than 5MB");
-      return;
-    }
-
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select a valid image file");
-      return;
-    }
-
-    try {
-      setUpload((prev) => ({ ...prev, isUploading: true, uploadProgress: 0 }));
-
-      const respImages = await filesApi.uploadImages(files, (progress: number) => {
-        setUpload((prev) => ({ ...prev, uploadProgress: progress }));
-      });
-
-      setFormData((prev) => ({ ...prev, receiptImage: respImages[0] }));
-      toast.success("Image uploaded successfully");
-    } catch (error) {
-      toast.error((error as string) || "Failed to upload image");
-    } finally {
-      setUpload((prev) => ({ ...prev, isUploading: false, uploadProgress: 0 }));
-      if (imageInputRef.current) imageInputRef.current.value = "";
-    }
-  };
-
-  const handleDeleteImages = async (subPath: string) => {
-    try {
-      await filesApi.delete(subPath);
-      setFormData((prev) => ({ ...prev, receiptImage: undefined }));
-      toast.success("Image deleted successfully");
-      if (imageInputRef.current) imageInputRef.current.value = "";
-    } catch (error) {
-      toast.error((error as string) || "Failed to delete image");
-    }
-  };
-
-  const handlePaymentSubmit = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (!formData.paymentMethod) {
-      toast.error("Please select a payment method");
-      return;
-    }
-
-    const requiresReceipt = formData.paymentMethod === PaymentMethods.QRIS || formData.paymentMethod === PaymentMethods.BANK_TRANSFER;
-
-    if (requiresReceipt && !formData.receiptImage) {
-      toast.error("Please upload payment receipt");
-      return;
-    }
-
-    onSubmit(formData);
-  };
+  const hasInvoice = Boolean(formData.invoiceUrl);
 
   return (
-    <form className="space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
         <button type="button" onClick={onBack} aria-label="Back to details" className="grid border size-9 place-items-center border-border text-body hover:border-primary hover:text-primary">
           <PiArrowLeft className="size-4" />
@@ -131,104 +72,33 @@ export const PaymentStep = ({ formData, setFormData, onBack, onSubmit, isLoading
         <span className="text-2xl font-heading text-body">{formatIDR(formData.totalPurchased)}</span>
       </div>
 
-      <fieldset className="space-y-3">
-        <legend className="pb-3 font-heading text-xxs uppercase tracking-[0.16em] text-body/55">Payment Method</legend>
-
-        {METHODS.map(({ value, icon: Icon, label, hint }) => {
-          const isActive = formData.paymentMethod === value;
-          return (
-            <label
-              key={value}
-              className={`flex cursor-pointer items-start gap-4 border p-4 transition-colors ${isActive ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}
-            >
-              <input
-                type="radio"
-                name="paymentMethod"
-                value={value}
-                checked={isActive}
-                onChange={() => setFormData((prev) => ({ ...prev, paymentMethod: value }))}
-                className="mt-1 accent-primary"
-              />
-              <Icon className={`mt-0.5 size-5 shrink-0 ${isActive ? "text-primary" : "text-body/50"}`} />
-              <span className="space-y-1">
-                <span className="block text-sm uppercase font-heading text-body tracking-[0.04em]">{label}</span>
-                <span className="block text-xs text-body/70">{hint}</span>
-              </span>
-            </label>
-          );
-        })}
-      </fieldset>
-
-      {formData.paymentMethod === PaymentMethods.QRIS && (
-        <div className="p-6 space-y-3 text-center border border-border bg-muted">
-          <p className="font-heading text-xxs uppercase tracking-[0.16em] text-body/55">Scan to Pay</p>
-          {parameter?.data.qris_image && <Img src={parameter.data.qris_image.url} alt="QRIS payment code" className="w-full mx-auto aspect-square max-w-56 bg-footer/30" cover />}
-          <p className="text-xs text-body/60">Open your banking or e-wallet app and scan the code above.</p>
-        </div>
-      )}
-
-      {formData.paymentMethod === PaymentMethods.BANK_TRANSFER && (
-        <div className="border divide-y border-border divide-border">
-          {bankAccounts.length === 0 ? (
-            <p className="p-4 text-xs text-body/60">Bank details are not configured yet — please message us for the account number.</p>
-          ) : (
-            bankAccounts.map((account) => (
-              <div key={account.number} className="p-4 space-y-1">
-                <p className="text-sm uppercase font-heading text-primary tracking-[0.06em]">{account.bank}</p>
-                <p className="text-sm text-body tabular-nums">{account.number}</p>
-                <p className="text-xs text-body/70">{account.holder}</p>
-                {(account.branch || account.swift) && (
-                  <p className="text-xs text-body/55">
-                    {account.branch}
-                    {account.branch && account.swift ? " · " : ""}
-                    {account.swift && `SWIFT ${account.swift}`}
-                  </p>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-      )}
-
-      <div className="space-y-2">
-        <p className="font-heading text-xxs uppercase tracking-[0.16em] text-body/55">Payment Receipt *</p>
-
-        <div className="flex items-center border border-border">
-          <input type="file" id="receipt" ref={imageInputRef} onChange={handleImagesChange} hidden accept="image/*" disabled={upload.isUploading} />
-          <label
-            htmlFor="receipt"
-            className={`flex items-center gap-2 border-r border-border px-4 py-2.5 font-heading text-xxs uppercase tracking-[0.14em] ${
-              upload.isUploading ? "cursor-not-allowed text-body/40" : "cursor-pointer text-body hover:text-primary"
-            }`}
+      {hasInvoice ? (
+        <div className="p-6 space-y-2 text-center border border-border bg-muted">
+          <p className="font-heading text-xxs uppercase tracking-[0.16em] text-body/55">Complete your payment</p>
+          <p className="text-xs text-body/60">We opened your payment page in a new tab — QRIS, bank transfer, e-wallet or a convenience store, whichever you chose. Come back here once you&rsquo;re done.</p>
+          <button
+            type="button"
+            onClick={() => openInvoice(formData.invoiceUrl!)}
+            className="inline-flex items-center gap-1.5 pt-1 text-xxs uppercase tracking-[0.1em] text-primary hover:text-body"
           >
-            <PiUploadSimple className="size-4" />
-            {upload.isUploading ? "Uploading…" : "Choose Image"}
-          </label>
-
-          <span className="flex-1 px-3 text-xs truncate text-body/70">{formData.receiptImage?.originalName || "No file selected"}</span>
-
-          {!formData.receiptImage && !upload.isUploading && <span className="hidden pr-3 text-xxs text-body/45 sm:block">Max 5MB</span>}
-
-          {formData.receiptImage && !upload.isUploading && (
-            <button type="button" onClick={() => handleDeleteImages(formData.receiptImage?.path || "")} aria-label="Remove receipt" className="px-3 text-body/60 hover:text-primary">
-              <PiX className="size-4" />
-            </button>
-          )}
+            Reopen payment page <PiArrowSquareOut className="size-3.5" />
+          </button>
         </div>
-
-        <p className="text-xxs text-body/50">Both methods are verified by hand, so a readable screenshot of the transfer is required either way.</p>
-
-        {upload.isUploading && <ProgressBar uploadProgress={upload.uploadProgress} />}
-      </div>
+      ) : (
+        <div className="p-6 space-y-2 text-center border border-border bg-muted">
+          <p className="font-heading text-xxs uppercase tracking-[0.16em] text-body/55">Pay securely with Xendit</p>
+          <p className="text-xs text-body/60">QRIS, bank transfer, e-wallet or a convenience store — choose whichever you like on the next page.</p>
+        </div>
+      )}
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row">
-        <StoreButton type="button" variant="outline" onClick={onBack} className="w-full">
+        <StoreButton type="button" variant="outline" onClick={onBack} className="w-full" disabled={isCreatingOrder}>
           Back
         </StoreButton>
-        <StoreButton type="button" onClick={handlePaymentSubmit} disabled={isLoading || upload.isUploading} className="w-full">
-          {isLoading ? "Processing…" : "Complete Order"}
+        <StoreButton type="button" onClick={hasInvoice ? onPaid : onPayNow} disabled={isCreatingOrder} className="w-full">
+          {isCreatingOrder ? "Creating order…" : hasInvoice ? "I've Completed Payment" : "Pay Now"}
         </StoreButton>
       </div>
-    </form>
+    </div>
   );
 };

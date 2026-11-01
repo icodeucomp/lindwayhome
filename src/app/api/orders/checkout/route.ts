@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { z } from "zod";
 
-import { ConfigService, PaxelError, ShippingService, ShippingDestination, getShippingOrigin, quoteServices } from "@/services";
+import { ConfigService, PaxelError, ShippingService, ShippingDestination, XenditError, getShippingOrigin, initiateOrderPayment, quoteServices, releaseOrderPayment } from "@/services";
 
-import { errorMessage, getClientIp, logCalculation, logError, logger, logRequest, logResponse, prisma, resolveFiles, sendOrderConfirmation } from "@/lib";
+import { errorMessage, getClientIp, logCalculation, logError, logger, logRequest, logResponse, prisma } from "@/lib";
 
-import { API_BASE_URL, ParcelItem, calculateTotalPrice, consolidateParcel, hashDestination, hashItems, resolveUnitPrice, signCheckoutToken, toRupiah, verifyCheckoutToken } from "@/utils";
+import { ParcelItem, calculateTotalPrice, consolidateParcel, hashDestination, hashItems, resolveUnitPrice, signCheckoutToken, toRupiah, verifyCheckoutToken } from "@/utils";
 
 import { CartSchema, CreateOrderSchema, DiscountType, ShippingCalculateSchema } from "@/types";
 
@@ -361,7 +361,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: errorMessage(error) }, { status: 400 });
     }
 
-    // ── 3. Merge trusted prices, link the member, move the receipt out of temp ──
+    // ── 3. Merge trusted prices, link the member ─────────────────────────────
     const member = await findActiveMember(body.email ?? null);
 
     const createData = CreateOrderSchema.parse({
@@ -374,7 +374,12 @@ export async function POST(request: NextRequest) {
       isMember: Boolean(member),
     });
 
-    // ── 4. Database transaction ──────────────────────────────────────────────
+    // ── 4. Database transaction: reserve stock, create the order ─────────────
+    // Stock is decremented HERE, not when an admin later verifies payment. Waiting
+    // until verification is what let two buyers both "succeed" at ordering the last
+    // unit in v1 (A9.4) — reserving it the instant a checkout is attempted closes
+    // that window instead of widening it, which a webhook-driven confirmation would
+    // otherwise do (a retried notification racing a second buyer's order).
     const result = await prisma.$transaction(async (tx) => {
       const lines: { productId: string; quantity: number; selectedSize: string; unitPrice: number; lineTotal: number; name: string }[] = [];
 
@@ -387,7 +392,7 @@ export async function POST(request: NextRequest) {
             price: true,
             discountedPrice: true,
             name: true,
-            variants: { where: { size: { code: item.selectedSize.toUpperCase() } }, select: { quantity: true } },
+            variants: { where: { size: { code: item.selectedSize.toUpperCase() } }, select: { id: true, quantity: true } },
           },
         });
 
@@ -404,6 +409,10 @@ export async function POST(request: NextRequest) {
           throw new Error(`Insufficient stock for "${name}" size "${item.selectedSize}". Available: ${variant.quantity}, Requested: ${item.quantity}`);
         }
 
+        // The reservation. `products.stock` follows via the product_variant_stock_sync
+        // trigger (D24) — application code never writes it directly.
+        await tx.productVariant.update({ where: { id: variant.id }, data: { quantity: { decrement: item.quantity } } });
+
         // Snapshot the price this line actually sold at. `discountedPrice` is
         // mutable, so without this an admin re-pricing the product later would
         // silently rewrite what past orders appear to have charged.
@@ -411,13 +420,11 @@ export async function POST(request: NextRequest) {
         lines.push({ productId: item.productId, quantity: item.quantity, selectedSize: item.selectedSize, unitPrice, lineTotal: unitPrice * item.quantity, name });
       }
 
-      const resolvedImages = await resolveFiles({}, createData.receiptImage, "receipts");
-
       const order = await tx.order.create({
         data: {
           ...createData,
           memberId: member?.id,
-          receiptImage: resolvedImages,
+          paymentMethod: null,
           items: {
             create: lines.map((line) => ({
               productId: line.productId,
@@ -430,43 +437,53 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return { order, lines };
+      const transaction = await tx.paymentTransaction.create({
+        data: {
+          orderId: order.id,
+          gatewayOrderId: order.id,
+          grossAmount: trustedPrices.totalPurchased,
+          status: "PENDING",
+        },
+      });
+
+      return { order, lines, transactionId: transaction.id };
     });
 
-    // ── 5. Send confirmation email ───────────────────────────────────────────
-    // The order is already committed at this point, so a failed email must not be
-    // reported as a failed order — the buyer would re-submit and pay twice.
+    // ── 5. Ask Xendit for an Invoice — deliberately OUTSIDE the DB transaction ──────
+    // A network call has no place holding a database transaction open. If Xendit is
+    // unreachable or rejects the request, the reservation above is undone by a small
+    // compensating transaction rather than left stranded — the same "booking is a
+    // separate, retriable step" reasoning Paxel already uses, just run in reverse:
+    // here the payment step failing has to release what was reserved.
     try {
-      await sendOrderConfirmation({
+      const invoice = await initiateOrderPayment({
         orderId: result.order.id,
+        gatewayOrderId: result.order.id,
+        grossAmount: trustedPrices.totalPurchased,
         email: result.order.email,
-        address: result.order.address,
-        whatsappNumber: result.order.whatsappNumber,
-        postalCode: result.order.postalCode,
-        totalPurchased: result.order.totalPurchased.toNumber(),
-        shippingCost: result.order.shippingCost?.toNumber() ?? 0,
-        totalItemsSold: result.order.totalItemsSold,
-        isMember: result.order.isMember,
-        paymentMethod: result.order.paymentMethod,
         fullname: result.order.fullname,
-        items: result.lines.map((line) => ({
-          product: { id: line.productId, name: line.name, price: line.unitPrice },
-          selectedSize: line.selectedSize,
-          quantity: line.quantity,
-        })),
-        baseUrl: API_BASE_URL!,
-        createdAt: result.order.createdAt,
+        whatsappNumber: result.order.whatsappNumber,
       });
+
+      await prisma.paymentTransaction.update({ where: { id: result.transactionId }, data: { transactionId: invoice.invoiceId, redirectUrl: invoice.invoiceUrl } });
+
+      const totalItems = result.lines.reduce((sum, line) => sum + line.quantity, 0);
+
+      logResponse(pathAPI, Date.now() - startTime, { message: `Order created with ${totalItems} item(s), awaiting payment`, data: { id: result.order.id } });
+
+      return NextResponse.json(
+        { success: true, message: "Order created. Complete payment to confirm it.", data: { id: result.order.id, invoiceUrl: invoice.invoiceUrl } },
+        { status: 201 },
+      );
     } catch (error) {
-      logError("Send Order Confirmation failed with order ID: " + result.order.id, Date.now() - startTime, error);
+      logError(`${pathAPI} xendit error`, Date.now() - startTime, error);
+
+      await releaseOrderPayment(result.order.id, "Failed to initiate payment with Xendit");
+      await prisma.paymentTransaction.update({ where: { id: result.transactionId }, data: { status: "CANCELLED" } }).catch(() => undefined);
+
+      const userMessage = error instanceof XenditError ? error.userMessage : "We could not start the payment for this order. Please try again.";
+      return NextResponse.json({ success: false, message: userMessage }, { status: 502 });
     }
-
-    // ── 6. Success response ──────────────────────────────────────────────────
-    const totalItems = result.lines.reduce((sum, line) => sum + line.quantity, 0);
-
-    logResponse(pathAPI, Date.now() - startTime, { message: `Order created with ${totalItems} item(s)`, data: body });
-
-    return NextResponse.json({ success: true, message: `Order created successfully with ${totalItems} item${totalItems > 1 ? "s" : ""}.`, data: { id: result.order.id } }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       logError(`${pathAPI} zod error`, Date.now() - startTime, error);

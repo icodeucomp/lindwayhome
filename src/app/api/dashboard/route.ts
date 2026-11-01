@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
       prisma.order.groupBy({ by: ["status"], where: orderWhere, _count: { _all: true } }),
       // Bucketed in JS rather than SQL: Prisma cannot group by day, and date_trunc
       // would mean going back to raw SQL — the thing A9.5 was about.
-      prisma.order.findMany({ where: { createdAt: { gte: trendStart } }, select: { createdAt: true, paymentMethod: true } }),
+      prisma.order.findMany({ where: { createdAt: { gte: trendStart } }, select: { createdAt: true } }),
       prisma.order.findMany({
         where: orderWhere,
         select: { id: true, fullname: true, email: true, totalPurchased: true, status: true, isPurchased: true, paymentMethod: true, createdAt: true },
@@ -77,18 +77,20 @@ export async function GET(request: NextRequest) {
       prisma.product.count({ where: { ...productWhere, isActive: false } }),
     ]);
 
-    const buckets = new Map<string, { bankTransfer: number; qris: number }>();
+    // A single series: v1 split this by its two hardcoded payment methods, but the
+    // gateway's channel vocabulary is open-ended now, so a fixed-series stacked
+    // chart no longer applies (see the comment on DashboardData.ordersByDay).
+    const buckets = new Map<string, { count: number }>();
     for (let offset = 0; offset < 30; offset += 1) {
       const day = new Date(trendStart);
       day.setDate(trendStart.getDate() + offset);
-      buckets.set(localDayKey(day), { bankTransfer: 0, qris: 0 });
+      buckets.set(localDayKey(day), { count: 0 });
     }
 
     for (const row of trendRows) {
       const bucket = buckets.get(localDayKey(row.createdAt));
       if (!bucket) continue;
-      if (row.paymentMethod === "QRIS") bucket.qris += 1;
-      else bucket.bankTransfer += 1;
+      bucket.count += 1;
     }
 
     return NextResponse.json(

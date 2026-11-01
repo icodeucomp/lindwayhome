@@ -11,9 +11,19 @@
  *   · the token binds the service and the destination, so neither can be swapped after pricing
  *   · the total stored on `Order` equals the total signed into the token
  *   · `OrderItem` carries a unitPrice/lineTotal snapshot
- *   · verification decrements the variant, `products.stock` follows via the trigger, `soldCount` rises
+ *   · order creation reserves stock immediately (the variant decrements, `products.stock` follows
+ *     via the trigger) and returns a Xendit invoice URL — soldCount does NOT move yet
+ *   · verification (the admin override path, shared with the Xendit webhook) credits `soldCount`
+ *     only — it does not touch stock a second time
  *   · status moves AWAITING_PAYMENT → PAID
+ *   · confirming an already-confirmed order is a no-op — proves the same guard a retried webhook relies on
  *   · a pickup books, tracks, appears in the day's list, and cancels — returning the order to PAID
+ *
+ * Runs against Xendit in mock mode if XENDIT_SECRET_KEY is unset (see
+ * `src/services/xendit.ts`) — order creation still returns a (fake) invoice URL,
+ * so this script needs no real Xendit account to verify the reservation/
+ * confirmation logic. It cannot exercise the real webhook, since that needs a
+ * genuine callback token.
  */
 const BASE = "http://localhost:3000/api";
 
@@ -81,7 +91,6 @@ check("client-supplied purchased is ignored", tampered.data.purchased === expect
 
 // 4 — the token must not survive a changed destination (D28)
 step(4, "POST /orders/checkout with the token replayed against a different address");
-const receipt = { filename: "r.webp", originalName: "r.webp", url: "/images/qris.jpeg", path: "/images/qris.jpeg", size: 1234, mimeType: "image/webp", alt: "receipt", isMoved: true };
 
 const buyer = {
   email: "smoke@example.com",
@@ -92,8 +101,6 @@ const buyer = {
   latitude: -8.65,
   longitude: 115.24,
   isPinned: true,
-  paymentMethod: "BANK_TRANSFER",
-  receiptImage: receipt,
   items,
 };
 
@@ -126,8 +133,18 @@ const created = await j(
 );
 const orderId = created.data.id;
 console.log(`   ${created.message}  id=${orderId}`);
+check("order creation returns a Xendit invoice URL", typeof created.data.invoiceUrl === "string" && created.data.invoiceUrl.length > 0, String(created.data.invoiceUrl));
 
-// 6 — admin verifies
+// 5b — stock is reserved at CREATION now, not at verification — closes the v1
+// overselling window (A9.4) instead of widening it under a webhook's retries.
+step("5b", "GET /products/[id] — stock reserved immediately, before any payment");
+const afterCreate = await j(await fetch(`${BASE}/products/${product.id}`));
+const reservedVariant = afterCreate.data.variants.find((v) => v.size.code === variant.size.code);
+check("variant decremented at order creation", reservedVariant.quantity === variant.quantity - 2, `${variant.quantity} → ${reservedVariant.quantity}`);
+check("products.stock followed via the trigger", afterCreate.data.stock === product.stock - 2, `${product.stock} → ${afterCreate.data.stock}`);
+check("soldCount NOT yet incremented — nobody has paid", afterCreate.data.soldCount === product.soldCount, String(afterCreate.data.soldCount));
+
+// 6 — admin verifies (the manual override path — a Xendit webhook uses the same confirmOrderPayment underneath)
 step(6, "POST /auth/login → PUT /orders/[id] { isPurchased: true }");
 const auth = await j(await fetch(`${BASE}/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: "admin", password: "!Admin123" }) }));
 const token = auth.data.token;
@@ -142,16 +159,23 @@ check("destination persisted", before.data.village === destination.village && be
 
 await j(await fetch(`${BASE}/orders/${orderId}`, { method: "PUT", headers: { "Content-Type": "application/json", ...authed }, body: JSON.stringify({ isPurchased: true }) }));
 
-// 7 — stock and soldCount must both have moved, via the trigger
-step(7, "GET /products/[id] — stock + soldCount after verification");
+// 7 — verification credits soldCount only — stock already moved at creation
+step(7, "GET /products/[id] — soldCount after verification (stock already moved at creation)");
 const after = await j(await fetch(`${BASE}/products/${product.id}`));
 const afterVariant = after.data.variants.find((v) => v.size.code === variant.size.code);
-check("variant decremented", afterVariant.quantity === variant.quantity - 2, `${variant.quantity} → ${afterVariant.quantity}`);
-check("products.stock followed via the trigger", after.data.stock === product.stock - 2, `${product.stock} → ${after.data.stock}`);
+check("variant unchanged by verification — it was already reserved", afterVariant.quantity === reservedVariant.quantity, `${reservedVariant.quantity} → ${afterVariant.quantity}`);
 check("soldCount incremented", after.data.soldCount === product.soldCount + 2, `${product.soldCount} → ${after.data.soldCount}`);
 
 const verified = await j(await fetch(`${BASE}/orders/${orderId}`, { headers: authed }));
 check("status moved to PAID", verified.data.status === "PAID", verified.data.status);
+
+// 7b — confirming an already-confirmed order must be a no-op. This is the exact
+// safety a retried Xendit webhook relies on (confirmOrderPayment's `WHERE`
+// guard) — proven here via the admin path since it shares the same function.
+step("7b", "PUT /orders/[id] { isPurchased: true } again — must not double-credit soldCount");
+await j(await fetch(`${BASE}/orders/${orderId}`, { method: "PUT", headers: { "Content-Type": "application/json", ...authed }, body: JSON.stringify({ isPurchased: true }) }));
+const afterDuplicate = await j(await fetch(`${BASE}/products/${product.id}`));
+check("soldCount unchanged by a duplicate confirmation", afterDuplicate.data.soldCount === after.data.soldCount, `${after.data.soldCount} → ${afterDuplicate.data.soldCount}`);
 
 // 8 — book a courier pickup
 step(8, "POST /orders/[id]/shipment");

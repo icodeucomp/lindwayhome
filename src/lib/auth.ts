@@ -35,15 +35,20 @@ export const verifyPassword = async (password: string, hashedPassword: string): 
   return bcrypt.compare(password, hashedPassword);
 };
 
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET is not set");
+}
+
 export const generateToken = (userId: string): string => {
-  return jwt.sign({ userId }, process.env.NEXT_PUBLIC_JWT_SECRET || "lindway", {
+  return jwt.sign({ userId }, JWT_SECRET, {
     expiresIn: "1d",
   });
 };
 
 export const verifyToken = (token: string): TokenPayload | null => {
   try {
-    return jwt.verify(token, process.env.NEXT_PUBLIC_JWT_SECRET || "lindway") as TokenPayload;
+    return jwt.verify(token, JWT_SECRET) as TokenPayload;
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       throw new Error(`Invalid token: ${error.message}`);

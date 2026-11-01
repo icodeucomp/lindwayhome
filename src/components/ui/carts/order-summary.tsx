@@ -10,13 +10,11 @@ import { CheckoutForm, CheckoutSteps, CompleteStep, PaymentStep, type CheckoutSt
 
 import { Modal } from "@/components";
 import { orderCheckoutApi } from "@/utils";
-import { CheckoutFormData, PaymentMethods } from "@/types";
+import { CheckoutFormData } from "@/types";
 
 const initFormData: CheckoutFormData = {
   email: "",
   fullname: "",
-  receiptImage: undefined,
-  paymentMethod: PaymentMethods.BANK_TRANSFER,
   address: "",
   isMember: false,
   items: [],
@@ -53,9 +51,13 @@ export const OrderSummary = ({ isVisible, onClose, price, totalItem }: OrderSumm
   const [formData, setFormData] = React.useState<CheckoutFormData>(initFormData);
   const [formErrors, setFormErrors] = React.useState<Record<string, string>>({});
 
+  // Order creation and payment are two separate moments now (§B6.3): creating the
+  // order only reserves stock and opens a Xendit invoice. `onSuccess` here just
+  // hands the resulting invoice URL back to the payment step — it does NOT advance
+  // to "complete", because nobody has paid yet.
   const createOrder = orderCheckoutApi.useCreateOrder({
-    onSuccess: () => {
-      setCurrentStep("complete");
+    onSuccess: (data) => {
+      setFormData((prev) => ({ ...prev, invoiceUrl: data.invoiceUrl }));
     },
   });
 
@@ -78,28 +80,27 @@ export const OrderSummary = ({ isVisible, onClose, price, totalItem }: OrderSumm
     setCurrentStep("payment");
   };
 
-  const handlePaymentSubmit = async (paymentData: CheckoutFormData) => {
-    try {
-      if (!paymentData.checkoutToken) {
-        toast.error("Checkout session expired. Please go back and recalculate.");
-        setCurrentStep("summary");
-        return;
-      }
-
-      const submitData = {
-        ...paymentData,
-        isPurchased: false,
-        postalCode: Number(paymentData.postalCode),
-        checkoutToken: paymentData.checkoutToken,
-        items: addSelectedItems(),
-      };
-
-      createOrder.mutate(submitData);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to submit order. Please try again.";
-      toast.error(errorMessage);
+  const handlePayNow = () => {
+    if (!formData.checkoutToken) {
+      toast.error("Checkout session expired. Please go back and recalculate.");
+      setCurrentStep("summary");
+      return;
     }
+
+    const submitData = {
+      ...formData,
+      postalCode: Number(formData.postalCode),
+      checkoutToken: formData.checkoutToken,
+      items: addSelectedItems(),
+    };
+
+    createOrder.mutate(submitData);
   };
+
+  // Fired once the buyer says they finished paying on Xendit's hosted page — not
+  // once the order is merely created. The order can exist for a while with nobody
+  // having paid yet; this is the actual "the buyer did something" signal.
+  const handlePaid = () => setCurrentStep("complete");
 
   return (
     <Modal
@@ -127,7 +128,7 @@ export const OrderSummary = ({ isVisible, onClose, price, totalItem }: OrderSumm
           />
         )}
         {currentStep === "payment" && (
-          <PaymentStep formData={formData} setFormData={setFormData} onBack={() => setCurrentStep("summary")} onSubmit={handlePaymentSubmit} isLoading={createOrder.isPending} />
+          <PaymentStep formData={formData} onBack={() => setCurrentStep("summary")} onPayNow={handlePayNow} onPaid={handlePaid} isCreatingOrder={createOrder.isPending} />
         )}
         {currentStep === "complete" && <CompleteStep formData={formData} totalItem={totalItem} totalPurchased={formData.totalPurchased} onClose={handleClose} />}
       </div>

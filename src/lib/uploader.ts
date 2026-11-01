@@ -28,7 +28,7 @@ export class FileUploader {
   private baseURL: string;
 
   constructor(config: FileUploaderConfig = {}) {
-    this.baseUploadPath = config.baseUploadPath || process.env.NEXT_PUBLIC_UPLOADS_PATH || "uploads";
+    this.baseUploadPath = config.baseUploadPath || process.env.UPLOADS_PATH || "uploads";
     this.allowedTypes = config.allowedTypes || ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
     this.maxFileSize = config.maxFileSize || 5 * 1024 * 1024;
     this.tempTTLMs = config.tempTTLMs || 60 * 60 * 1000;

@@ -2,7 +2,7 @@
 
 import { StoreButton } from "@/components/ui/storefront";
 
-import { formatUnderscoreToSpace, formatIDR } from "@/utils";
+import { formatIDR } from "@/utils";
 
 import { CheckoutFormData } from "@/types";
 
@@ -11,9 +11,11 @@ import { PiCheckCircle } from "react-icons/pi";
 /**
  * The closing step of the checkout wizard.
  *
- * It deliberately does not promise the order is paid: the receipt still has to be
- * verified by hand before stock moves (§A5.3), and telling a buyer "payment received"
- * a second after they upload an image would be a claim the system cannot yet make.
+ * It deliberately does not promise the order is paid: the buyer saying "I've
+ * completed payment" means they finished the flow on Xendit's hosted page, not that
+ * the payment has settled — that confirmation still comes from Xendit's webhook
+ * (§B6.3), and claiming "payment received" here would be a claim the system cannot
+ * yet make.
  */
 
 interface CompleteStepProps {
@@ -36,8 +38,8 @@ export const CompleteStep = ({ formData, totalItem, onClose, totalPurchased }: C
       <PiCheckCircle className="mx-auto size-12 text-primary" />
       <h2 className="text-2xl uppercase font-heading text-primary tracking-[0.06em]">Order Received</h2>
       <p className="max-w-md mx-auto text-sm text-body/70">
-        Thank you — {totalItem} item{totalItem > 1 ? "s" : ""} {totalItem > 1 ? "are" : "is"} reserved for you. We verify every transfer by hand, usually within one working day, and email you as
-        soon as it clears.
+        Thank you — {totalItem} item{totalItem > 1 ? "s" : ""} {totalItem > 1 ? "are" : "is"} reserved for you. We&rsquo;re confirming your payment now and will email you the moment it&rsquo;s
+        through.
       </p>
     </div>
 
@@ -45,7 +47,6 @@ export const CompleteStep = ({ formData, totalItem, onClose, totalPurchased }: C
       <Row label="Order Total">
         <span className="font-heading">{formatIDR(totalPurchased)}</span>
       </Row>
-      <Row label="Payment Method">{formatUnderscoreToSpace(formData.paymentMethod)}</Row>
       <Row label="Name">{formData.fullname}</Row>
       <Row label="Confirmation Sent To">{formData.email}</Row>
     </div>

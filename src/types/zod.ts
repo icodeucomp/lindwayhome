@@ -8,13 +8,13 @@ export const LocaleEnum = z.enum(["EN", "ID"]);
 export const BrandEnum = z.enum(["MY_LINDWAY", "SIMPLY_LINDWAY", "LURE_BY_LINDWAY", "STUDIO_BY_LINDWAY", "LINDWAY_AWP"]);
 export const AudienceEnum = z.enum(["WOMEN", "MEN", "KIDS"]);
 export const ClothingEnum = z.enum(["DRESSES", "TOPS", "SKIRTS"]);
-export const PaymentMethodEnum = z.enum(["BANK_TRANSFER", "QRIS"]);
 export const DiscountEnum = z.enum(["PERCENTAGE", "FIXED"]);
 export const OrderStatusEnum = z.enum(["AWAITING_PAYMENT", "PAID", "SHIPPED", "COMPLETED", "CANCELLED"]);
 export const InquiryTypeEnum = z.enum(["PRODUCT_INQUIRY", "ORDER_SUPPORT", "CUSTOM_ORDER", "WHOLESALE_B2B", "PARTNERSHIP", "OTHER"]);
 export const InquiryStatusEnum = z.enum(["NEW", "IN_PROGRESS", "HANDLED", "ARCHIVED"]);
 export const ShippingServiceEnum = z.enum(["SAMEDAY", "NEXTDAY", "REGULAR", "INSTANT"]);
 export const ShipmentStatusEnum = z.enum(["BOOKED", "PICKED_UP", "IN_TRANSIT", "DELIVERED", "CANCELLED", "FAILED"]);
+export const PaymentTransactionStatusEnum = z.enum(["PENDING", "SETTLED", "EXPIRED", "CANCELLED", "DENIED", "REFUNDED"]);
 
 // =============================================================================
 // Shared
@@ -194,13 +194,19 @@ export const OrderSchema = z.object({
   trackingNumber: z.string().nullish(),
   cancelledAt: z.coerce.date().nullish(),
 
-  paymentMethod: PaymentMethodEnum.optional(),
-  receiptImage: FileSchema,
+  // Xendit's own channel string, set from the winning PaymentTransaction once
+  // settled — never buyer-supplied (see the schema comment on Order.paymentMethod).
+  paymentMethod: z.string().nullish(),
+  // No receipt for a gateway payment.
+  receiptImage: FileSchema.nullish(),
   instagram: z.string().optional(),
   reference: z.string().optional(),
 });
 
-export const CreateOrderSchema = OrderSchema.omit({ id: true });
+// `paymentMethod` and `receiptImage` are never buyer-supplied — the checkout route
+// sets `paymentMethod: null` explicitly regardless of what the body contains, the
+// same way it already ignores a client-supplied price (§A5.2).
+export const CreateOrderSchema = OrderSchema.omit({ id: true, paymentMethod: true, receiptImage: true });
 export const UpdateOrderSchema = OrderSchema.partial();
 
 // =============================================================================
@@ -384,7 +390,9 @@ export const OrderQuerySchema = z.object({
   ...baseQuery,
   isPurchased: z.string().optional(),
   status: OrderStatusEnum.optional(),
-  paymentMethod: PaymentMethodEnum.optional(),
+  // Any Xendit channel string, or absent — not a fixed enum any more (see the
+  // schema comment on Order.paymentMethod).
+  paymentMethod: z.string().optional(),
 });
 
 export const LocationQuerySchema = z.object({

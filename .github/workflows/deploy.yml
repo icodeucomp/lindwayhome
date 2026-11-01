@@ -1,0 +1,76 @@
+# Ships main to the VPS. The build runs on the server (docker compose), so this
+# job only packs the source and hands it to the server (authorized_keys forces deploy-gate.sh, which runs /opt/lindway/bin/deploy.sh), which is
+# expected to rebuild with `docker compose up -d --build` and roll back on a
+# failed build or health check.
+#
+# Secrets: DEPLOY_SSH_KEY (private key authorised on the server),
+#          DEPLOY_KNOWN_HOSTS (ssh-keyscan of the VPS).
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  HOST: root@185.196.21.56
+
+jobs:
+  # Nothing reaches the server unless it typechecks, lints and builds first.
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: mkdir -p generated/prisma && npm ci
+      - run: npx prisma generate
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run paxel:check
+      - run: npm run build
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+          JWT_SECRET: ci-only
+          CHECKOUT_TOKEN_SECRET: ci-only
+          NEXT_PUBLIC_BASE_URL: http://localhost:3000
+
+  deploy:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          if [ -z "$DEPLOY_SSH_KEY" ] || [ -z "$DEPLOY_KNOWN_HOSTS" ]; then
+            echo "::error::Secret DEPLOY_SSH_KEY / DEPLOY_KNOWN_HOSTS kosong atau tidak terbaca oleh repo ini"
+            exit 1
+          fi
+          install -m 700 -d ~/.ssh
+          # Strip CRs: keys pasted from Windows otherwise fail with "invalid format".
+          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519
+          if ! ssh-keygen -y -f ~/.ssh/id_ed25519 > /dev/null; then
+            echo "::error::DEPLOY_SSH_KEY bukan private key yang valid (pastikan baris BEGIN/END ikut tersalin)"
+            exit 1
+          fi
+
+      - name: Deploy
+        run: |
+          git ls-files -z -- . ':!CLAUDE.md' ':!.claude' | tar --null -czf - -T - \
+            | ssh -o BatchMode=yes "$HOST" deploy lindway

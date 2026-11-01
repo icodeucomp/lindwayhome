@@ -24,11 +24,6 @@ export enum ClothingType {
   SKIRTS = "SKIRTS",
 }
 
-export enum PaymentMethods {
-  BANK_TRANSFER = "BANK_TRANSFER",
-  QRIS = "QRIS",
-}
-
 export enum DiscountType {
   PERCENTAGE = "PERCENTAGE",
   FIXED = "FIXED",
@@ -107,7 +102,7 @@ export interface QueryParams {
   isFavorite?: boolean;
   isPurchased?: string;
   status?: OrderStatus | InquiryStatus | string;
-  paymentMethod?: PaymentMethods | string;
+  paymentMethod?: string;
   inquiryType?: InquiryType | string;
   categoryId?: string;
   featured?: string;
@@ -548,13 +543,43 @@ export interface Order {
   trackingNumber: string | null;
   cancelledAt: string | null;
 
-  paymentMethod: PaymentMethods;
-  receiptImage: Files;
+  /** Xendit's own channel string ("QRIS", "BCA", "OVO", …), set once a payment settles. Null while `AWAITING_PAYMENT`. */
+  paymentMethod: string | null;
+  /** No receipt for a gateway payment — this is legacy display data only now. */
+  receiptImage: Files | null;
   instagram: string | null;
   reference: string | null;
 
   items: OrderItem[];
   shipments?: Shipment[];
+  /** Newest first — see PaymentTransaction's own doc comment for why there can be more than one. */
+  paymentTransactions?: PaymentTransaction[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * One Xendit Invoice attempt. Kept as its own row, not columns on `Order`, because
+ * an abandoned-and-retried checkout would otherwise silently overwrite its own
+ * history — exactly the reasoning `Shipment` already uses for Paxel bookings.
+ */
+export type PaymentTransactionStatus = "PENDING" | "SETTLED" | "EXPIRED" | "CANCELLED" | "DENIED" | "REFUNDED";
+
+export interface PaymentTransaction {
+  id: string;
+  orderId: string;
+  gateway: string;
+  gatewayOrderId: string;
+  /** Xendit's own Invoice id — set as soon as the invoice is created, not only once a callback arrives. */
+  transactionId: string | null;
+  /** The hosted Xendit Invoice URL the buyer pays at. */
+  redirectUrl: string | null;
+  /** Xendit's own vocabulary verbatim — see the comment on Order.paymentMethod. */
+  paymentType: string | null;
+  status: PaymentTransactionStatus;
+  grossAmount: number;
+  paidAt: string | null;
+  expiredAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -563,6 +588,10 @@ export interface Order {
  * Prices are absent on purpose. The server takes `shippingCost`, `purchased`,
  * `totalPurchased`, `totalItemsSold` and now `shippingServiceType` from the signed
  * checkout token and ignores anything the client sends for them (§A5.2).
+ *
+ * `paymentMethod` and `receiptImage` are gone too — payment is gateway-driven now,
+ * not buyer-chosen up front, so the server sets `paymentMethod: null` at creation
+ * regardless of what a request body contains (same trust boundary as the prices).
  */
 export interface CreateOrder {
   email: string;
@@ -580,13 +609,17 @@ export interface CreateOrder {
   longitude: number;
   isPinned?: boolean;
 
-  receiptImage?: Files;
   isMember: boolean;
   instagram?: string;
   reference?: string;
-  paymentMethod: PaymentMethods;
   items: CartItem[];
   checkoutToken: string;
+}
+
+/** What `POST /orders/checkout` returns once the order and its Xendit invoice both exist. */
+export interface CreateOrderResult {
+  id: string;
+  invoiceUrl: string;
 }
 
 // =============================================================================
@@ -710,6 +743,8 @@ export interface CheckoutFormData extends CreateOrder {
   shippingCost?: number;
   /** Which courier option the buyer picked. Carried so the payment step can show it. */
   shippingServiceType?: ShippingServiceType;
+  /** Set once `useCreateOrder` returns, so the payment step can open the Xendit invoice. */
+  invoiceUrl?: string;
 }
 
 export interface EditOrder {
@@ -722,8 +757,6 @@ export interface EditOrder {
   postalCode?: number;
   instagram?: string;
   reference?: string;
-  paymentMethod?: PaymentMethods;
-  receiptImage?: Files;
 }
 
 export interface Member {
@@ -897,8 +930,12 @@ export interface DashboardData {
   stockByBrand: { brand: BrandType; stock: number; products: number }[];
   /** Every OrderStatus, lifecycle-ordered, including the stages sitting at zero. */
   statusPipeline: { status: OrderStatus; count: number }[];
-  /** Fixed 30-day window — independent of the month/year filter. */
-  ordersByDay: { date: string; bankTransfer: number; qris: number }[];
+  /**
+   * Fixed 30-day window — independent of the month/year filter. A single series:
+   * v1 split this by the two hardcoded payment methods, but the gateway's channel
+   * vocabulary is open-ended now, so a fixed-series stacked chart no longer applies.
+   */
+  ordersByDay: { date: string; count: number }[];
   latestOrders: {
     id: string;
     fullname: string;
@@ -906,7 +943,7 @@ export interface DashboardData {
     totalPurchased: number;
     status: OrderStatus;
     isPurchased: boolean;
-    paymentMethod: PaymentMethods;
+    paymentMethod: string | null;
     createdAt: string;
   }[];
 }

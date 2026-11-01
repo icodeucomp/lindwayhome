@@ -771,7 +771,7 @@ const FAQS = [
     topic: "orders",
     // Inactive, so the admin list has something the public page must never show.
     isActive: false,
-    en: { q: "Can I pay with a credit card?", a: "Not yet. Bank transfer and QRIS are the two ways to pay today." },
+    en: { q: "Can I pay with a credit card?", a: "Yes — checkout is powered by Xendit, which accepts credit cards, QRIS, bank transfer, e-wallets like OVO and DANA, and payment at a convenience store." },
     id: null,
   },
 ];

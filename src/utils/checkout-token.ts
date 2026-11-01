@@ -1,6 +1,9 @@
 import { createHmac } from "crypto";
 
-const SECRET = process.env.NEXT_PUBLIC_CHECKOUT_TOKEN || "default_secret_for_checkout_token";
+const SECRET = process.env.CHECKOUT_TOKEN_SECRET;
+if (!SECRET) {
+  throw new Error("CHECKOUT_TOKEN_SECRET is not set");
+}
 
 /**
  * What the server locks for 15 minutes so the client cannot name its own price.
@@ -90,7 +93,11 @@ export const hashDestination = (destination: DestinationFingerprint): string => 
   // body to compare against the token, and it does so *before* the body has been
   // validated. A missing field must produce a mismatch, not a TypeError.
   const normalized = [destination.province, destination.district, destination.sub_district, destination.village, destination.postalCode]
-    .map((part) => String(part ?? "").trim().toUpperCase())
+    .map((part) =>
+      String(part ?? "")
+        .trim()
+        .toUpperCase(),
+    )
     .join("|");
   return createHmac("sha256", SECRET).update(normalized).digest("hex");
 };

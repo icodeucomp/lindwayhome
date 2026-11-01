@@ -14,7 +14,7 @@ import { orderStatusColors, orderStatusLabels } from "@/static/order";
 
 import { shippingServiceLabels } from "@/static/shipment";
 
-import { paymentMethodColors, paymentMethodLabels } from "@/static/payment";
+import { paymentMethodColor, paymentMethodLabel } from "@/static/payment";
 
 import { convertDate, formatIDR, ordersApi } from "@/utils";
 
@@ -36,7 +36,7 @@ interface OrdersListsProps {
 const StatusMarks = ({ order }: { order: Order }) => (
   <div className="flex flex-wrap items-center gap-1.5">
     <Badge className={orderStatusColors[order.status]}>{orderStatusLabels[order.status]}</Badge>
-    <Badge className={paymentMethodColors[order.paymentMethod]}>{paymentMethodLabels[order.paymentMethod]}</Badge>
+    <Badge className={paymentMethodColor(order.paymentMethod)}>{paymentMethodLabel(order.paymentMethod)}</Badge>
     {order.isMember && <Badge className="bg-primary/12 text-primary">Member</Badge>}
   </div>
 );
@@ -64,6 +64,13 @@ const OrderDetail = ({ orderId, onClose }: { orderId: string | null; onClose: ()
   const refetchOrder = React.useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["order", orderId] });
   }, [queryClient, orderId]);
+
+  const checkPaymentStatus = ordersApi.useCheckPaymentStatus({
+    onSuccess: () => {
+      refetchOrder();
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    },
+  });
 
   return (
     <Modal isVisible={orderId !== null} onClose={onClose}>
@@ -115,12 +122,41 @@ const OrderDetail = ({ orderId, onClose }: { orderId: string | null; onClose: ()
               {order.cancelledAt && <DetailRow label="Cancelled">{convertDate(order.cancelledAt)}</DetailRow>}
             </div>
 
-            {order.receiptImage && (
+            {order.paymentTransactions && order.paymentTransactions.length > 0 ? (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="admin-field-label">Payment attempts</p>
+                  {!order.isPurchased && (
+                    <button
+                      type="button"
+                      onClick={() => checkPaymentStatus.mutate(order.id)}
+                      disabled={checkPaymentStatus.isPending}
+                      className="text-xxs uppercase tracking-[0.1em] text-primary hover:text-body disabled:opacity-50"
+                    >
+                      {checkPaymentStatus.isPending ? "Checking…" : "Check with Xendit"}
+                    </button>
+                  )}
+                </div>
+                <div className="border divide-y border-border divide-border/70">
+                  {order.paymentTransactions.map((transaction) => (
+                    <div key={transaction.id} className="p-3 text-xs">
+                      <div className="flex items-center justify-between gap-3">
+                        <Badge className={paymentMethodColor(transaction.paymentType)}>{paymentMethodLabel(transaction.paymentType)}</Badge>
+                        <span className="text-body/50">{transaction.status}</span>
+                      </div>
+                      {transaction.transactionId && <p className="mt-1.5 text-body/50 truncate">Xendit invoice ID: {transaction.transactionId}</p>}
+                      {transaction.paidAt && <p className="mt-1 text-body/50">Paid {convertDate(transaction.paidAt)}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : order.receiptImage ? (
+              // Legacy v1 orders only — a gateway payment has no receipt.
               <div>
                 <p className="mb-2 admin-field-label">Payment receipt</p>
                 <Img src={order.receiptImage.url} alt={order.receiptImage.alt} className="w-full border rounded-sm border-border" width={400} height={400} />
               </div>
-            )}
+            ) : null}
           </div>
 
           <div>
@@ -255,7 +291,7 @@ export const OrdersLists = ({ orders, view, isLoading, isError, hasFilters, pend
                   <Badge className={orderStatusColors[order.status]}>{orderStatusLabels[order.status]}</Badge>
                 </Td>
                 <Td>
-                  <Badge className={paymentMethodColors[order.paymentMethod]}>{paymentMethodLabels[order.paymentMethod]}</Badge>
+                  <Badge className={paymentMethodColor(order.paymentMethod)}>{paymentMethodLabel(order.paymentMethod)}</Badge>
                 </Td>
                 <Td className="text-right text-body tabular-nums whitespace-nowrap">{formatIDR(order.totalPurchased)}</Td>
                 <Td className="text-right whitespace-nowrap text-body/50">{convertDate(order.createdAt)}</Td>

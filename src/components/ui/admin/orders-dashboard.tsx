@@ -20,13 +20,9 @@ const PURCHASE_OPTIONS = [
   { value: "true", label: "Verified" },
 ];
 
-const PAYMENT_OPTIONS = [
-  { value: "", label: "All" },
-  { value: "BANK_TRANSFER", label: "Bank Transfer" },
-  { value: "QRIS", label: "QRIS" },
-];
-
-const FILTER_KEYS = ["isPurchased", "status", "paymentMethod"] as const;
+// No fixed method dropdown any more: Xendit's channel vocabulary is open-ended
+// (QRIS, bank transfer, e-wallet, retail outlet, …), unlike v1's two hardcoded methods.
+const FILTER_KEYS = ["isPurchased", "status"] as const;
 
 export const OrdersDashboard = () => {
   const queryClient = useQueryClient();
@@ -40,9 +36,9 @@ export const OrdersDashboard = () => {
   const [orderToVerify, setOrderToVerify] = React.useState<Order | null>(null);
 
   const { data, isLoading, isError } = ordersApi.useGetOrders<ApiResponse<Order[]>>({
-    key: ["orders", searchQuery, page, limit, filters.isPurchased, filters.status, filters.paymentMethod],
+    key: ["orders", searchQuery, page, limit, filters.isPurchased, filters.status],
     enabled: isAuthenticated,
-    params: { search: searchQuery, limit, page, isPurchased: filters.isPurchased, status: filters.status, paymentMethod: filters.paymentMethod },
+    params: { search: searchQuery, limit, page, isPurchased: filters.isPurchased, status: filters.status },
   });
 
   const updateOrder = ordersApi.useUpdateOrder({
@@ -68,7 +64,7 @@ export const OrdersDashboard = () => {
       <PageHeader
         eyebrow="Sales"
         title="Orders"
-        description="Every purchase made on your website. Check the payment receipt the customer uploaded, then verify the order — that confirms the sale and takes the items out of stock."
+        description="Every purchase made on your website. Xendit confirms payment automatically — Verify is a manual override for when a gateway confirmation is missing or delayed."
       />
 
       <ListToolbar>
@@ -78,7 +74,6 @@ export const OrdersDashboard = () => {
           <FilterRow>
             <FilterDropdown label="Payment state" value={filters.isPurchased} options={PURCHASE_OPTIONS} onChange={(value) => setFilter("isPurchased", value)} />
             <FilterDropdown label="Status" value={filters.status} options={orderStatusOptions} onChange={(value) => setFilter("status", value)} />
-            <FilterDropdown label="Method" value={filters.paymentMethod} options={PAYMENT_OPTIONS} onChange={(value) => setFilter("paymentMethod", value)} />
             {hasFilters && (
               <AdminButton size="sm" variant="ghost" onClick={resetAll}>
                 Clear
@@ -108,8 +103,8 @@ export const OrdersDashboard = () => {
       <ConfirmDialog
         isVisible={orderToVerify !== null}
         tone="primary"
-        title={`Verify ${orderToVerify?.fullname ?? "this order"}'s payment?`}
-        description="This decrements stock for every item and marks the order paid. It cannot be undone — check the receipt first."
+        title={`Manually verify ${orderToVerify?.fullname ?? "this order"}'s payment?`}
+        description="This bypasses Xendit and marks the order paid directly. Stock was already reserved at checkout, so only use this if you've confirmed payment yourself — check the payment attempts panel first."
         confirmLabel="Verify payment"
         isPending={updateOrder.isPending}
         onConfirm={confirmVerification}

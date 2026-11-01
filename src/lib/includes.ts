@@ -45,6 +45,8 @@ export const orderInclude = {
   // Newest first: a re-booked order has more than one, and the current parcel is
   // the one an admin is looking for.
   shipments: { orderBy: { createdAt: "desc" } },
+  // Newest first, same reason — a retried checkout leaves more than one attempt.
+  paymentTransactions: { orderBy: { createdAt: "desc" } },
   items: {
     include: {
       product: {

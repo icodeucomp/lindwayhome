@@ -3,3 +3,6 @@ export * from "./shipping";
 export * from "./paxel-error";
 export * from "./paxel";
 export * from "./shipment";
+export * from "./xendit-error";
+export * from "./xendit";
+export * from "./payment";

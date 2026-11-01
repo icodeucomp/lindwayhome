@@ -12,7 +12,7 @@ import { brandByKey, isBrandActive } from "@/static/taxonomy";
 
 import { orderStatusBars, orderStatusLabels } from "@/static/order";
 
-import { paymentMethodLabels } from "@/static/payment";
+import { paymentMethodLabel } from "@/static/payment";
 
 import { formatIDR, dashboardApi } from "@/utils";
 
@@ -44,28 +44,15 @@ const shortDate = (value: string) => new Date(value.length === 10 ? `${value}T00
 /* -------------------------------------------------------------------------- */
 
 const TrendChart = ({ days }: { days: DashboardData["ordersByDay"] }) => {
-  const peak = Math.max(1, ...days.map((day) => day.bankTransfer + day.qris));
+  const peak = Math.max(1, ...days.map((day) => day.count));
   const ticks = [...new Set([0, Math.ceil(peak / 2), peak])].sort((a, b) => a - b);
-  const total = days.reduce((sum, day) => sum + day.bankTransfer + day.qris, 0);
+  const total = days.reduce((sum, day) => sum + day.count, 0);
 
   return (
     <div>
       <BlockHeading title="Orders · last 30 days" aside={`${total} total`} />
 
-      <div className="flex flex-wrap items-center gap-5 mb-5">
-        {[
-          { label: paymentMethodLabels.BANK_TRANSFER, dot: "bg-primary", count: days.reduce((sum, day) => sum + day.bankTransfer, 0) },
-          { label: paymentMethodLabels.QRIS, dot: "bg-body", count: days.reduce((sum, day) => sum + day.qris, 0) },
-        ].map((series) => (
-          <span key={series.label} className="flex items-center gap-2 text-xs text-body/60">
-            <span className={`rounded-full size-2 ${series.dot}`} />
-            {series.label}
-            <span className="text-body">{series.count}</span>
-          </span>
-        ))}
-      </div>
-
-      <div className="flex gap-3">
+      <div className="flex gap-3 mt-5">
         <div className="flex flex-col justify-between h-40 text-xxs text-body/40 tabular-nums">
           {[...ticks].reverse().map((tick) => (
             <span key={tick}>{tick}</span>
@@ -79,15 +66,11 @@ const TrendChart = ({ days }: { days: DashboardData["ordersByDay"] }) => {
             ))}
 
             <div className="relative flex items-end h-full gap-px">
-              {days.map((day) => {
-                const dayTotal = day.bankTransfer + day.qris;
-                return (
-                  <div key={day.date} title={`${shortDate(day.date)} — ${dayTotal} order${dayTotal === 1 ? "" : "s"}`} className="flex flex-col justify-end flex-1 h-full">
-                    {day.qris > 0 && <div className="bg-body" style={{ height: `${(day.qris / peak) * 100}%` }} />}
-                    {day.bankTransfer > 0 && <div className="bg-primary" style={{ height: `${(day.bankTransfer / peak) * 100}%` }} />}
-                  </div>
-                );
-              })}
+              {days.map((day) => (
+                <div key={day.date} title={`${shortDate(day.date)} — ${day.count} order${day.count === 1 ? "" : "s"}`} className="flex flex-col justify-end flex-1 h-full">
+                  {day.count > 0 && <div className="bg-primary" style={{ height: `${(day.count / peak) * 100}%` }} />}
+                </div>
+              ))}
             </div>
           </div>
 
@@ -231,7 +214,7 @@ export const MainDashboard = () => {
                           <span className="block text-body">{order.fullname}</span>
                           <span className="block text-xs text-body/50">{order.email}</span>
                         </Td>
-                        <Td>{paymentMethodLabels[order.paymentMethod]}</Td>
+                        <Td>{paymentMethodLabel(order.paymentMethod)}</Td>
                         <Td className="text-right text-body tabular-nums">{formatIDR(order.totalPurchased)}</Td>
                         <Td className="text-right whitespace-nowrap text-body/50">{shortDate(order.createdAt)}</Td>
                       </tr>
