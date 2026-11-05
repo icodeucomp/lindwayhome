@@ -1,5 +1,5 @@
 import { writeFile, mkdir, rename, readdir, unlink, stat } from "fs/promises";
-import { join, resolve } from "path";
+import { isAbsolute, join, relative, resolve } from "path";
 import { existsSync } from "fs";
 
 interface FileUploaderConfig {
@@ -60,11 +60,13 @@ export class FileUploader {
     return true;
   }
 
-  private async isInsideBasePath(base: string, target: string): Promise<boolean> {
-    const basePath = resolve(base);
-    const targetPath = resolve(target);
+  // Synchronous on purpose: this was `async`, so callers saw a Promise, `!promise` was always
+  // false, and the "outside of upload directory" guard never fired. `relative` also removes the
+  // hardcoded "/" separator, and the base itself is rejected so a folder delete cannot wipe the root.
+  private isInsideBasePath(base: string, target: string): boolean {
+    const rel = relative(resolve(base), resolve(target));
 
-    return targetPath.startsWith(basePath + "/");
+    return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
   }
 
   async uploadToTemp(file: File): Promise<UploadedFileInfo> {
