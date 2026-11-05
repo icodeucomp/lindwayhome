@@ -78,7 +78,19 @@ cp .env.example /opt/lindway/.env && nano /opt/lindway/.env
 command="/opt/lindway/bin/deploy-gate.sh",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-ed25519 AAAA... lindway-ci-deploy
 ```
 
-Layout afterwards: `/opt/lindway/{bin/, .env, current/, previous/}`. A forced-command key cannot open a shell, so test it with `ssh -i key root@host "deploy lindway" < /dev/null` (it will try to deploy an empty archive and fail), not `echo ok`.
+Layout afterwards: `/opt/lindway/{bin/, .env, current/, releases/}`. A forced-command key cannot open a shell, so test it with `ssh -i key root@host "deploy lindway" < /dev/null` (it will try to deploy an empty archive and fail), not `echo ok`.
+
+### Nginx
+
+[`deploy/nginx/`](deploy/nginx/) is the whole site config in one file. It terminates TLS, raises the upload limit to 50 MB, adds security headers, and rate-limits login, register, the contact form, uploads and checkout. The Xendit callback is deliberately unthrottled, and `/api/files/cleanup` and `/api/orders/cleanup` return 404 from outside (the cron script calls the app on `127.0.0.1` directly).
+
+```bash
+cp deploy/nginx/lindway /etc/nginx/sites-available/lindway
+ln -s /etc/nginx/sites-available/lindway /etc/nginx/sites-enabled/lindway
+nginx -t && systemctl reload nginx
+```
+
+Rate limits are per client IP, so they rely on nginx sending the real address in `X-Forwarded-For` (the proxy block sets it). The upstream port in the file must match `port=` in `deploy.sh`. The file uses `listen 443 ssl http2`, which is right for nginx 1.24; on 1.25.1+ nginx warns that it is deprecated and `http2 on;` replaces it.
 
 ### Run it as a systemd service (shows in Cockpit)
 
@@ -93,6 +105,14 @@ journalctl -u app-lindway -f      # container logs
 
 ### What a deploy does
 
-Unpack to `/opt/lindway/next` → keep the live copy as `previous` → swap the new one in as `current` → `docker compose up -d --build` → poll `GET /api` on port **18090** (set in `deploy.sh`; point the reverse proxy there). If the build or health check fails, `previous` is restored and rebuilt automatically. The database, uploads and logs are docker volumes (project name pinned to `lindway`), so swapping folders never touches data.
+Unpack to `/opt/lindway/next` → move the live copy to `releases/<timestamp>` → swap the new one in as `current` → `docker compose up -d --build` → poll `GET /api` on port **18090** (set in `deploy.sh`; point the reverse proxy there). If the build or health check fails, the version it replaced is restored and rebuilt automatically. The last 5 versions are kept in `releases/` (change `keep` in `deploy.sh`). The database, uploads and logs are docker volumes (project name pinned to `lindway`), so swapping folders never touches data.
+
+Manual rollback to any kept version:
+
+```bash
+cd /opt/lindway && ls releases                      # pick a timestamp
+mv current releases/$(date +%Y%m%d-%H%M%S)-bad && mv releases/<timestamp> current
+cd current && APP_PORT=18090 docker compose -p lindway up -d --build
+```
 
 Files intended for local tooling only (`CLAUDE.md`, `.claude/`) are not tracked by git, so they never reach GitHub, the deploy archive or the Docker image.

@@ -8,11 +8,12 @@
 #   bin/deploy-gate.sh forced command of the CI key (see authorized_keys)
 #   .env               server-only secrets, created once by hand, copied into every deploy
 #   current/           the live source
-#   previous/          the source before the last deploy (kept for rollback)
+#   releases/<stamp>/  every earlier version (oldest first); the last $keep are kept
 #
 # Unpacks the new source next to the live copy, builds and swaps the containers.
-# If the build or the health check fails, the previous source is put back and its
-# containers restarted, so a broken commit never leaves the app down.
+# If the build or the health check fails, the version it replaced is put back and its
+# containers restarted, so a broken commit never leaves the app down. Older versions
+# stay in releases/ for a manual rollback (see README).
 #
 # The database, uploads and logs live in docker volumes, not in the source folder,
 # so swapping folders never touches data. The compose project name is pinned (-p)
@@ -22,6 +23,7 @@ set -euo pipefail
 
 root=/opt/lindway
 port=18090
+keep=5   # how many earlier versions to keep in releases/
 
 # Only one app lives here; the argument is checked so a typo in the workflow fails
 # loudly instead of deploying something unintended.
@@ -34,15 +36,22 @@ flock 9
 
 live="$root/current"
 new="$root/next"
-old="$root/previous"
+releases="$root/releases"
 
 rm -rf "$new"
 mkdir -p "$new"
 tar -xz -C "$new"
 cp "$root/.env" "$new/.env"
 
-rm -rf "$old"
-[ -d "$live" ] && mv "$live" "$old"
+mkdir -p "$releases"
+# One-time move from the old single-slot layout.
+if [ -d "$root/previous" ]; then mv "$root/previous" "$releases/00000000-000000-legacy"; fi
+
+backup=""
+if [ -d "$live" ]; then
+  backup="$releases/$(date +%Y%m%d-%H%M%S)"
+  mv "$live" "$backup"
+fi
 mv "$new" "$live"
 
 # Shell variables win over .env in compose interpolation, so the port the health
@@ -61,9 +70,9 @@ healthy() {
 
 rollback() {
   echo "!! deploy failed, restoring previous version" >&2
-  if [ -d "$old" ]; then
+  if [ -n "$backup" ] && [ -d "$backup" ]; then
     rm -rf "$live"
-    mv "$old" "$live"
+    mv "$backup" "$live"
     (cd "$live" && compose up -d --build --remove-orphans) || true
   fi
   exit 1
@@ -72,6 +81,9 @@ rollback() {
 cd "$live"
 compose up -d --build --remove-orphans || rollback
 healthy || rollback
+
+# Timestamps sort oldest-first, so everything before the last $keep goes.
+ls -1 "$releases" | sort | head -n "-$keep" | while read -r r; do rm -rf "${releases:?}/$r"; done || true
 
 docker image prune -f >/dev/null
 echo "== lindway deployed ($(date -Is))"

@@ -1,0 +1,86 @@
+# Install at /etc/nginx/sites-available/lindway, then:
+#   ln -s /etc/nginx/sites-available/lindway /etc/nginx/sites-enabled/lindway
+#   nginx -t && systemctl reload nginx
+#
+# One file, one proxy block. The upstream port (18090) must match `port=` in deploy.sh.
+
+# ── Rate limiting ─────────────────────────────────────────────────────────────
+# Each map turns "METHOD:/path" into a key: the client IP when the request is one we
+# want to throttle, "" when it is not. nginx does not count a request with an empty
+# key, so every limit below can sit on the single `location /` and only fires for its
+# own endpoint. $uri is already decoded and slash-merged, so `//api/auth/login` and
+# `%2fapi...` variants land on the same key as the plain path.
+map "$request_method:$uri" $lw_login_key    { "POST:/api/auth/login"        $binary_remote_addr; default ""; }
+map "$request_method:$uri" $lw_register_key { "POST:/api/auth/register"     $binary_remote_addr; default ""; }
+map "$request_method:$uri" $lw_contact_key  { "POST:/api/contact-inquiries" $binary_remote_addr; default ""; }
+map "$request_method:$uri" $lw_upload_key   { ~^POST:/api/files/            $binary_remote_addr; default ""; }  # public until F-53
+map "$request_method:$uri" $lw_checkout_key { ~^[A-Z]+:/api/orders/checkout $binary_remote_addr; default ""; }  # GET quotes call Paxel too
+map "$request_method:$uri" $lw_api_key {
+    # Xendit retries a failed callback, so it must never be throttled.
+    "POST:/api/payments/xendit/callback" "";
+    ~:/api/                              $binary_remote_addr;
+    default                              "";
+}
+
+limit_req_zone $lw_login_key    zone=lw_login:1m    rate=10r/m;
+limit_req_zone $lw_register_key zone=lw_register:1m rate=5r/m;
+limit_req_zone $lw_contact_key  zone=lw_contact:1m  rate=5r/m;
+limit_req_zone $lw_upload_key   zone=lw_upload:1m   rate=20r/m;
+limit_req_zone $lw_checkout_key zone=lw_checkout:1m rate=30r/m;
+limit_req_zone $lw_api_key      zone=lw_api:10m     rate=300r/m;
+limit_req_status 429;
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name lindwayhome.com www.lindwayhome.com;
+    return 301 https://lindwayhome.com$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name lindwayhome.com;
+
+    # certbot fills these in; the certificate folder does not depend on this filename
+    ssl_certificate     /etc/letsencrypt/live/lindwayhome.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/lindwayhome.com/privkey.pem;
+
+    server_tokens off;
+    client_max_body_size 50m;           # default 1 MB would 413 most image uploads
+    client_body_timeout 30s;            # slow-body (slowloris-style) uploads are cut off
+    client_header_timeout 15s;
+
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript image/svg+xml;
+
+    # No Content-Security-Policy: the storefront loads OpenStreetMap tiles, Xendit's
+    # hosted page and inline Next.js scripts, and a wrong CSP breaks checkout silently.
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Content-Type-Options    "nosniff" always;
+    add_header X-Frame-Options           "SAMEORIGIN" always;
+    add_header Referrer-Policy           "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy        "camera=(), microphone=(), geolocation=(self)" always;
+
+    # The cron script calls the app on 127.0.0.1:18090 directly, so nobody needs these
+    # from the internet. The x-cron-secret header is the first lock; this is the second.
+    location ~ ^/api/(files|orders)/cleanup$ { return 404; }
+
+    # Dotfiles and VCS folders: nothing legitimate lives here, and a stray one is bad.
+    location ~ /\.(?!well-known) { return 404; }
+
+    location / {
+        limit_req zone=lw_login    burst=5   nodelay;
+        limit_req zone=lw_register burst=2   nodelay;
+        limit_req zone=lw_contact  burst=3   nodelay;
+        limit_req zone=lw_upload   burst=10  nodelay;
+        limit_req zone=lw_checkout burst=10  nodelay;
+        limit_req zone=lw_api      burst=100 nodelay;
+
+        proxy_pass http://127.0.0.1:18090;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
+}
