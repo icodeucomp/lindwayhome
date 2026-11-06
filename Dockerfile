@@ -32,6 +32,15 @@ FROM node:22-slim AS runner
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates wget && rm -rf /var/lib/apt/lists/*
 
+# The base image's `node` user is uid/gid 1000, which on most hosts is the first human login
+# account. Uploads are a bind mount, so that id is also the owner of files on the host, and a
+# person (or a user created later) who happens to hold 1000 could edit them. A fixed id that no
+# login account uses keeps the owner meaningful: on the server it belongs to a no-login
+# `lindway-app` user. `usermod -u` also re-owns /home/node.
+ARG APP_UID=1500
+ARG APP_GID=1500
+RUN groupmod -g ${APP_GID} node && usermod -u ${APP_UID} -g ${APP_GID} node
+
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=4790 \
