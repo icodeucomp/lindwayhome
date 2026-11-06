@@ -34,7 +34,9 @@ services:
     ports:
       - "127.0.0.1:${APP_PORT:-18090}:4790"
     volumes:
-      - uploads:/data/uploads
+      # A host folder when UPLOADS_HOST_PATH is set (production: /opt/lindway/uploads, outside
+      # the current/ folder that every deploy swaps), otherwise the named volume below.
+      - ${UPLOADS_HOST_PATH:-uploads}:/data/uploads
       - logs:/app/logs
 
 volumes:

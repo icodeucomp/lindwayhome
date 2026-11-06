@@ -38,7 +38,7 @@ docker compose up -d --build
 - On every start the container runs `prisma migrate deploy`, then serves on host port `APP_PORT` (default 18090, localhost only), which maps to port 4790 inside the container.
 - Set `SEED_ON_START=true` for **one** start on a fresh database to load seed data, then remove it.
 - `NEXT_PUBLIC_BASE_URL` is inlined into the client bundle at build time; changing it needs `--build`.
-- Volumes: `pgdata` (database), `uploads` (product/article images, served at `/uploads/*`), `logs`.
+- Volumes: `pgdata` (database) and `logs`. Uploads (product/article images, served at `/uploads/*`) use a Docker volume by default, or a host folder when `UPLOADS_HOST_PATH` is set (production sets `/opt/lindway/uploads`).
 - Healthcheck: `GET /api`.
 - Put a reverse proxy (nginx/Caddy) with TLS in front of `APP_PORT`.
 
@@ -70,7 +70,12 @@ Repository secrets required: `DEPLOY_SSH_KEY` and `DEPLOY_KNOWN_HOSTS` (output o
 mkdir -p /opt/lindway/bin
 install -m 755 deploy/deploy.sh deploy/deploy-gate.sh /opt/lindway/bin/
 
+# uploaded images live outside current/, which every deploy swaps. The container runs as uid 1000
+# (the image's "node" user), so this is the one folder under /opt/lindway that is not root-owned.
+mkdir -p /opt/lindway/uploads && chown 1000:1000 /opt/lindway/uploads
+
 # secrets: filled in from .env.example, never in git; copied into every deploy as .env
+# (also set UPLOADS_HOST_PATH=/opt/lindway/uploads in it)
 cp .env.example /opt/lindway/.env && nano /opt/lindway/.env
 # Set SEED_ON_START=true for the very first deploy only, then remove it.
 
@@ -78,7 +83,7 @@ cp .env.example /opt/lindway/.env && nano /opt/lindway/.env
 command="/opt/lindway/bin/deploy-gate.sh",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-ed25519 AAAA... lindway-ci-deploy
 ```
 
-Layout afterwards: `/opt/lindway/{bin/, .env, current/, releases/}`. A forced-command key cannot open a shell, so test it with `ssh -i key root@host "deploy lindway" < /dev/null` (it will try to deploy an empty archive and fail), not `echo ok`.
+Layout afterwards: `/opt/lindway/{bin/, .env, uploads/, current/, releases/}`. A forced-command key cannot open a shell, so test it with `ssh -i key root@host "deploy lindway" < /dev/null` (it will try to deploy an empty archive and fail), not `echo ok`.
 
 ### Nginx
 
@@ -105,7 +110,7 @@ journalctl -u app-lindway -f      # container logs
 
 ### What a deploy does
 
-Unpack to `/opt/lindway/next` → move the live copy to `releases/<timestamp>` → swap the new one in as `current` → `docker compose up -d --build` → poll `GET /api` on port **18090** (set in `deploy.sh`; point the reverse proxy there). If the build or health check fails, the version it replaced is restored and rebuilt automatically. The last 5 versions are kept in `releases/` (change `keep` in `deploy.sh`). The database, uploads and logs are docker volumes (project name pinned to `lindway`), so swapping folders never touches data.
+Unpack to `/opt/lindway/next` → move the live copy to `releases/<timestamp>` → swap the new one in as `current` → `docker compose up -d --build` → poll `GET /api` on port **18090** (set in `deploy.sh`; point the reverse proxy there). If the build or health check fails, the version it replaced is restored and rebuilt automatically. The last 5 versions are kept in `releases/` (change `keep` in `deploy.sh`). The database and logs are docker volumes (project name pinned to `lindway`) and uploads are the host folder `/opt/lindway/uploads`, so swapping folders never touches data. Back up `/opt/lindway/uploads` and the `pgdata` volume. Everything under `/opt/lindway` is root-owned and not writable by others, except `uploads/`.
 
 Manual rollback to any kept version:
 

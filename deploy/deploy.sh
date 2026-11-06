@@ -20,6 +20,7 @@
 # for the same reason: a name derived from the folder would change across a swap
 # and point the app at brand-new empty volumes.
 set -euo pipefail
+umask 022   # nothing under /opt/lindway is ever group- or world-writable
 
 root=/opt/lindway
 port=18090
@@ -40,7 +41,10 @@ releases="$root/releases"
 
 rm -rf "$new"
 mkdir -p "$new"
-tar -xz -C "$new"
+# --no-same-owner: the archive is built on the GitHub runner, so its files carry that user's
+# id (1001), which tar would keep when run as root and which can collide with a real local
+# user. Extracted files must be owned by whoever runs this script: root.
+tar -xz --no-same-owner -C "$new"
 cp "$root/.env" "$new/.env"
 
 mkdir -p "$releases"
