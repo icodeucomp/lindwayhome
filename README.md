@@ -73,7 +73,7 @@ install -m 755 deploy/deploy.sh deploy/deploy-gate.sh /opt/lindway/bin/
 # uploaded images live outside current/, which every deploy swaps. The container runs as uid 1500
 # (see the Dockerfile), a no-login system user that owns nothing else, so this is the one folder
 # under /opt/lindway that is not root-owned.
-useradd --system -u 1500 -U --no-create-home --shell /usr/sbin/nologin lindway-app
+groupadd -g 1500 lindway-app && useradd --system -u 1500 -g 1500 -d /nonexistent --no-create-home --shell /usr/sbin/nologin lindway-app
 mkdir -p /opt/lindway/uploads && chown 1500:1500 /opt/lindway/uploads
 # the existing logs volume must follow when switching an older install:
 #   chown -R 1500:1500 /var/lib/docker/volumes/lindway_logs/_data
