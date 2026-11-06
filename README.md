@@ -70,13 +70,12 @@ Repository secrets required: `DEPLOY_SSH_KEY` and `DEPLOY_KNOWN_HOSTS` (output o
 mkdir -p /opt/lindway/bin
 install -m 755 deploy/deploy.sh deploy/deploy-gate.sh /opt/lindway/bin/
 
-# uploaded images live outside current/, which every deploy swaps. The container runs as uid 1500
-# (see the Dockerfile), a no-login system user that owns nothing else, so this is the one folder
-# under /opt/lindway that is not root-owned.
-groupadd -g 1500 lindway-app && useradd --system -u 1500 -g 1500 -d /nonexistent --no-create-home --shell /usr/sbin/nologin lindway-app
-mkdir -p /opt/lindway/uploads && chown 1500:1500 /opt/lindway/uploads
+# uploaded images live outside current/, which every deploy swaps. The container runs as www-data
+# (uid 33, already on the host), so that is the owner; this is the one folder under /opt/lindway
+# that is not root-owned.
+mkdir -p /opt/lindway/uploads && chown www-data:www-data /opt/lindway/uploads
 # the existing logs volume must follow when switching an older install:
-#   chown -R 1500:1500 /var/lib/docker/volumes/lindway_logs/_data
+#   chown -R www-data:www-data /var/lib/docker/volumes/lindway_logs/_data
 
 # secrets: filled in from .env.example, never in git; copied into every deploy as .env
 # (also set UPLOADS_HOST_PATH=/opt/lindway/uploads in it)
