@@ -3,6 +3,7 @@
 services:
   db:
     image: postgres:16-alpine
+    container_name: lindway-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-lindwayhome}
@@ -17,6 +18,7 @@ services:
       retries: 10
 
   app:
+    container_name: lindway-app
     build:
       context: .
       args:

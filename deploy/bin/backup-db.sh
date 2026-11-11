@@ -4,6 +4,6 @@
 set -euo pipefail
 dir=/opt/lindway/backups
 mkdir -p "$dir"
-docker exec lindway-db-1 sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' \
+docker exec lindway-db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' \
   | gzip > "$dir/db-$(date +%F).sql.gz"
 find "$dir" -name 'db-*.sql.gz' -mtime +14 -delete

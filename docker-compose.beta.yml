@@ -3,6 +3,7 @@
 # answers to the name `db`, so main must be running first. Same .env, same uploads volume.
 services:
   app:
+    container_name: lindway-beta-app
     build:
       context: .
       args:
