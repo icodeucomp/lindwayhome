@@ -1,0 +1,32 @@
+# Beta stack (beta.lindwayhome.com): the app only. It shares the production database by joining
+# the network of the main stack (project `lindway`, see docker-compose.yml), where the database
+# answers to the name `db`, so main must be running first. Same .env, same uploads folder.
+services:
+  app:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL:?set NEXT_PUBLIC_BASE_URL in .env}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-lindwayhome}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-lindway}
+      UPLOADS_PATH: /data/uploads
+      # The database is shared with production, so beta never changes its schema or seeds it:
+      # main applies migrations. See docker/entrypoint.sh.
+      SKIP_MIGRATE: "true"
+      SEED_ON_START: ""
+    ports:
+      - "127.0.0.1:${APP_PORT:-18091}:4790"
+    volumes:
+      - ${UPLOADS_HOST_PATH:-uploads}:/data/uploads
+      - logs:/app/logs
+
+networks:
+  default:
+    name: lindway_default
+    external: true
+
+volumes:
+  uploads:
+  logs:

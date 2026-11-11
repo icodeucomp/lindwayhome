@@ -2,14 +2,15 @@
 # Install at /opt/lindway/bin/cron-cleanup.sh (chmod 755) and schedule it, e.g.:
 #   */15 * * * * /opt/lindway/bin/cron-cleanup.sh >> /var/log/lindway-cleanup.log 2>&1
 #
+# Both sites share one database, so this runs once, against main (port 18090).
 # Sweeps expired temp uploads and releases orders stuck awaiting payment (frees the stock
 # they reserved). Calls the app on 127.0.0.1 directly, not through nginx, which blocks
 # these two paths from the internet. Silent on success; prints only on failure.
 root=/opt/lindway
 port=18090
 
-secret=$(grep '^CRON_SECRET=' "$root/.env" | cut -d= -f2-)
-[ -n "$secret" ] || { echo "$(date -Is) CRON_SECRET is empty in $root/.env" >&2; exit 1; }
+secret=$(grep '^CRON_SECRET=' "$root/env/app.env" | cut -d= -f2-)
+[ -n "$secret" ] || { echo "$(date -Is) CRON_SECRET is empty in $root/env/app.env" >&2; exit 1; }
 
 status=0
 for path in files/cleanup orders/cleanup; do

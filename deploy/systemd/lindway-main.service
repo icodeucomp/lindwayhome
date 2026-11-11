@@ -1,0 +1,22 @@
+# Install at /etc/systemd/system/lindway-main.service, then:
+#   systemctl daemon-reload && systemctl enable --now lindway-main
+# Do this after the first successful deploy, because the unit never builds.
+[Unit]
+Description=Lindway Home main (lindwayhome.com, port 18090)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/lindway/main/current
+Environment=APP_PORT=18090
+ExecStart=/usr/bin/docker compose -p lindway -f docker-compose.yml up --no-build --no-color
+ExecStop=/usr/bin/docker compose -p lindway -f docker-compose.yml stop
+Restart=always
+RestartSec=10
+TimeoutStartSec=0
+TimeoutStopSec=120
+
+[Install]
+WantedBy=multi-user.target

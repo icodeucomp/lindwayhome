@@ -1,7 +1,8 @@
-# Ships main to the VPS. The build runs on the server (docker compose), so this
-# job only packs the source and hands it to the server (authorized_keys forces deploy-gate.sh, which runs /opt/lindway/bin/deploy.sh), which is
-# expected to rebuild with `docker compose up -d --build` and roll back on a
-# failed build or health check.
+# Ships two sites to the VPS: branch main -> lindwayhome.com, branch lindway-beta ->
+# beta.lindwayhome.com. The build runs on the server (docker compose), so this job only packs the
+# source and hands it to the server (authorized_keys forces deploy-gate.sh, which runs
+# /opt/lindway/bin/deploy.sh <main|beta>), which rebuilds with `docker compose up -d --build` and
+# rolls back on a failed build or health check.
 #
 # Secrets: DEPLOY_SSH_KEY (private key authorised on the server),
 #          DEPLOY_KNOWN_HOSTS (ssh-keyscan of the VPS).
@@ -9,15 +10,19 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, lindway-beta]
   workflow_dispatch:
 
+# One queue per site: a single shared group would let GitHub drop a queued deploy of one site
+# when the other site pushes.
 concurrency:
-  group: deploy
+  group: deploy-${{ github.ref_name == 'main' && 'main' || 'beta' }}
   cancel-in-progress: false
 
 env:
   HOST: root@185.196.21.56
+  # The branch decides the site; a manual run uses whichever branch it was started from.
+  APP: ${{ github.ref_name == 'main' && 'main' || 'beta' }}
 
 jobs:
   # Nothing reaches the server unless it typechecks, lints and builds first.
@@ -73,4 +78,4 @@ jobs:
       - name: Deploy
         run: |
           git ls-files -z -- . ':!CLAUDE.md' ':!.claude' | tar --null -czf - -T - \
-            | ssh -o BatchMode=yes "$HOST" deploy lindway
+            | ssh -o BatchMode=yes "$HOST" deploy "$APP"
