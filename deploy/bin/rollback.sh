@@ -14,7 +14,7 @@ want="${2:-}"
 
 case "$app" in
   main) port=18090; project=lindway;      compose_file=docker-compose.yml ;;
-  beta) port=18091; project=lindway-beta; compose_file=docker-compose.beta.yml ;;
+  beta) port=4091; project=lindway-beta; compose_file=docker-compose.beta.yml ;;
   *) echo "usage: rollback.sh <main|beta> [stamp]" >&2; exit 2 ;;
 esac
 

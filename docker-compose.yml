@@ -34,9 +34,9 @@ services:
     ports:
       - "127.0.0.1:${APP_PORT:-18090}:4790"
     volumes:
-      # A host folder when UPLOADS_HOST_PATH is set (production: /opt/lindway/uploads, outside
-      # the current/ folder that every deploy swaps), otherwise the named volume below.
-      - ${UPLOADS_HOST_PATH:-uploads}:/data/uploads
+      # Named volume, so deploys (which swap the source folder) never touch uploaded images.
+      # Beta mounts this same volume by its full name, `lindway_uploads`.
+      - uploads:/data/uploads
       - logs:/app/logs
 
 volumes:
