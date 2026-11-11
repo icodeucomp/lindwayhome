@@ -9,7 +9,7 @@
 #   backups/                daily database dumps
 #   main/current/           lindwayhome.com, live source          (port 18090, project `lindway`)
 #   main/releases/<stamp>/  every earlier main version (oldest first); the last $keep are kept
-#   beta/current/           beta.lindwayhome.com, live source     (port 4091, project `lindway-beta`)
+#   beta/current/           beta.lindwayhome.com, live source     (port 18091, project `lindway-beta`)
 #   beta/releases/<stamp>/  every earlier beta version
 #
 # Both sites run against the same database (the one in the main stack), so main must be up before
@@ -31,7 +31,7 @@ keep=5   # how many earlier versions to keep in releases/
 app="${1:-}"
 case "$app" in
   main) port=18090; project=lindway;      compose_file=docker-compose.yml;      site=https://lindwayhome.com ;;
-  beta) port=4091; project=lindway-beta; compose_file=docker-compose.beta.yml; site=https://beta.lindwayhome.com ;;
+  beta) port=18091; project=lindway-beta; compose_file=docker-compose.beta.yml; site=https://beta.lindwayhome.com ;;
   *) echo "unknown app: '$app' (expected main or beta)" >&2; exit 2 ;;
 esac
 

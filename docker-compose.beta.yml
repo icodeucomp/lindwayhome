@@ -12,12 +12,21 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-lindwayhome}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-lindway}
       UPLOADS_PATH: /data/uploads
+      # Inside the container beta listens on 4091 (main: 4790); the host side stays 18091.
+      PORT: "4091"
       # The database is shared with production, so beta never changes its schema or seeds it:
       # main applies migrations. See docker/entrypoint.sh.
       SKIP_MIGRATE: "true"
       SEED_ON_START: ""
+    # The image's healthcheck probes 4790, so it is restated for this port.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4091/api >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
     ports:
-      - "127.0.0.1:${APP_PORT:-4091}:4790"
+      - "127.0.0.1:${APP_PORT:-18091}:4091"
     volumes:
       - uploads:/data/uploads
       - logs:/app/logs

@@ -60,7 +60,7 @@ Two sites run from one server and **one database**:
 | Site | Branch | Folder | Port | Compose project |
 | --- | --- | --- | --- | --- |
 | https://lindwayhome.com (main) | `main` | `/opt/lindway/main` | 18090 | `lindway` (runs the database) |
-| https://beta.lindwayhome.com (beta) | `lindway-beta` | `/opt/lindway/beta` | 4091 | `lindway-beta` (app only) |
+| https://beta.lindwayhome.com (beta) | `lindway-beta` | `/opt/lindway/beta` | 18091 (container 4091) | `lindway-beta` (app only) |
 
 [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) runs on every push to `main` or `lindway-beta` (or manually):
 
@@ -80,7 +80,7 @@ deploy/
   bin/cron-cleanup.sh      expired uploads / unpaid orders -> /opt/lindway/bin/
   bin/backup-db.sh         daily pg_dump       -> /etc/cron.daily/lindway-db-backup
   env/app.env              secrets template    -> /opt/lindway/env/app.env
-  systemd/lindway-main.service, lindway-beta.service -> /etc/systemd/system/
+  systemd/app-lindwayhome.service, app-lindwayhome-beta.service -> /etc/systemd/system/
 ```
 
 ### Sharing one database
@@ -121,7 +121,7 @@ certbot certonly --nginx --expand -d lindwayhome.com -d www.lindwayhome.com -d b
 
 ### Nginx
 
-[`deploy/config-sites.conf`](deploy/config-sites.conf) is the config for both sites in one file. It terminates TLS, raises the upload limit to 50 MB, adds security headers, and rate-limits login, register, the contact form, uploads and checkout. The Xendit callback is deliberately unthrottled, and `/api/files/cleanup` and `/api/orders/cleanup` return 404 from outside (the cron script calls the app on `127.0.0.1` directly). The host decides the upstream: `beta.lindwayhome.com` goes to port 4091, everything else to 18090.
+[`deploy/config-sites.conf`](deploy/config-sites.conf) is the config for both sites in one file. It terminates TLS, raises the upload limit to 50 MB, adds security headers, and rate-limits login, register, the contact form, uploads and checkout. The Xendit callback is deliberately unthrottled, and `/api/files/cleanup` and `/api/orders/cleanup` return 404 from outside (the cron script calls the app on `127.0.0.1` directly). The host decides the upstream: `beta.lindwayhome.com` goes to port 18091, everything else to 18090.
 
 ```bash
 cp deploy/config-sites.conf /etc/nginx/sites-available/lindway
@@ -136,14 +136,14 @@ Rate limits are per client IP, so they rely on nginx sending the real address in
 Do this **after** the first successful deploy of each site, because the units never build.
 
 ```bash
-cp deploy/systemd/lindway-main.service deploy/systemd/lindway-beta.service /etc/systemd/system/
+cp deploy/systemd/app-lindwayhome.service deploy/systemd/app-lindwayhome-beta.service /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now lindway-main
-systemctl enable --now lindway-beta     # after beta's first deploy
-journalctl -u lindway-main -f           # container logs
+systemctl enable --now app-lindwayhome
+systemctl enable --now app-lindwayhome-beta     # after beta's first deploy
+journalctl -u app-lindwayhome -f           # container logs
 ```
 
-`lindway-beta` requires `lindway-main`, because the database lives in main's stack.
+`app-lindwayhome-beta` requires `app-lindwayhome`, because the database lives in main's stack.
 
 ### What a deploy does
 

@@ -1,5 +1,5 @@
-# Install at /etc/systemd/system/lindway-main.service, then:
-#   systemctl daemon-reload && systemctl enable --now lindway-main
+# Install at /etc/systemd/system/app-lindwayhome.service, then:
+#   systemctl daemon-reload && systemctl enable --now app-lindwayhome
 # Do this after the first successful deploy, because the unit never builds.
 [Unit]
 Description=Lindway Home main (lindwayhome.com, port 18090)

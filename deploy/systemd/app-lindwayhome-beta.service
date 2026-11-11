@@ -1,17 +1,17 @@
-# Install at /etc/systemd/system/lindway-beta.service, then:
-#   systemctl daemon-reload && systemctl enable --now lindway-beta
+# Install at /etc/systemd/system/app-lindwayhome-beta.service, then:
+#   systemctl daemon-reload && systemctl enable --now app-lindwayhome-beta
 # Do this after the first successful beta deploy, because the unit never builds.
 [Unit]
-Description=Lindway Home beta (beta.lindwayhome.com, port 4091)
+Description=Lindway Home beta (beta.lindwayhome.com, port 18091)
 # Beta reaches the shared database through the main stack's network.
-Requires=docker.service lindway-main.service
-After=docker.service lindway-main.service network-online.target
+Requires=docker.service app-lindwayhome.service
+After=docker.service app-lindwayhome.service network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 WorkingDirectory=/opt/lindway/beta/current
-Environment=APP_PORT=4091
+Environment=APP_PORT=18091
 ExecStart=/usr/bin/docker compose -p lindway-beta -f docker-compose.beta.yml up --no-build --no-color
 ExecStop=/usr/bin/docker compose -p lindway-beta -f docker-compose.beta.yml stop
 Restart=always
