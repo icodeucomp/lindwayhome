@@ -89,6 +89,10 @@ const gate = (request: NextRequest): NextResponse | boolean => {
   // Xendit's payment callback carries no browser credentials and must always reach the handler.
   if (request.method === "POST" && request.nextUrl.pathname === "/api/payments/xendit/callback") return false;
 
+  // The health check (Docker's and deploy.sh's, neither of which can answer a password prompt). It
+  // only reports that the app is up; without this a gated release can never pass its own deploy.
+  if (request.method === "GET" && request.nextUrl.pathname === "/api") return false;
+
   // Shut, not open, when the credentials are missing.
   if (!isConfigured()) return deny(503, "Team access is not configured.");
 
