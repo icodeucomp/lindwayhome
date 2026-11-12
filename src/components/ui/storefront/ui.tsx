@@ -2,7 +2,7 @@
  * Storefront design kit (phase 2b).
  *
  * The public pages compose from this file the way admin screens compose from
- * `slicing/ui.tsx` (CLAUDE.md §C2). Every mockup in `reference/` repeats the same
+ * `slicing/ui.tsx` (§C2). Every mockup in `reference/` repeats the same
  * handful of shapes — a full-bleed hero, an uppercase section heading, a grey promo
  * block, an icon strip — so they live here once instead of being redrawn per page.
  *

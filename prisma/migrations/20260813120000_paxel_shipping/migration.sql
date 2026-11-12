@@ -1,4 +1,4 @@
--- Paxel shipping (CLAUDE.md D28, D29, §B6.5–B6.7).
+-- Paxel shipping (D28, D29, §B6.5–B6.7).
 --
 -- Adds the courier destination to `orders` and introduces `shipments`.
 --

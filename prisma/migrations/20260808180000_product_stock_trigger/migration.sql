@@ -1,5 +1,5 @@
 -- product_variant_stock_sync — keeps products.stock equal to the sum of its
--- variants (CLAUDE.md D24).
+-- variants (D24).
 --
 -- WHY A TRIGGER AND NOT APPLICATION CODE
 -- `stock` is the number the checkout reads to decide whether an item can still be

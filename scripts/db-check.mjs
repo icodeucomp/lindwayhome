@@ -1,5 +1,5 @@
 /**
- * Reports violations of the rules Prisma cannot express (CLAUDE.md §B4).
+ * Reports violations of the rules Prisma cannot express (§B4).
  *
  * This repo has no test framework, so this script is the only automated guard on
  * data integrity. Each rule is a class of silent bug: nothing errors when it is

@@ -1,7 +1,7 @@
 import { Container } from "@/components";
 
 /**
- * Route shell for v2 pages whose content lands in a later phase (CLAUDE.md Part C).
+ * Route shell for v2 pages whose content lands in a later phase (Part C).
  * It exists so the header and footer never link to a 404 — replace the whole file
  * usage, not just the copy, when the real page is built.
  *

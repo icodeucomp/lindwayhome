@@ -1,5 +1,5 @@
 /**
- * Canonical taxonomy display data (CLAUDE.md D25).
+ * Canonical taxonomy display data (D25).
  *
  * Brand, audience and clothing are Prisma enums, so the database stores only the
  * key. Everything a page needs to render — label, URL slug, hero copy, hero image,

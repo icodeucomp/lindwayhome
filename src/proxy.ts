@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { defaultLocale, locales } from "@/i18n/config";
 
 // Locale routing only. This proxy deliberately does NOT authenticate anything —
-// admin protection stays per-handler via checkAuth (see CLAUDE.md §A2).
+// admin protection stays per-handler via checkAuth (see §A2).
 const findLocale = (pathname: string) => locales.find((locale) => pathname === `/${locale}` || pathname.startsWith(`/${locale}/`));
 
 const preferredLocale = (request: NextRequest) => {

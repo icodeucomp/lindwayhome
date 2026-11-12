@@ -182,4 +182,3 @@ ls /opt/lindway/main/releases              # pick a stamp
 
 The version being replaced is kept too, so a rollback can itself be rolled back.
 
-Files intended for local tooling only (`CLAUDE.md`, `.claude/`) are not tracked by git, so they never reach GitHub, the deploy archive or the Docker image.

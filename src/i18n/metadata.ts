@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { defaultLocale, locales, type Locale } from "./config";
 
 /**
- * Page metadata with its language alternates (CLAUDE.md §B3.3).
+ * Page metadata with its language alternates (§B3.3).
  *
  * Every localized page needs `hreflang` links, and until now none had them: search
  * engines saw `/en/about` and `/id/about` as two unrelated pages with identical

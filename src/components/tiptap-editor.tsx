@@ -13,7 +13,7 @@ import { PiTextBBold, PiTextItalic, PiListBullets, PiListNumbers, PiTextHOne, Pi
  * HTML string — every consumer persists `JSONContent` into a Json column.
  *
  * Rendering that JSON back onto a public page is admin-authored content, so it MUST be
- * sanitized at render time (CLAUDE.md §E6). This component only produces the value.
+ * sanitized at render time (§E6). This component only produces the value.
  */
 export interface TiptapEditorProps {
   value?: JSONContent | null;

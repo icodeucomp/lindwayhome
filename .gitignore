@@ -59,6 +59,3 @@ reference
 # example env is committed
 !.env.example
 
-# Claude Code local files — never pushed or deployed
-/CLAUDE.md
-/.claude/

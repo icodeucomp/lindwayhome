@@ -8,7 +8,7 @@ export interface TranslationRow {
 
 /**
  * Merges a set of translation rows down to one object for the active locale
- * (CLAUDE.md §B3.2).
+ * (§B3.2).
  *
  * The merge is **per field, never per record**: if an admin filled the ID name but
  * left the ID description empty, the reader gets the ID name and the EN

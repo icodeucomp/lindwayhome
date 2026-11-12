@@ -8,7 +8,7 @@ import type { RichText as RichTextDoc } from "@/types";
  * It walks the node tree and emits React elements. It deliberately does NOT go through
  * `generateHTML` + `dangerouslySetInnerHTML`: that would put admin-authored markup
  * straight into every visitor's DOM and make a sanitizer the only thing standing
- * between a compromised admin account and stored XSS (CLAUDE.md §E6). Walking the tree
+ * between a compromised admin account and stored XSS (§E6). Walking the tree
  * removes the injection surface instead of guarding it — an unknown node type renders
  * nothing rather than raw markup.
  *

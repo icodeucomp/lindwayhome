@@ -106,7 +106,7 @@ const SIZE_GUIDES: SeedSizeGuide[] = [
   {
     // WARNING: these size codes are a different vocabulary from XS…XXXL. Every one
     // of them has to exist as a `Size` row AND have a matching `package_dimensions`
-    // config key, or checkout returns 404 for any kids product. See CLAUDE.md §B4.2.
+    // config key, or checkout returns 404 for any kids product. See §B4.2.
     title: "Baby & Kids",
     description: "Soft, breathable cotton tees designed for our littlest customers.",
     parameterLabels: {

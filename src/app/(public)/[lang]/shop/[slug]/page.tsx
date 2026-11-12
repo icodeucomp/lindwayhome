@@ -13,7 +13,7 @@ import { isLocale, locales, type Locale } from "@/i18n/config";
 import { PLACEHOLDER_IMAGE } from "@/static/images";
 
 /**
- * One listing route for all three taxonomy axes (CLAUDE.md §B2.1).
+ * One listing route for all three taxonomy axes (§B2.1).
  *
  * `/shop/dresses`, `/shop/women` and `/shop/my-lindway` are the same page with a
  * different axis pinned, and any of them takes the others as query filters:

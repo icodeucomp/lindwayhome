@@ -77,5 +77,5 @@ jobs:
 
       - name: Deploy
         run: |
-          git ls-files -z -- . ':!CLAUDE.md' ':!.claude' | tar --null -czf - -T - \
+          git ls-files -z -- . | tar --null -czf - -T - \
             | ssh -o BatchMode=yes "$HOST" deploy "$APP"

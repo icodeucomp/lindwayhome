@@ -1,5 +1,5 @@
 /**
- * v2 navigation (CLAUDE.md §B2.2).
+ * v2 navigation (§B2.2).
  *
  * The three Collections columns are derived from `taxonomy.ts`, not queried. Brand,
  * audience and clothing are Prisma enums (D25), so the menu changes with a deploy, not
