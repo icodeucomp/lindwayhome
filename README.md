@@ -122,7 +122,7 @@ certbot certonly --nginx --expand -d lindwayhome.com -d www.lindwayhome.com -d b
 
 ### Access gate
 
-The app is still in development, so **both** sites show a "Coming soon" page (503) to the public, and the team tests on beta. Every path is covered, API, uploads and admin included, which keeps the shared database out of reach. Search engines get a temporary 503 with `Retry-After` on the main domain (no `noindex`, so its SEO is preserved for a short period) and `noindex` on beta. The one request let through without the cookie is Xendit's payment callback (`POST /api/payments/xendit/callback`), which has to reach the app. The cleanup cron calls the app on `127.0.0.1` directly and never goes through the gate.
+The app is still in development. **lindwayhome.com** shows a "Coming soon" page (503) to the public, and **beta.lindwayhome.com** asks for a username and password (HTTP basic auth, user `team`) so the team can test there. Every path is covered on both, API, uploads and admin included, which keeps the shared database out of reach. Search engines get a temporary 503 with `Retry-After` on the main domain (no `noindex`, so its SEO is preserved for a short period) and `noindex` on beta. The one request let through without the cookie is Xendit's payment callback (`POST /api/payments/xendit/callback`), which has to reach the app. The cleanup cron calls the app on `127.0.0.1` directly and never goes through the gate.
 
 The secret lives in `/etc/nginx/lindway-access.conf` (root, mode 600, **not in git**), which `config-sites.conf` includes, so nginx will not start without it. Create it once:
 
@@ -139,7 +139,8 @@ nginx -t && systemctl reload nginx
 echo "https://beta.lindwayhome.com/team-access?key=$key"   # send this link to the team
 ```
 
-Opening that link once sets a 30-day cookie for `lindwayhome.com` and `beta.lindwayhome.com`, after which both sites work in that browser. A wrong or missing key gets a 404. **Rotate** by running the block again (old cookies stop working at once). **Launch** by deleting the `if ($lw_gate) { return 503; }` line in `config-sites.conf` (and the access include), then reload; beta stays `noindex` through the `$lw_robots` map.
+Opening that link once sets a 30-day cookie for `lindwayhome.com` and `beta.lindwayhome.com`, after which both sites work in that browser. This is the only way into the main domain; beta also accepts the password, which is stored hashed in `/etc/nginx/lindway-beta.htpasswd` (not in git). Change it with `printf 'team:%s
+' "$(openssl passwd -apr1 'NEW-PASSWORD')" > /etc/nginx/lindway-beta.htpasswd && systemctl reload nginx`. A wrong or missing key gets a 404. **Rotate** by running the block again (old cookies stop working at once). **Launch** by deleting the `if ($lw_gate) { return 503; }` line in `config-sites.conf` (and the access include), then reload; beta stays `noindex` through the `$lw_robots` map.
 
 ### Nginx
 
