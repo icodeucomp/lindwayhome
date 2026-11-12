@@ -6,3 +6,4 @@ export * from "./shipment";
 export * from "./xendit-error";
 export * from "./xendit";
 export * from "./payment";
+export * from "./team-access";

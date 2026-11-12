@@ -1,5 +1,7 @@
 export * from "./layout-dashboard";
 export * from "./login";
+export * from "./team-login";
+export * from "./team-access-dashboard";
 export * from "./main-dashboard";
 export * from "./inbox-dashboard";
 

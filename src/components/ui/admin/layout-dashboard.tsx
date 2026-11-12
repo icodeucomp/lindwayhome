@@ -6,7 +6,7 @@ import Link from "next/link";
 
 import { usePathname, useRouter } from "next/navigation";
 
-import { PiSquaresFour, PiEnvelopeSimple, PiTShirt, PiRuler, PiTable, PiReceipt, PiTruck, PiUsers, PiNewspaper, PiTag, PiQuestion, PiSlidersHorizontal, PiMapPinLine, PiSignOut, PiList, PiX } from "react-icons/pi";
+import { PiSquaresFour, PiEnvelopeSimple, PiTShirt, PiRuler, PiTable, PiReceipt, PiTruck, PiUsers, PiNewspaper, PiTag, PiQuestion, PiSlidersHorizontal, PiMapPinLine, PiLockKey, PiSignOut, PiList, PiX } from "react-icons/pi";
 
 import { useAuthStore } from "@/hooks";
 
@@ -41,6 +41,7 @@ const NAV_ITEMS: NavItem[] = [
   { group: "Content", href: "/admin/dashboard/faqs", label: "FAQ", icon: PiQuestion },
   { group: "Settings", href: "/admin/dashboard/parameters", label: "Parameters", icon: PiSlidersHorizontal },
   { group: "Settings", href: "/admin/dashboard/locations", label: "Locations", icon: PiMapPinLine },
+  { group: "Settings", href: "/admin/dashboard/team-access", label: "Team Access", icon: PiLockKey },
 ];
 
 const NAV_GROUPS = [...new Set(NAV_ITEMS.map((item) => item.group))];

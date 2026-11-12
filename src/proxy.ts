@@ -33,5 +33,5 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   // Everything except admin, the API, Next internals, uploads, and files with an extension.
-  matcher: ["/((?!admin|api|_next|uploads|images|icons|fonts|favicon.ico|.*\\.[\\w]+$).*)"],
+  matcher: ["/((?!admin|api|_next|uploads|images|icons|fonts|team-login|favicon.ico|.*\\.[\\w]+$).*)"],
 };

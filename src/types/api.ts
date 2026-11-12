@@ -976,3 +976,9 @@ export interface RequestDataForEmail {
   baseUrl: string;
   createdAt: Date;
 }
+
+export interface TeamAccessSummary {
+  username: string | null;
+  isConfigured: boolean;
+  updatedAt: string | null;
+}

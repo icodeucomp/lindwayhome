@@ -89,7 +89,7 @@ deploy/
 Beta uses the production database, the same secrets and the same uploads volume, so **everything beta does is real data**: an order placed on beta is a real order, an admin edit on beta edits production. Beta is for trying *code* (UI, logic), not data. Two guards are built in:
 
 - **Beta never migrates or seeds** (`SKIP_MIGRATE=true` in `docker-compose.beta.yml`). Only main runs `prisma migrate deploy`, so a half-finished branch cannot change the live schema. Consequence: a branch that adds a migration works on beta only after main has applied it.
-- **Both sites are closed to the public for now** ("Coming soon", see "Access gate"), so nobody can reach the shared data through either host; only people with the team link can. Beta is also served `noindex`.
+- **Both sites are closed to the public for now** (see "Access gate"): nobody can reach the shared data without a team sign-in. Beta is also served `noindex`.
 
 Payments: the Xendit callback in the Xendit dashboard points at main only. The cleanup cron runs once, against main.
 
@@ -122,25 +122,37 @@ certbot certonly --nginx --expand -d lindwayhome.com -d www.lindwayhome.com -d b
 
 ### Access gate
 
-The app is still in development. **lindwayhome.com** shows a "Coming soon" page (503) to the public, and **beta.lindwayhome.com** asks for a username and password (HTTP basic auth, user `team`) so the team can test there. Every path is covered on both, API, uploads and admin included, which keeps the shared database out of reach. Search engines get a temporary 503 with `Retry-After` on the main domain (no `noindex`, so its SEO is preserved for a short period) and `noindex` on beta. The one request let through without the cookie is Xendit's payment callback (`POST /api/payments/xendit/callback`), which has to reach the app. The cleanup cron calls the app on `127.0.0.1` directly and never goes through the gate.
+The app is still in development and both sites run on the live database, so neither is open to the public. Before nginx serves anything it asks the app whether the visitor holds a valid **team session** (`auth_request` to `GET /api/team-access/check`). Without one:
 
-The secret lives in `/etc/nginx/lindway-access.conf` (root, mode 600, **not in git**), which `config-sites.conf` includes, so nginx will not start without it. Create it once:
+- **lindwayhome.com** shows a "Coming soon" page (503, `Retry-After`, no `noindex`, so its SEO is preserved for a short period);
+- **beta.lindwayhome.com** redirects to the sign-in page at `/team-login` (and is served `noindex`).
+
+The team signs in on `/team-login` (same look as the admin login) with the username and password stored in the database. The session is a signed cookie (`lw_session`, 7 days) set on `lindwayhome.com`, so one sign-in covers both sites; its domain comes from `TEAM_ACCESS_COOKIE_DOMAIN` in `env/app.env`. The sign-in page can also be opened on lindwayhome.com itself.
+
+**Change the username or password** in the admin dashboard: **Settings → Team Access**. Saving a change signs everyone out. The password is stored as a bcrypt hash in an inactive config row, so it never appears on the Parameters screen or in the public config endpoint.
+
+Only a few paths work without a session: `/team-login`, `/api/team-access/login` (rate limited), `/favicon.ico`, the sign-in page's `/_next/static/*` files, and Xendit's payment callback (`POST /api/payments/xendit/callback`, which carries no cookie and must reach the app). The cleanup cron calls the app on `127.0.0.1` directly and never goes through the gate.
+
+#### Break-glass key link
+
+If the team sign-in is ever lost or locked, a second cookie that skips the check lets an admin in to fix it. Its secret lives in `/etc/nginx/lindway-access.conf` (root, mode 600, **not in git**), which `config-sites.conf` includes, so nginx will not start without it. Create it once:
 
 ```bash
 install -d -m 755 /opt/lindway/site
 install -m 644 deploy/coming-soon.html /opt/lindway/site/coming-soon.html
 
 key=$(openssl rand -hex 24)
-printf 'map $cookie_lw_access $lw_pass   { "%s" 1; default 0; }
-map $arg_key          $lw_key_ok { "%s" 1; default 0; }
-' "$key" "$key" > /etc/nginx/lindway-access.conf
+printf 'map $cookie_lw_access $lw_pass   { "%s" 1; default 0; }\nmap $arg_key          $lw_key_ok { "%s" 1; default 0; }\n' "$key" "$key" > /etc/nginx/lindway-access.conf
 chmod 600 /etc/nginx/lindway-access.conf
 nginx -t && systemctl reload nginx
-echo "https://beta.lindwayhome.com/team-access?key=$key"   # send this link to the team
+echo "https://lindwayhome.com/team-access?key=$key"
 ```
 
-Opening that link once sets a 30-day cookie for `lindwayhome.com` and `beta.lindwayhome.com`, after which both sites work in that browser. This is the only way into the main domain; beta also accepts the password, which is stored hashed in `/etc/nginx/lindway-beta.htpasswd` (not in git). Change it with `printf 'team:%s
-' "$(openssl passwd -apr1 'NEW-PASSWORD')" > /etc/nginx/lindway-beta.htpasswd && systemctl reload nginx`. A wrong or missing key gets a 404. **Rotate** by running the block again (old cookies stop working at once). **Launch** by deleting the `if ($lw_gate) { return 503; }` line in `config-sites.conf` (and the access include), then reload; beta stays `noindex` through the `$lw_robots` map.
+Opening that link sets a 30-day cookie for both hosts. A wrong or missing key gets a 404. **Rotate** by running the block again (old cookies stop working at once).
+
+**First time on a fresh database:** no team credentials exist yet, so nobody can sign in. Open the key link, log in to `/admin`, and set them under Settings → Team Access.
+
+**Launch** by deleting the `auth_request /_lw_auth;` line in `config-sites.conf` (and the include) and reloading nginx; beta stays `noindex` through the `$lw_robots` map.
 
 ### Nginx
 
