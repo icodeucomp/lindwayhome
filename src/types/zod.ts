@@ -528,9 +528,3 @@ export const EmailRequestSchema = z.object({
   template: z.string(),
   context: EmailContextSchema,
 });
-
-// Team access: the sign-in that closes both sites to the public while the app is in development.
-export const TeamLoginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
-});

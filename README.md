@@ -123,32 +123,53 @@ certbot certonly --nginx --expand -d lindwayhome.com -d www.lindwayhome.com -d b
 
 ### Access gate
 
-The app is still in development and both sites run on the live database, so neither is open to the public. Before nginx serves anything it asks the app whether the visitor holds a valid **team session** (`auth_request` to `GET /api/team-access/check`). Without one:
+The app is still in development and both sites run on the live database, so neither is open to the public. They are closed in two different ways:
 
-- **lindwayhome.com** shows a "Coming soon" page (503, `Retry-After`, no `noindex`, so its SEO is preserved for a short period);
-- **beta.lindwayhome.com** redirects to the sign-in page at `/team-login` (and is served `noindex`).
+| | lindwayhome.com (main) | beta.lindwayhome.com (beta) |
+| --- | --- | --- |
+| Public sees | "Coming soon" page (503, no `noindex`) | the browser's sign-in popup (401, `noindex`) |
+| Who can get in | nobody, until launch | the team, with the shared username and password |
+| Closed by | the `$lw_main_closed` switch in `deploy/config-sites.conf` (nginx) | `TEAM_ACCESS_GATE=true` in `docker-compose.beta.yml` (the app's `src/proxy.ts`) |
+| Credentials | none | `TEAM_ACCESS_USERNAME` / `TEAM_ACCESS_PASSWORD` in `/opt/lindway/env/app.env` |
+| Session length | n/a | `TEAM_ACCESS_SESSION_HOURS` in the same file (default 24) |
+| Code, port, container | branch `main`, 18090, `lindway-app` | branch `lindway-beta`, 18091 (container 4091), `lindway-beta-app` |
+| Database, uploads | shared | shared |
 
-The team signs in on `/team-login` (same look as the admin login). There is **one shared username and password**, kept only in the server's env file; whoever enters them is the team:
+**Beta password.** One shared username and password, kept only in the env file; whoever enters them is the team. Nothing is stored in the database and there is no dashboard for it. While either variable is empty beta stays shut for everyone.
 
 ```bash
 # /opt/lindway/env/app.env
 TEAM_ACCESS_USERNAME=team
 TEAM_ACCESS_PASSWORD=choose-a-long-password
-TEAM_ACCESS_COOKIE_DOMAIN=lindwayhome.com
+TEAM_ACCESS_SESSION_HOURS=24
 ```
 
-Nothing is stored in the database and there is nothing to manage in the dashboard. While either variable is empty nobody can sign in and both sites stay closed. **To change the password**, edit that file and run `/opt/lindway/bin/apply-env.sh`; it recreates the containers in seconds without a rebuild, and everyone has to sign in again (the session cookie is tied to the credentials).
+**To change the password or the session length**, edit that file and run `/opt/lindway/bin/apply-env.sh` (seconds, no rebuild). Everyone has to sign in again.
 
-A successful sign-in sets a signed cookie (`lw_session`, 7 days) on `lindwayhome.com`, so one sign-in covers both sites. The sign-in page is also reachable on lindwayhome.com itself, and is rate limited by nginx.
+**Session length.** A browser keeps popup credentials until it is closed and re-sends them on its own, so a plain check could never expire. The app therefore issues a signed cookie (`lw_session`) that lasts `TEAM_ACCESS_SESSION_HOURS`, and once that period has rolled over it refuses the first request even if the browser re-sent the old credentials, which makes the browser show the popup again. The cookie is for the beta host only, so signing in to beta never opens lindwayhome.com. Wrong passwords are counted per IP (10 in 10 minutes, then 429).
 
-Only a few paths work without a session: `/team-login`, `/api/team-access/login`, `/favicon.ico`, the sign-in page's `/_next/static/*` files, and Xendit's payment callback (`POST /api/payments/xendit/callback`, which carries no cookie and must reach the app). The cleanup cron calls the app on `127.0.0.1` directly and never goes through the gate. The "Coming soon" page is served from `/opt/lindway/site/coming-soon.html`:
+Xendit's payment callback (`POST /api/payments/xendit/callback`) is exempt on both sites, because it carries no browser credentials and must reach the app. The cleanup cron calls the app on `127.0.0.1` directly and never goes through either gate.
+
+#### Opening lindwayhome.com to the public
+
+On the server, in `/etc/nginx/sites-available/lindway`, change the `1` to `0` on this line, then reload:
+
+```nginx
+map $host $lw_main_closed { lindwayhome.com 1; default 0; }   # 1 = coming soon, 0 = open
+```
+
+```bash
+nginx -t && systemctl reload nginx
+```
+
+That is the only change. Beta keeps its password, because the beta gate is separate. Keep `deploy/config-sites.conf` in step with the server copy. The "Coming soon" page is served from `/opt/lindway/site/coming-soon.html`:
 
 ```bash
 install -d -m 755 /opt/lindway/site
 install -m 644 deploy/coming-soon.html /opt/lindway/site/coming-soon.html
 ```
 
-**Launch** by deleting the `auth_request /_lw_auth;` line in `config-sites.conf` and reloading nginx; beta stays `noindex` through the `$lw_robots` map.
+To open **beta** to everyone instead, remove the `TEAM_ACCESS_GATE` line from `docker-compose.beta.yml` and deploy.
 
 ### Nginx
 

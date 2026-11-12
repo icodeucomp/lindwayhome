@@ -19,6 +19,9 @@ services:
       # main applies migrations. See docker/entrypoint.sh.
       SKIP_MIGRATE: "true"
       SEED_ON_START: ""
+      # Beta asks for the team password (src/proxy.ts); main never sets this. If the credentials in
+      # .env are missing the gate stays shut rather than open.
+      TEAM_ACCESS_GATE: "true"
     # The image's healthcheck probes 4790, so it is restated for this port.
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4091/api >/dev/null || exit 1"]
