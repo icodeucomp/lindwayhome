@@ -80,7 +80,7 @@ deploy/
   bin/cron-cleanup.sh      expired uploads / unpaid orders -> /opt/lindway/bin/
   bin/backup-db.sh         daily pg_dump       -> /etc/cron.daily/lindway-db-backup
   env/app.env              secrets template    -> /opt/lindway/env/app.env
-  coming-soon.html         public face of beta -> /opt/lindway/site/coming-soon.html
+  coming-soon.html         public page while in development -> /opt/lindway/site/coming-soon.html
   systemd/app-lindwayhome.service, app-lindwayhome-beta.service -> /etc/systemd/system/
 ```
 
@@ -89,7 +89,7 @@ deploy/
 Beta uses the production database, the same secrets and the same uploads volume, so **everything beta does is real data**: an order placed on beta is a real order, an admin edit on beta edits production. Beta is for trying *code* (UI, logic), not data. Two guards are built in:
 
 - **Beta never migrates or seeds** (`SKIP_MIGRATE=true` in `docker-compose.beta.yml`). Only main runs `prisma migrate deploy`, so a half-finished branch cannot change the live schema. Consequence: a branch that adds a migration works on beta only after main has applied it.
-- **Beta is closed to the public.** Every request to `beta.lindwayhome.com` gets a "Coming soon" page (503, `noindex`) unless it carries the access cookie, so nobody can reach the shared data through beta (see "Beta gate"). `lindwayhome.com` is untouched and stays indexable.
+- **Both sites are closed to the public for now** ("Coming soon", see "Access gate"), so nobody can reach the shared data through either host; only people with the team link can. Beta is also served `noindex`.
 
 Payments: the Xendit callback in the Xendit dashboard points at main only. The cleanup cron runs once, against main.
 
@@ -120,24 +120,26 @@ DNS: an `A` record for `beta.lindwayhome.com` pointing at the server, then add t
 certbot certonly --nginx --expand -d lindwayhome.com -d www.lindwayhome.com -d beta.lindwayhome.com
 ```
 
-### Beta gate
+### Access gate
 
-Beta shows a "Coming soon" page to everyone except people holding a cookie. The secret lives in `/etc/nginx/lindway-beta-access.conf` (root, mode 600, **not in git**), which `config-sites.conf` includes, so nginx will not start without it. Create it once:
+The app is still in development, so **both** sites show a "Coming soon" page (503) to the public, and the team tests on beta. Every path is covered, API, uploads and admin included, which keeps the shared database out of reach. Search engines get a temporary 503 with `Retry-After` on the main domain (no `noindex`, so its SEO is preserved for a short period) and `noindex` on beta. The one request let through without the cookie is Xendit's payment callback (`POST /api/payments/xendit/callback`), which has to reach the app. The cleanup cron calls the app on `127.0.0.1` directly and never goes through the gate.
+
+The secret lives in `/etc/nginx/lindway-access.conf` (root, mode 600, **not in git**), which `config-sites.conf` includes, so nginx will not start without it. Create it once:
 
 ```bash
 install -d -m 755 /opt/lindway/site
 install -m 644 deploy/coming-soon.html /opt/lindway/site/coming-soon.html
 
 key=$(openssl rand -hex 24)
-printf 'map $cookie_lw_beta $lw_beta_pass   { "%s" 1; default 0; }
-map $arg_key        $lw_beta_key_ok { "%s" 1; default 0; }
-' "$key" "$key" > /etc/nginx/lindway-beta-access.conf
-chmod 600 /etc/nginx/lindway-beta-access.conf
+printf 'map $cookie_lw_access $lw_pass   { "%s" 1; default 0; }
+map $arg_key          $lw_key_ok { "%s" 1; default 0; }
+' "$key" "$key" > /etc/nginx/lindway-access.conf
+chmod 600 /etc/nginx/lindway-access.conf
 nginx -t && systemctl reload nginx
-echo "https://beta.lindwayhome.com/beta-access?key=$key"   # send this link to the team
+echo "https://beta.lindwayhome.com/team-access?key=$key"   # send this link to the team
 ```
 
-Opening that link once sets a 30-day cookie, after which the whole beta site (pages, API, admin, uploads) works in that browser. A wrong or missing key gets a 404, and the entry path does not exist on `lindwayhome.com`. **Rotate** by running the block again (old cookies stop working at once). **Open beta to everyone** by deleting the `if ($lw_gate) { return 503; }` line in `config-sites.conf`, and remove the `noindex` map too if it should be indexed.
+Opening that link once sets a 30-day cookie for `lindwayhome.com` and `beta.lindwayhome.com`, after which both sites work in that browser. A wrong or missing key gets a 404. **Rotate** by running the block again (old cookies stop working at once). **Launch** by deleting the `if ($lw_gate) { return 503; }` line in `config-sites.conf` (and the access include), then reload; beta stays `noindex` through the `$lw_robots` map.
 
 ### Nginx
 
