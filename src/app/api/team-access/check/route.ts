@@ -6,7 +6,7 @@ import { TEAM_SESSION_COOKIE, verifySessionToken } from "@/services";
 // anything on the closed sites, so it answers with a bare status and logs nothing.
 export async function GET(request: NextRequest) {
   try {
-    const valid = await verifySessionToken(request.cookies.get(TEAM_SESSION_COOKIE)?.value);
+    const valid = verifySessionToken(request.cookies.get(TEAM_SESSION_COOKIE)?.value);
     return new NextResponse(null, { status: valid ? 204 : 401, headers: { "Cache-Control": "no-store" } });
   } catch {
     // A failure here must read as "not signed in", never as a pass.

@@ -32,7 +32,6 @@ import {
   UpdateMember,
   Shipment,
   BookShipmentPayload,
-  UpdateTeamAccess,
 } from "@/types";
 
 import { QueryKey, useMutation, UseMutationOptions, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -81,44 +80,6 @@ export const authApi = {
   register: async (data: RegisterRequest): Promise<AuthResponse> => {
     const response = await api.post("/auth/register", data);
     return response.data;
-  },
-};
-
-// Team access API (the sign-in that closes the sites to the public; admin only)
-export const teamAccessApi = {
-  useGetTeamAccess: <T>({ key, gcTime = GC_TIME, staleTime = 0, enabled = true }: FetchOptions) => {
-    return useQuery<T, Error>({
-      queryKey: key,
-      queryFn: async () => {
-        const { data } = await api.get("/team-access");
-        return data;
-      },
-      gcTime,
-      staleTime,
-      enabled,
-    });
-  },
-  useUpdateTeamAccess: ({ ...mutationOptions }: UseMutationOptions<string, Error, UpdateTeamAccess>) => {
-    return useMutation({
-      mutationFn: async (payload: UpdateTeamAccess) => {
-        try {
-          const { data } = await api.put("/team-access", payload);
-          toast.success(data.message || "Team sign-in updated");
-          return data.message;
-        } catch (error) {
-          if (axios.isAxiosError(error)) {
-            const responseData = error.response?.data;
-            const detail = Array.isArray(responseData?.errors) ? responseData.errors.map((item: { message: string }) => item.message).join("\n") : undefined;
-            throw new Error(detail || responseData?.message || "An error occurred");
-          }
-          throw new Error("An unexpected error occurred");
-        }
-      },
-      onError: (error: unknown) => {
-        toast.error(error instanceof Error ? error.message : "An unknown error occurred");
-      },
-      ...mutationOptions,
-    });
   },
 };
 

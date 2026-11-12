@@ -77,6 +77,7 @@ deploy/
   bin/deploy.sh            deploy <main|beta>  -> /opt/lindway/bin/
   bin/deploy-gate.sh       forced SSH command  -> /opt/lindway/bin/
   bin/rollback.sh          rollback <main|beta> [stamp] -> /opt/lindway/bin/
+  bin/apply-env.sh         apply an env/app.env change without a rebuild -> /opt/lindway/bin/
   bin/cron-cleanup.sh      expired uploads / unpaid orders -> /opt/lindway/bin/
   bin/backup-db.sh         daily pg_dump       -> /etc/cron.daily/lindway-db-backup
   env/app.env              secrets template    -> /opt/lindway/env/app.env
@@ -97,7 +98,7 @@ Payments: the Xendit callback in the Xendit dashboard points at main only. The c
 
 ```bash
 mkdir -p /opt/lindway/{bin,env,main,beta,backups}
-install -m 755 deploy/bin/deploy.sh deploy/bin/deploy-gate.sh deploy/bin/rollback.sh deploy/bin/cron-cleanup.sh /opt/lindway/bin/
+install -m 755 deploy/bin/deploy.sh deploy/bin/deploy-gate.sh deploy/bin/rollback.sh deploy/bin/cron-cleanup.sh deploy/bin/apply-env.sh /opt/lindway/bin/
 install -m 755 deploy/bin/backup-db.sh /etc/cron.daily/lindway-db-backup
 
 # The container runs as www-data (uid 33). Volumes created by an older install may still belong to
@@ -127,32 +128,27 @@ The app is still in development and both sites run on the live database, so neit
 - **lindwayhome.com** shows a "Coming soon" page (503, `Retry-After`, no `noindex`, so its SEO is preserved for a short period);
 - **beta.lindwayhome.com** redirects to the sign-in page at `/team-login` (and is served `noindex`).
 
-The team signs in on `/team-login` (same look as the admin login) with the username and password stored in the database. The session is a signed cookie (`lw_session`, 7 days) set on `lindwayhome.com`, so one sign-in covers both sites; its domain comes from `TEAM_ACCESS_COOKIE_DOMAIN` in `env/app.env`. The sign-in page can also be opened on lindwayhome.com itself.
+The team signs in on `/team-login` (same look as the admin login). There is **one shared username and password**, kept only in the server's env file; whoever enters them is the team:
 
-**Change the username or password** in the admin dashboard: **Settings → Team Access**. Saving a change signs everyone out. The password is stored as a bcrypt hash in an inactive config row, so it never appears on the Parameters screen or in the public config endpoint.
+```bash
+# /opt/lindway/env/app.env
+TEAM_ACCESS_USERNAME=team
+TEAM_ACCESS_PASSWORD=choose-a-long-password
+TEAM_ACCESS_COOKIE_DOMAIN=lindwayhome.com
+```
 
-Only a few paths work without a session: `/team-login`, `/api/team-access/login` (rate limited), `/favicon.ico`, the sign-in page's `/_next/static/*` files, and Xendit's payment callback (`POST /api/payments/xendit/callback`, which carries no cookie and must reach the app). The cleanup cron calls the app on `127.0.0.1` directly and never goes through the gate.
+Nothing is stored in the database and there is nothing to manage in the dashboard. While either variable is empty nobody can sign in and both sites stay closed. **To change the password**, edit that file and run `/opt/lindway/bin/apply-env.sh`; it recreates the containers in seconds without a rebuild, and everyone has to sign in again (the session cookie is tied to the credentials).
 
-#### Break-glass key link
+A successful sign-in sets a signed cookie (`lw_session`, 7 days) on `lindwayhome.com`, so one sign-in covers both sites. The sign-in page is also reachable on lindwayhome.com itself, and is rate limited by nginx.
 
-If the team sign-in is ever lost or locked, a second cookie that skips the check lets an admin in to fix it. Its secret lives in `/etc/nginx/lindway-access.conf` (root, mode 600, **not in git**), which `config-sites.conf` includes, so nginx will not start without it. Create it once:
+Only a few paths work without a session: `/team-login`, `/api/team-access/login`, `/favicon.ico`, the sign-in page's `/_next/static/*` files, and Xendit's payment callback (`POST /api/payments/xendit/callback`, which carries no cookie and must reach the app). The cleanup cron calls the app on `127.0.0.1` directly and never goes through the gate. The "Coming soon" page is served from `/opt/lindway/site/coming-soon.html`:
 
 ```bash
 install -d -m 755 /opt/lindway/site
 install -m 644 deploy/coming-soon.html /opt/lindway/site/coming-soon.html
-
-key=$(openssl rand -hex 24)
-printf 'map $cookie_lw_access $lw_pass   { "%s" 1; default 0; }\nmap $arg_key          $lw_key_ok { "%s" 1; default 0; }\n' "$key" "$key" > /etc/nginx/lindway-access.conf
-chmod 600 /etc/nginx/lindway-access.conf
-nginx -t && systemctl reload nginx
-echo "https://lindwayhome.com/team-access?key=$key"
 ```
 
-Opening that link sets a 30-day cookie for both hosts. A wrong or missing key gets a 404. **Rotate** by running the block again (old cookies stop working at once).
-
-**First time on a fresh database:** no team credentials exist yet, so nobody can sign in. Open the key link, log in to `/admin`, and set them under Settings → Team Access.
-
-**Launch** by deleting the `auth_request /_lw_auth;` line in `config-sites.conf` (and the include) and reloading nginx; beta stays `noindex` through the `$lw_robots` map.
+**Launch** by deleting the `auth_request /_lw_auth;` line in `config-sites.conf` and reloading nginx; beta stays `noindex` through the `$lw_robots` map.
 
 ### Nginx
 

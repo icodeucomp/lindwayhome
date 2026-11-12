@@ -530,20 +530,7 @@ export const EmailRequestSchema = z.object({
 });
 
 // Team access: the sign-in that closes both sites to the public while the app is in development.
-export const TeamAccessSchema = z.object({
-  username: z
-    .string()
-    .trim()
-    .min(3, "Username must be at least 3 characters")
-    .max(64, "Username must be at most 64 characters")
-    .regex(/^[A-Za-z0-9._@-]+$/, "Use letters, numbers and . _ @ - only"),
-  // Optional so the username can change on its own; the first save still needs one (the service checks).
-  password: z.string().min(8, "Password must be at least 8 characters").max(128, "Password must be at most 128 characters").optional(),
-});
-
 export const TeamLoginSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
 });
-
-export type UpdateTeamAccess = z.infer<typeof TeamAccessSchema>;

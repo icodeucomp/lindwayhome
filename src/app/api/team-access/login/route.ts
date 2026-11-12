@@ -6,7 +6,8 @@ import { TeamLoginSchema } from "@/types";
 
 import { z } from "zod";
 
-// POST - Sign in to the closed sites. Public on purpose (nginx lets this one path through).
+// POST - Sign in to the closed sites with the shared team username and password from the env file.
+// Public on purpose: nginx lets this one path through (and rate limits it).
 export async function POST(request: NextRequest) {
   const pathAPI = "POST /team-access/login";
   const startTime = Date.now();
@@ -17,9 +18,7 @@ export async function POST(request: NextRequest) {
     // The body is not logged: it carries the password.
     const { username, password } = TeamLoginSchema.parse(body);
 
-    const credentials = await checkLogin(username, password);
-
-    if (!credentials) {
+    if (!checkLogin(username, password)) {
       logger.error(`${pathAPI} error`, { error: "Invalid credentials", ip: getClientIp(request) });
       return NextResponse.json({ success: false, message: "Invalid username or password" }, { status: 401 });
     }
@@ -32,7 +31,7 @@ export async function POST(request: NextRequest) {
     const domain = process.env.TEAM_ACCESS_COOKIE_DOMAIN || undefined;
     response.cookies.set({
       name: TEAM_SESSION_COOKIE,
-      value: createSessionToken(credentials),
+      value: createSessionToken(),
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
