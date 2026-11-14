@@ -11,7 +11,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-lindwayhome}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-lindway}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-lindway_user}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-lindway}
       UPLOADS_PATH: /data/uploads
       # Inside the container beta listens on 4091 (main: 4790); the host side stays 18091.
       PORT: "4091"

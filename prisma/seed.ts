@@ -206,6 +206,21 @@ async function seedLocations() {
 
 async function seedUsers() {
   console.log("👥 users…");
+
+  // Production (SEED_SCOPE=essentials): one super admin whose email and password come from the env
+  // file, never from this repo, which is public. Re-running leaves an existing account untouched.
+  if (ESSENTIALS_ONLY) {
+    const email = process.env.SEED_ADMIN_EMAIL;
+    const password = process.env.SEED_ADMIN_PASSWORD;
+    if (!email || !password) throw new Error("SEED_SCOPE=essentials needs SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD");
+
+    await prisma.user.createMany({
+      data: [{ email, username: process.env.SEED_ADMIN_USERNAME || "admin", password: await hashPassword(password), role: "SUPER_ADMIN" }],
+      skipDuplicates: true,
+    });
+    return;
+  }
+
   await prisma.user.createMany({
     data: [
       { email: "admin@gmail.com", username: "admin", password: await hashPassword("!Admin123"), role: "ADMIN" },
@@ -878,18 +893,26 @@ async function seedInquiries() {
 
 // =============================================================================
 
+// SEED_SCOPE=essentials seeds only what the app needs to run: the two admin users, locations, sizes
+// and the config parameters. No sample products, size guides, articles, FAQ or contact inquiries
+// (orders and members are never seeded). Production uses it; unset, everything is seeded for local dev.
+const ESSENTIALS_ONLY = process.env.SEED_SCOPE === "essentials";
+
 async function main() {
-  console.log("🌱 seeding…\n");
+  console.log(`🌱 seeding${ESSENTIALS_ONLY ? " (essentials only)" : ""}…\n`);
 
   await seedUsers();
   await seedLocations();
   await seedSizes();
   await seedConfig();
-  await seedSizeGuides();
-  await seedProducts();
-  await seedJournal();
-  await seedFaqs();
-  await seedInquiries();
+
+  if (!ESSENTIALS_ONLY) {
+    await seedSizeGuides();
+    await seedProducts();
+    await seedJournal();
+    await seedFaqs();
+    await seedInquiries();
+  }
 
   const [users, sizeCount, guideCount, productCount, variantCount, configCount, locationCount, categoryCount, articleCount, draftCount, faqCount, inquiryCount] = await Promise.all([
     prisma.user.count(),
@@ -913,7 +936,7 @@ async function main() {
   console.log(`   products ${productCount} · variants ${variantCount}`);
   console.log(`   article categories ${categoryCount} · articles ${articleCount} (${draftCount} draft) · faqs ${faqCount} · inquiries ${inquiryCount}`);
   console.log(`   stock from trigger: ${stockSynced.map((product) => `${product.sku}=${product.stock}`).join(" ")}`);
-  if (stockSynced.every((product) => product.stock === 0)) {
+  if (stockSynced.length > 0 && stockSynced.every((product) => product.stock === 0)) {
     console.warn("\n⚠️  every product has stock 0 — the trigger was probably not applied.");
     console.warn("   The trigger ships as a migration — run: npm run db:migrate, then re-seed.");
   }

@@ -107,7 +107,12 @@ install -m 755 deploy/bin/backup-db.sh /etc/cron.daily/lindway-db-backup
 
 # secrets: filled in from the template, never in git; shared by both sites
 install -m 600 deploy/env/app.env /opt/lindway/env/app.env && nano /opt/lindway/env/app.env
-# Set SEED_ON_START=true for the very first deploy of main only, then remove it.
+# Set SEED_ON_START=true for the very first deploy of main only, then remove it (a later start would
+# overwrite settings edited in the admin). With SEED_SCOPE=essentials that seeds only config parameters,
+# locations, sizes and ONE super admin (SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD, kept out of git;
+# delete the password line afterwards). Products, size guides, articles, FAQ and inquiries start empty.
+# To recreate the database with a different POSTGRES_USER, the pgdata volume has to be recreated too:
+# the user is only created when the volume is first initialised.
 
 # one line in /root/.ssh/authorized_keys (public key from `ssh-keygen`, comment last):
 command="/opt/lindway/bin/deploy-gate.sh",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-ed25519 AAAA... lindway-ci-deploy
