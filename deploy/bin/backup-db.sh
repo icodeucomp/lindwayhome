@@ -2,6 +2,7 @@
 # Install on the VPS at /etc/cron.daily/lindway-db-backup (chmod 755; no dot in the name or
 # run-parts skips it). Daily gzip'd pg_dump of the database both sites share, kept for 14 days.
 set -euo pipefail
+umask 077   # database dumps are readable by root only
 dir=/opt/lindway/backups
 mkdir -p "$dir"
 docker exec lindway-db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' \

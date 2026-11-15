@@ -81,7 +81,7 @@ deploy/
   bin/cron-cleanup.sh      expired uploads / unpaid orders -> /opt/lindway/bin/
   bin/backup-db.sh         daily pg_dump       -> /etc/cron.daily/lindway-db-backup
   env/app.env              secrets template    -> /opt/lindway/env/app.env
-  coming-soon.html         public page while in development -> /opt/lindway/site/coming-soon.html
+  coming-soon.html         public page while in development -> /var/www/lindway/coming-soon.html
   systemd/app-lindwayhome.service, app-lindwayhome-beta.service -> /etc/systemd/system/
 ```
 
@@ -167,11 +167,11 @@ map $host $lw_main_closed { lindwayhome.com 1; default 0; }   # 1 = coming soon,
 nginx -t && systemctl reload nginx
 ```
 
-That is the only change. Beta keeps its password, because the beta gate is separate. Keep `deploy/config-sites.conf` in step with the server copy. The "Coming soon" page is served from `/opt/lindway/site/coming-soon.html`:
+That is the only change. Beta keeps its password, because the beta gate is separate. Keep `deploy/config-sites.conf` in step with the server copy. The "Coming soon" page is served from `/var/www/lindway/coming-soon.html`:
 
 ```bash
-install -d -m 755 /opt/lindway/site
-install -m 644 deploy/coming-soon.html /opt/lindway/site/coming-soon.html
+install -d -m 755 /var/www/lindway
+install -m 644 deploy/coming-soon.html /var/www/lindway/coming-soon.html
 ```
 
 To open **beta** to everyone instead, remove the `TEAM_ACCESS_GATE` line from `docker-compose.beta.yml` and deploy.
