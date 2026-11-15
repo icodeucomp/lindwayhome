@@ -144,7 +144,7 @@ The app is still in development and both sites run on the live database, so neit
 
 ```bash
 # /opt/lindway/env/app.env
-TEAM_ACCESS_USERNAME=team
+TEAM_ACCESS_USERNAME=admin
 TEAM_ACCESS_PASSWORD=choose-a-long-password
 TEAM_ACCESS_SESSION_HOURS=24
 ```

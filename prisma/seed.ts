@@ -208,15 +208,20 @@ async function seedUsers() {
   console.log("👥 users…");
 
   // Production (SEED_SCOPE=essentials): one super admin whose email and password come from the env
-  // file, never from this repo, which is public. Re-running leaves an existing account untouched.
+  // file, never from this repo, which is public. Matched on the username, so an account that already
+  // exists is updated to these values (email, password, role) rather than skipped, which would leave
+  // its old credentials in place.
   if (ESSENTIALS_ONLY) {
     const email = process.env.SEED_ADMIN_EMAIL;
     const password = process.env.SEED_ADMIN_PASSWORD;
     if (!email || !password) throw new Error("SEED_SCOPE=essentials needs SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD");
 
-    await prisma.user.createMany({
-      data: [{ email, username: process.env.SEED_ADMIN_USERNAME || "admin", password: await hashPassword(password), role: "SUPER_ADMIN" }],
-      skipDuplicates: true,
+    const username = process.env.SEED_ADMIN_USERNAME || "admin";
+    const hashed = await hashPassword(password);
+    await prisma.user.upsert({
+      where: { username },
+      update: { email, password: hashed, role: "SUPER_ADMIN", isActive: true },
+      create: { email, username, password: hashed, role: "SUPER_ADMIN" },
     });
     return;
   }
