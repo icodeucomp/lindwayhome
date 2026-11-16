@@ -185,14 +185,70 @@ const ALL_SIZES = [...ADULT_SIZES, ...KIDS_SIZES];
 // =============================================================================
 
 const LOCATIONS = [
-  { code: "51.71.01.1001", province: "Bali", district: "Kota Denpasar", sub_district: "Denpasar Timur", village: "Sumerta", approx_lat: -8.6538, approx_long: 115.2352 },
-  { code: "51.71.02.1002", province: "Bali", district: "Kota Denpasar", sub_district: "Denpasar Selatan", village: "Renon", approx_lat: -8.6786, approx_long: 115.2358 },
-  { code: "51.03.05.2003", province: "Bali", district: "Badung", sub_district: "Kuta", village: "Legian", approx_lat: -8.7059, approx_long: 115.1715 },
+  {
+    code: "51.71.01.1001",
+    province: "Bali",
+    district: "Kota Denpasar",
+    sub_district: "Denpasar Timur",
+    village: "Sumerta",
+    approx_lat: -8.6538,
+    approx_long: 115.2352,
+  },
+  {
+    code: "51.71.02.1002",
+    province: "Bali",
+    district: "Kota Denpasar",
+    sub_district: "Denpasar Selatan",
+    village: "Renon",
+    approx_lat: -8.6786,
+    approx_long: 115.2358,
+  },
+  {
+    code: "51.03.05.2003",
+    province: "Bali",
+    district: "Badung",
+    sub_district: "Kuta",
+    village: "Legian",
+    approx_lat: -8.7059,
+    approx_long: 115.1715,
+  },
   { code: "51.08.01.2004", province: "Bali", district: "Gianyar", sub_district: "Ubud", village: "Ubud", approx_lat: -8.5069, approx_long: 115.2625 },
-  { code: "51.06.02.2005", province: "Bali", district: "Buleleng", sub_district: "Buleleng", village: "Singaraja", approx_lat: -8.1121, approx_long: 115.0882 },
-  { code: "31.71.01.1006", province: "DKI Jakarta", district: "Jakarta Pusat", sub_district: "Menteng", village: "Menteng", approx_lat: -6.1959, approx_long: 106.8317 },
-  { code: "35.78.01.1007", province: "Jawa Timur", district: "Kota Surabaya", sub_district: "Gubeng", village: "Gubeng", approx_lat: -7.2678, approx_long: 112.7519 },
-  { code: "34.71.01.1008", province: "DI Yogyakarta", district: "Kota Yogyakarta", sub_district: "Gondokusuman", village: "Terban", approx_lat: -7.7793, approx_long: 110.3742 },
+  {
+    code: "51.06.02.2005",
+    province: "Bali",
+    district: "Buleleng",
+    sub_district: "Buleleng",
+    village: "Singaraja",
+    approx_lat: -8.1121,
+    approx_long: 115.0882,
+  },
+  {
+    code: "31.71.01.1006",
+    province: "DKI Jakarta",
+    district: "Jakarta Pusat",
+    sub_district: "Menteng",
+    village: "Menteng",
+    approx_lat: -6.1959,
+    approx_long: 106.8317,
+  },
+  {
+    code: "35.78.01.1007",
+    province: "Jawa Timur",
+    district: "Kota Surabaya",
+    sub_district: "Gubeng",
+    village: "Gubeng",
+    approx_lat: -7.2678,
+    approx_long: 112.7519,
+  },
+  {
+    code: "34.71.01.1008",
+    province: "DI Yogyakarta",
+    district: "Kota Yogyakarta",
+    sub_district: "Gondokusuman",
+    village: "Terban",
+    approx_lat: -7.7793,
+    approx_long: 110.3742,
+  },
 ];
 
 // =============================================================================
@@ -246,13 +302,43 @@ async function seedSizes() {
 async function seedConfig() {
   console.log("⚙️  config parameters…");
 
-  const shipping = await ConfigService.createConfigGroup({ name: "shipping", label: "Shipping (Paxel)", description: "Pickup address and courier services offered at checkout", order: 1 });
-  const dimensions = await ConfigService.createConfigGroup({ name: "package_dimensions", label: "Package Dimensions", description: "Default parcel dimensions per size, overridable per product variant", order: 2 });
+  const shipping = await ConfigService.createConfigGroup({
+    name: "shipping",
+    label: "Shipping (Paxel)",
+    description: "Pickup address and courier services offered at checkout",
+    order: 1,
+  });
+  const dimensions = await ConfigService.createConfigGroup({
+    name: "package_dimensions",
+    label: "Package Dimensions",
+    description: "Default parcel dimensions per size, overridable per product variant",
+    order: 2,
+  });
   const tax = await ConfigService.createConfigGroup({ name: "tax", label: "Tax", description: "Store-wide tax rate", order: 3 });
-  const promotions = await ConfigService.createConfigGroup({ name: "promotions", label: "Promotion", description: "One store-wide promotional discount", order: 4 });
-  const members = await ConfigService.createConfigGroup({ name: "members", label: "Member", description: "Discount rate applied to registered members", order: 5 });
-  const defaults = await ConfigService.createConfigGroup({ name: "product_defaults", label: "Product Content Defaults", description: "Fallback copy for products that do not override it", order: 6 });
-  const store = await ConfigService.createConfigGroup({ name: "store_profile", label: "Store Profile", description: "Bank accounts and contact details shown to buyers", order: 7 });
+  const promotions = await ConfigService.createConfigGroup({
+    name: "promotions",
+    label: "Promotion",
+    description: "One store-wide promotional discount",
+    order: 4,
+  });
+  const members = await ConfigService.createConfigGroup({
+    name: "members",
+    label: "Member",
+    description: "Discount rate applied to registered members",
+    order: 5,
+  });
+  const defaults = await ConfigService.createConfigGroup({
+    name: "product_defaults",
+    label: "Product Content Defaults",
+    description: "Fallback copy for products that do not override it",
+    order: 6,
+  });
+  const store = await ConfigService.createConfigGroup({
+    name: "store_profile",
+    label: "Store Profile",
+    description: "Bank accounts and contact details shown to buyers",
+    order: 7,
+  });
   const media = await ConfigService.createConfigGroup({ name: "media", label: "Media", description: "Images shown on the storefront", order: 8 });
 
   // ── Shipping — the Paxel pickup address and service allowlist ─────────────
@@ -265,16 +351,52 @@ async function seedConfig() {
   // These values are the ORIGIN Paxel collects from, and every one of them is
   // required — `getShippingOrigin` throws rather than falling back, which is how v1
   // came to ship with Jakarta coordinates while the brand operates from Denpasar.
-  const shippingKeys: { key: string; label: string; description: string; value: Prisma.InputJsonValue; type: "TEXT" | "NUMBER" | "DECIMAL" | "BOOLEAN" | "JSON" }[] = [
+  const shippingKeys: {
+    key: string;
+    label: string;
+    description: string;
+    value: Prisma.InputJsonValue;
+    type: "TEXT" | "NUMBER" | "DECIMAL" | "BOOLEAN" | "JSON";
+  }[] = [
     { key: "origin_name", label: "Pickup Contact Name", description: "Who the courier asks for at pickup", value: "Lindway Home", type: "TEXT" },
-    { key: "origin_phone", label: "Pickup Phone", description: "Reachable at pickup time. Sent to Paxel as 62…", value: "6281338080808", type: "TEXT" },
+    {
+      key: "origin_phone",
+      label: "Pickup Phone",
+      description: "Reachable at pickup time. Sent to Paxel as 62…",
+      value: "6281338080808",
+      type: "TEXT",
+    },
     { key: "origin_email", label: "Pickup Email", description: "Optional, forwarded to the courier", value: "hello@lindwayhome.com", type: "TEXT" },
-    { key: "origin_address", label: "Pickup Address", description: "Street address the courier drives to (max 350 chars)", value: "Jl. Tukad Balian No. 78, Renon", type: "TEXT" },
-    { key: "origin_note", label: "Pickup Note", description: "Directions for the courier (max 150 chars)", value: "Ruko depan, pintu kaca", type: "TEXT" },
+    {
+      key: "origin_address",
+      label: "Pickup Address",
+      description: "Street address the courier drives to (max 350 chars)",
+      value: "Jl. Tukad Balian No. 78, Renon",
+      type: "TEXT",
+    },
+    {
+      key: "origin_note",
+      label: "Pickup Note",
+      description: "Directions for the courier (max 150 chars)",
+      value: "Ruko depan, pintu kaca",
+      type: "TEXT",
+    },
     { key: "origin_province", label: "Pickup Province", description: "Provinsi", value: "Bali", type: "TEXT" },
     // Paxel's `city` is our `district` column — kabupaten/kota.
-    { key: "origin_city", label: "Pickup City / Regency", description: "Kabupaten or Kota — Paxel's `city` field", value: "Kota Denpasar", type: "TEXT" },
-    { key: "origin_district", label: "Pickup District", description: "Kecamatan — Paxel's `district` field", value: "Denpasar Selatan", type: "TEXT" },
+    {
+      key: "origin_city",
+      label: "Pickup City / Regency",
+      description: "Kabupaten or Kota — Paxel's `city` field",
+      value: "Kota Denpasar",
+      type: "TEXT",
+    },
+    {
+      key: "origin_district",
+      label: "Pickup District",
+      description: "Kecamatan — Paxel's `district` field",
+      value: "Denpasar Selatan",
+      type: "TEXT",
+    },
     { key: "origin_village", label: "Pickup Village", description: "Kelurahan or Desa — Paxel's `village` field", value: "Renon", type: "TEXT" },
     { key: "origin_zip_code", label: "Pickup Postal Code", description: "Five digits", value: "80226", type: "TEXT" },
     // Denpasar, where the brand actually operates.
@@ -283,13 +405,20 @@ async function seedConfig() {
     {
       key: "enabled_services",
       label: "Courier Services Offered",
-      description: "Which Paxel services a buyer may choose from. Order in the checkout follows SAMEDAY, NEXTDAY, REGULAR, INSTANT regardless of the order here.",
+      description:
+        "Which Paxel services a buyer may choose from. Order in the checkout follows SAMEDAY, NEXTDAY, REGULAR, INSTANT regardless of the order here.",
       value: ["SAMEDAY", "NEXTDAY", "REGULAR", "INSTANT"],
       type: "JSON",
     },
     { key: "item_category", label: "Courier Item Category", description: "Declared goods category on every parcel", value: "Fashion", type: "TEXT" },
     { key: "need_insurance", label: "Insure Shipments", description: "Adds Paxel's insurance to every booking", value: false, type: "BOOLEAN" },
-    { key: "pickup_lead_minutes", label: "Pickup Lead Time (minutes)", description: "Earliest pickup offered, counted from now", value: 120, type: "NUMBER" },
+    {
+      key: "pickup_lead_minutes",
+      label: "Pickup Lead Time (minutes)",
+      description: "Earliest pickup offered, counted from now",
+      value: 120,
+      type: "NUMBER",
+    },
     {
       key: "shipping_timezone",
       label: "Store Timezone",
@@ -317,38 +446,77 @@ async function seedConfig() {
   }
 
   // ── Tax, promotion, member rate ───────────────────────────────────────────
-  await ConfigService.createConfig({ key: "tax_rate", label: "Tax Rate", description: "Applied after discounts", value: 8.5, type: "DECIMAL", groupId: tax.id, order: 1 });
+  await ConfigService.createConfig({
+    key: "tax_rate",
+    label: "Tax Rate",
+    description: "Applied after discounts",
+    value: 8.5,
+    type: "DECIMAL",
+    groupId: tax.id,
+    order: 1,
+  });
   await ConfigService.createConfig({
     key: "tax_type",
     label: "Tax Type",
     description: "Percentage of the subtotal, or a fixed amount",
     value: "PERCENTAGE",
     type: "SELECT",
-    validation: { options: [{ label: "Percentage", value: "PERCENTAGE" }, { label: "Fixed", value: "FIXED" }] },
+    validation: {
+      options: [
+        { label: "Percentage", value: "PERCENTAGE" },
+        { label: "Fixed", value: "FIXED" },
+      ],
+    },
     groupId: tax.id,
     order: 2,
   });
 
-  await ConfigService.createConfig({ key: "promotion_discount", label: "Promotion Discount", description: "Store-wide discount on every product", value: 0, type: "DECIMAL", groupId: promotions.id, order: 1 });
+  await ConfigService.createConfig({
+    key: "promotion_discount",
+    label: "Promotion Discount",
+    description: "Store-wide discount on every product",
+    value: 0,
+    type: "DECIMAL",
+    groupId: promotions.id,
+    order: 1,
+  });
   await ConfigService.createConfig({
     key: "promo_type",
     label: "Promotion Type",
     description: "Percentage or fixed amount",
     value: "PERCENTAGE",
     type: "SELECT",
-    validation: { options: [{ label: "Percentage", value: "PERCENTAGE" }, { label: "Fixed", value: "FIXED" }] },
+    validation: {
+      options: [
+        { label: "Percentage", value: "PERCENTAGE" },
+        { label: "Fixed", value: "FIXED" },
+      ],
+    },
     groupId: promotions.id,
     order: 2,
   });
 
-  await ConfigService.createConfig({ key: "member_discount", label: "Member Discount", description: "Discount for buyers with an active membership", value: 6.1, type: "DECIMAL", groupId: members.id, order: 1 });
+  await ConfigService.createConfig({
+    key: "member_discount",
+    label: "Member Discount",
+    description: "Discount for buyers with an active membership",
+    value: 6.1,
+    type: "DECIMAL",
+    groupId: members.id,
+    order: 1,
+  });
   await ConfigService.createConfig({
     key: "member_type",
     label: "Member Discount Type",
     description: "Percentage or fixed amount",
     value: "PERCENTAGE",
     type: "SELECT",
-    validation: { options: [{ label: "Percentage", value: "PERCENTAGE" }, { label: "Fixed", value: "FIXED" }] },
+    validation: {
+      options: [
+        { label: "Percentage", value: "PERCENTAGE" },
+        { label: "Fixed", value: "FIXED" },
+      ],
+    },
     groupId: members.id,
     order: 2,
   });
@@ -384,11 +552,17 @@ async function seedConfig() {
       label: "Default Shipping & Delivery",
       en: doc(
         p("Orders are processed within 1-3 business days. Custom-made items may take 21-30 working days, depending on the complexity."),
-        ul(["We ship across Indonesia and offer international delivery upon request.", "You'll receive a tracking number once your order is on its way."]),
+        ul([
+          "We ship across Indonesia and offer international delivery upon request.",
+          "You'll receive a tracking number once your order is on its way.",
+        ]),
       ),
       id: doc(
         p("Pesanan diproses dalam 1-3 hari kerja. Produk custom dapat memakan waktu 21-30 hari kerja, tergantung tingkat kerumitannya."),
-        ul(["Kami mengirim ke seluruh Indonesia dan melayani pengiriman internasional atas permintaan.", "Anda akan menerima nomor resi begitu pesanan dikirim."]),
+        ul([
+          "Kami mengirim ke seluruh Indonesia dan melayani pengiriman internasional atas permintaan.",
+          "Anda akan menerima nomor resi begitu pesanan dikirim.",
+        ]),
       ),
     },
     {
@@ -397,12 +571,16 @@ async function seedConfig() {
       en: doc(
         p("All items are final sale, not eligible for return."),
         p("Non-refundable · Non-modifiable · Non-cashable · Non-exchangeable · Non-transferable"),
-        p("Special conditions: returns or exchanges may be provided; items have to be in the same condition as when purchased. Items that include a bag must be returned with it."),
+        p(
+          "Special conditions: returns or exchanges may be provided; items have to be in the same condition as when purchased. Items that include a bag must be returned with it.",
+        ),
       ),
       id: doc(
         p("Semua produk merupakan penjualan final dan tidak dapat dikembalikan."),
         p("Tidak dapat direfund · Tidak dapat diubah · Tidak dapat diuangkan · Tidak dapat ditukar · Tidak dapat dipindahtangankan"),
-        p("Ketentuan khusus: pengembalian atau penukaran dapat diberikan dengan syarat kondisi barang sama seperti saat dibeli. Produk yang disertai tas harus dikembalikan beserta tasnya."),
+        p(
+          "Ketentuan khusus: pengembalian atau penukaran dapat diberikan dengan syarat kondisi barang sama seperti saat dibeli. Produk yang disertai tas harus dikembalikan beserta tasnya.",
+        ),
       ),
     },
   ];
@@ -676,8 +854,16 @@ async function seedProducts() {
 // =============================================================================
 
 const ARTICLE_CATEGORIES = [
-  { slug: "craft-and-process", en: { name: "Craft & Process", description: "How the pieces are made." }, id: { name: "Kriya & Proses", description: "Bagaimana setiap karya dibuat." } },
-  { slug: "our-people", en: { name: "Our People", description: "The artisans behind the label." }, id: { name: "Orang-Orang Kami", description: "Para perajin di balik label ini." } },
+  {
+    slug: "craft-and-process",
+    en: { name: "Craft & Process", description: "How the pieces are made." },
+    id: { name: "Kriya & Proses", description: "Bagaimana setiap karya dibuat." },
+  },
+  {
+    slug: "our-people",
+    en: { name: "Our People", description: "The artisans behind the label." },
+    id: { name: "Orang-Orang Kami", description: "Para perajin di balik label ini." },
+  },
   { slug: "sustainability", en: { name: "Sustainability", description: null }, id: null },
 ];
 
@@ -687,8 +873,16 @@ const ARTICLES = [
     category: "craft-and-process",
     featured: true,
     published: true,
-    en: { title: "How our batik is made", excerpt: "From canting to final rinse — the seven days behind a single length of cloth.", body: "Every metre begins with wax and a canting, drawn by hand." },
-    id: { title: "Bagaimana batik kami dibuat", excerpt: "Dari canting hingga bilasan terakhir — tujuh hari di balik selembar kain.", body: "Setiap meter dimulai dari malam dan canting, digambar dengan tangan." },
+    en: {
+      title: "How our batik is made",
+      excerpt: "From canting to final rinse — the seven days behind a single length of cloth.",
+      body: "Every metre begins with wax and a canting, drawn by hand.",
+    },
+    id: {
+      title: "Bagaimana batik kami dibuat",
+      excerpt: "Dari canting hingga bilasan terakhir — tujuh hari di balik selembar kain.",
+      body: "Setiap meter dimulai dari malam dan canting, digambar dengan tangan.",
+    },
   },
   {
     slug: "meet-the-kebaya-embroiderers",
@@ -696,7 +890,11 @@ const ARTICLES = [
     featured: false,
     published: true,
     // EN only, so the Journal exercises the same fallback the product pages do.
-    en: { title: "Meet the kebaya embroiderers", excerpt: "Four women in Denpasar whose needlework defines the Melati line.", body: "The jasmine motif takes a full day to embroider on each placket." },
+    en: {
+      title: "Meet the kebaya embroiderers",
+      excerpt: "Four women in Denpasar whose needlework defines the Melati line.",
+      body: "The jasmine motif takes a full day to embroider on each placket.",
+    },
     id: null,
   },
   {
@@ -705,7 +903,11 @@ const ARTICLES = [
     featured: false,
     // A draft, so the admin list has something that must never reach the public page.
     published: false,
-    en: { title: "Why we dye in small batches", excerpt: "Smaller runs, less water, and colour we can actually stand behind.", body: "A large dye run wastes more water than it saves in time." },
+    en: {
+      title: "Why we dye in small batches",
+      excerpt: "Smaller runs, less water, and colour we can actually stand behind.",
+      body: "A large dye run wastes more water than it saves in time.",
+    },
     id: null,
   },
 ];
@@ -751,7 +953,9 @@ async function seedJournal() {
         translations: {
           create: [
             { locale: "EN", title: article.en.title, excerpt: article.en.excerpt, content: doc(p(article.en.body)) },
-            ...(article.id ? [{ locale: "ID" as const, title: article.id.title, excerpt: article.id.excerpt, content: doc(p(article.id.body)) }] : []),
+            ...(article.id
+              ? [{ locale: "ID" as const, title: article.id.title, excerpt: article.id.excerpt, content: doc(p(article.id.body)) }]
+              : []),
           ],
         },
       },
@@ -769,8 +973,14 @@ async function seedJournal() {
 const FAQS = [
   {
     topic: "shipping",
-    en: { q: "How long does delivery take?", a: "Orders within Bali arrive in 1-2 days. Elsewhere in Indonesia allow 3-5 working days after the piece ships." },
-    id: { q: "Berapa lama pengiriman?", a: "Pesanan di dalam Bali tiba dalam 1-2 hari. Ke luar Bali, mohon menunggu 3-5 hari kerja setelah barang dikirim." },
+    en: {
+      q: "How long does delivery take?",
+      a: "Orders within Bali arrive in 1-2 days. Elsewhere in Indonesia allow 3-5 working days after the piece ships.",
+    },
+    id: {
+      q: "Berapa lama pengiriman?",
+      a: "Pesanan di dalam Bali tiba dalam 1-2 hari. Ke luar Bali, mohon menunggu 3-5 hari kerja setelah barang dikirim.",
+    },
   },
   {
     topic: "shipping",
@@ -779,19 +989,31 @@ const FAQS = [
   },
   {
     topic: "sizing",
-    en: { q: "How do I choose my size?", a: "Every product page links the size guide for its pattern. Measure a garment you already own flat and compare." },
-    id: { q: "Bagaimana memilih ukuran?", a: "Setiap halaman produk menautkan panduan ukuran untuk polanya. Ukur pakaian yang sudah Anda miliki dalam keadaan rata, lalu bandingkan." },
+    en: {
+      q: "How do I choose my size?",
+      a: "Every product page links the size guide for its pattern. Measure a garment you already own flat and compare.",
+    },
+    id: {
+      q: "Bagaimana memilih ukuran?",
+      a: "Setiap halaman produk menautkan panduan ukuran untuk polanya. Ukur pakaian yang sudah Anda miliki dalam keadaan rata, lalu bandingkan.",
+    },
   },
   {
     topic: "orders",
     en: { q: "How do I confirm my payment?", a: "Upload your transfer receipt at checkout. We verify it by hand, usually within one working day." },
-    id: { q: "Bagaimana konfirmasi pembayaran?", a: "Unggah bukti transfer Anda saat checkout. Kami memeriksanya secara manual, biasanya dalam satu hari kerja." },
+    id: {
+      q: "Bagaimana konfirmasi pembayaran?",
+      a: "Unggah bukti transfer Anda saat checkout. Kami memeriksanya secara manual, biasanya dalam satu hari kerja.",
+    },
   },
   {
     topic: "orders",
     // Inactive, so the admin list has something the public page must never show.
     isActive: false,
-    en: { q: "Can I pay with a credit card?", a: "Yes — checkout is powered by Xendit, which accepts credit cards, QRIS, bank transfer, e-wallets like OVO and DANA, and payment at a convenience store." },
+    en: {
+      q: "Can I pay with a credit card?",
+      a: "Yes — checkout is powered by Xendit, which accepts credit cards, QRIS, bank transfer, e-wallets like OVO and DANA, and payment at a convenience store.",
+    },
     id: null,
   },
 ];
@@ -919,7 +1141,20 @@ async function main() {
     await seedInquiries();
   }
 
-  const [users, sizeCount, guideCount, productCount, variantCount, configCount, locationCount, categoryCount, articleCount, draftCount, faqCount, inquiryCount] = await Promise.all([
+  const [
+    users,
+    sizeCount,
+    guideCount,
+    productCount,
+    variantCount,
+    configCount,
+    locationCount,
+    categoryCount,
+    articleCount,
+    draftCount,
+    faqCount,
+    inquiryCount,
+  ] = await Promise.all([
     prisma.user.count(),
     prisma.size.count(),
     prisma.sizeGuide.count(),
@@ -939,7 +1174,9 @@ async function main() {
   console.log("\n✅ done");
   console.log(`   users ${users} · sizes ${sizeCount} · size guides ${guideCount} · config ${configCount} · locations ${locationCount}`);
   console.log(`   products ${productCount} · variants ${variantCount}`);
-  console.log(`   article categories ${categoryCount} · articles ${articleCount} (${draftCount} draft) · faqs ${faqCount} · inquiries ${inquiryCount}`);
+  console.log(
+    `   article categories ${categoryCount} · articles ${articleCount} (${draftCount} draft) · faqs ${faqCount} · inquiries ${inquiryCount}`,
+  );
   console.log(`   stock from trigger: ${stockSynced.map((product) => `${product.sku}=${product.stock}`).join(" ")}`);
   if (stockSynced.length > 0 && stockSynced.every((product) => product.stock === 0)) {
     console.warn("\n⚠️  every product has stock 0 — the trigger was probably not applied.");
