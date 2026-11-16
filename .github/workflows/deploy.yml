@@ -4,8 +4,9 @@
 # /opt/lindway/bin/deploy.sh <main|beta>), which rebuilds with `docker compose up -d --build` and
 # rolls back on a failed build or health check.
 #
-# Secrets: DEPLOY_SSH_KEY (private key authorised on the server),
-#          DEPLOY_KNOWN_HOSTS (ssh-keyscan of the VPS).
+# Secrets: DEPLOY_HOST (user@ip of the VPS, e.g. root@1.2.3.4),
+#          DEPLOY_SSH_KEY (private key authorised on the server),
+#          DEPLOY_KNOWN_HOSTS (output of ssh-keyscan for the VPS).
 name: Deploy
 
 on:
@@ -20,7 +21,6 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  HOST: root@185.196.21.56
   # The branch decides the site; a manual run uses whichever branch it was started from.
   APP: ${{ github.ref_name == 'main' && 'main' || 'beta' }}
 
@@ -60,9 +60,10 @@ jobs:
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
         run: |
-          if [ -z "$DEPLOY_SSH_KEY" ] || [ -z "$DEPLOY_KNOWN_HOSTS" ]; then
-            echo "::error::Secret DEPLOY_SSH_KEY / DEPLOY_KNOWN_HOSTS kosong atau tidak terbaca oleh repo ini"
+          if [ -z "$DEPLOY_SSH_KEY" ] || [ -z "$DEPLOY_KNOWN_HOSTS" ] || [ -z "$DEPLOY_HOST" ]; then
+            echo "::error::Secret DEPLOY_HOST / DEPLOY_SSH_KEY / DEPLOY_KNOWN_HOSTS is empty or not readable by this repo"
             exit 1
           fi
           install -m 700 -d ~/.ssh
@@ -71,11 +72,18 @@ jobs:
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_ed25519
           if ! ssh-keygen -y -f ~/.ssh/id_ed25519 > /dev/null; then
-            echo "::error::DEPLOY_SSH_KEY bukan private key yang valid (pastikan baris BEGIN/END ikut tersalin)"
+            echo "::error::DEPLOY_SSH_KEY is not a valid private key (include the BEGIN/END lines)"
             exit 1
           fi
+          # The public fingerprint is safe to log; compare it with `ssh-keygen -lf` of the key
+          # you authorised on the server when debugging "Permission denied (publickey)".
+          echo "Key fingerprint: $(ssh-keygen -lf ~/.ssh/id_ed25519)"
 
       - name: Deploy
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
         run: |
+          # A bare IP in the secret would make ssh use the runner user; default to root.
+          case "$DEPLOY_HOST" in *@*) ;; *) DEPLOY_HOST="root@$DEPLOY_HOST" ;; esac
           git ls-files -z -- . | tar --null -czf - -T - \
-            | ssh -o BatchMode=yes "$HOST" deploy "$APP"
+            | ssh -o BatchMode=yes "$DEPLOY_HOST" deploy "$APP"
