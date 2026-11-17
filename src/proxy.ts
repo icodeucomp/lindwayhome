@@ -93,6 +93,11 @@ const gate = (request: NextRequest): NextResponse | boolean => {
   // only reports that the app is up; without this a gated release can never pass its own deploy.
   if (request.method === "GET" && request.nextUrl.pathname === "/api") return false;
 
+  // next/image fetches its source file (/images/..., /uploads/...) with an internal request that
+  // carries no headers at all, so no cookie and no Host. Without this every optimised photo came back
+  // 401 on beta. Anything arriving through nginx has a Host header, so only that internal fetch matches.
+  if (request.method === "GET" && !request.headers.get("host") && /^\/(images|icons|fonts|uploads)\//.test(request.nextUrl.pathname)) return false;
+
   // Shut, not open, when the credentials are missing.
   if (!isConfigured()) return deny(503, "Team access is not configured.");
 
