@@ -51,8 +51,6 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    // v1 assigned this to `where.OR`, which quietly discarded the search filter
-    // whenever both were supplied. They are separate conditions.
     if (isPurchased === "true" || isPurchased === "false") where.isPurchased = isPurchased === "true";
     if (status) where.status = status;
     if (paymentMethod) where.paymentMethod = paymentMethod;
@@ -65,11 +63,21 @@ export async function GET(request: NextRequest) {
       prisma.order.count({ where }),
     ]);
 
-    return NextResponse.json({ success: true, data: orders, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } }, { status: 200 });
+    return NextResponse.json(
+      { success: true, data: orders, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } },
+      { status: 200 },
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
       logError(`${pathAPI} zod error`, Date.now() - startTime, error);
-      return NextResponse.json({ success: false, message: "Validation error", errors: error.issues.map((issue) => ({ field: issue.path.join("."), message: issue.message })) }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Validation error",
+          errors: error.issues.map((issue) => ({ field: issue.path.join("."), message: issue.message })),
+        },
+        { status: 400 },
+      );
     }
 
     logError(`${pathAPI} error`, Date.now() - startTime, error);
