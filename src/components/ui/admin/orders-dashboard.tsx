@@ -12,7 +12,20 @@ import { ordersApi } from "@/utils";
 
 import { ApiResponse, Order, OrderStatus } from "@/types";
 
-import { AdminButton, ConfirmDialog, DataPagination, FilterDropdown, FilterRow, ListToolbar, OrdersLists, PageHeader, ResultCount, SearchBar, ToolbarRow, ViewToggle } from "./slicing";
+import {
+  AdminButton,
+  ConfirmDialog,
+  DataPagination,
+  FilterDropdown,
+  FilterRow,
+  ListToolbar,
+  OrdersLists,
+  PageHeader,
+  ResultCount,
+  SearchBar,
+  ToolbarRow,
+  ViewToggle,
+} from "./slicing";
 
 const PURCHASE_OPTIONS = [
   { value: "", label: "All" },
@@ -20,15 +33,30 @@ const PURCHASE_OPTIONS = [
   { value: "true", label: "Verified" },
 ];
 
-// No fixed method dropdown any more: Xendit's channel vocabulary is open-ended
-// (QRIS, bank transfer, e-wallet, retail outlet, …), unlike v1's two hardcoded methods.
 const FILTER_KEYS = ["isPurchased", "status"] as const;
+
+const ORDERS_REFRESH_MS = 15_000;
 
 export const OrdersDashboard = () => {
   const queryClient = useQueryClient();
   const { isAuthenticated } = useAuthStore();
 
-  const { searchQuery, inputValue, setInputValue, handleSearch, handleClearSearch, page, limit, handlePageChange, filters, setFilter, resetAll, hasFilters, view, setView } = useSearchPagination({
+  const {
+    searchQuery,
+    inputValue,
+    setInputValue,
+    handleSearch,
+    handleClearSearch,
+    page,
+    limit,
+    handlePageChange,
+    filters,
+    setFilter,
+    resetAll,
+    hasFilters,
+    view,
+    setView,
+  } = useSearchPagination({
     filterKeys: FILTER_KEYS,
     defaultLimit: 12,
   });
@@ -38,6 +66,9 @@ export const OrdersDashboard = () => {
   const { data, isLoading, isError } = ordersApi.useGetOrders<ApiResponse<Order[]>>({
     key: ["orders", searchQuery, page, limit, filters.isPurchased, filters.status],
     enabled: isAuthenticated,
+    staleTime: ORDERS_REFRESH_MS,
+    refetchInterval: ORDERS_REFRESH_MS,
+    refetchOnWindowFocus: true,
     params: { search: searchQuery, limit, page, isPurchased: filters.isPurchased, status: filters.status },
   });
 
@@ -49,8 +80,6 @@ export const OrdersDashboard = () => {
     },
   });
 
-  // Flipping isPurchased is what decrements the variant and raises soldCount, inside
-  // one transaction on the server (§A5.3) — the status move is the visible half.
   const confirmVerification = () => {
     if (!orderToVerify) return;
     updateOrder.mutate({ id: orderToVerify.id, order: { isPurchased: true, status: OrderStatus.PAID } });
@@ -68,11 +97,22 @@ export const OrdersDashboard = () => {
       />
 
       <ListToolbar>
-        <SearchBar value={inputValue} onChange={setInputValue} onSearch={handleSearch} onClear={handleClearSearch} placeholder="Search name, email or tracking number…" />
+        <SearchBar
+          value={inputValue}
+          onChange={setInputValue}
+          onSearch={handleSearch}
+          onClear={handleClearSearch}
+          placeholder="Search name, email or tracking number…"
+        />
 
         <ToolbarRow>
           <FilterRow>
-            <FilterDropdown label="Payment state" value={filters.isPurchased} options={PURCHASE_OPTIONS} onChange={(value) => setFilter("isPurchased", value)} />
+            <FilterDropdown
+              label="Payment state"
+              value={filters.isPurchased}
+              options={PURCHASE_OPTIONS}
+              onChange={(value) => setFilter("isPurchased", value)}
+            />
             <FilterDropdown label="Status" value={filters.status} options={orderStatusOptions} onChange={(value) => setFilter("status", value)} />
             {hasFilters && (
               <AdminButton size="sm" variant="ghost" onClick={resetAll}>
@@ -98,7 +138,15 @@ export const OrdersDashboard = () => {
         onRequestPurchase={setOrderToVerify}
       />
 
-      {pagination && <DataPagination page={page} totalPages={pagination.totalPages} total={pagination.total} limit={pagination.limit} onPageChange={handlePageChange} />}
+      {pagination && (
+        <DataPagination
+          page={page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          limit={pagination.limit}
+          onPageChange={handlePageChange}
+        />
+      )}
 
       <ConfirmDialog
         isVisible={orderToVerify !== null}

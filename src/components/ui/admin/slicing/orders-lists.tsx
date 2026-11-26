@@ -55,7 +55,16 @@ const DetailRow = ({ label, children }: { label: string; children: React.ReactNo
 const OrderDetail = ({ orderId, onClose }: { orderId: string | null; onClose: () => void }) => {
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isError } = ordersApi.useGetOrder<ApiResponse<Order>>({ key: ["order", orderId], id: orderId ?? "", enabled: orderId !== null });
+  // The open order refreshes itself too: a buyer paying (or the payment expiring) changes it while an
+  // admin is looking at it, and the buttons below depend on its current status.
+  const { data, isLoading, isError } = ordersApi.useGetOrder<ApiResponse<Order>>({
+    key: ["order", orderId],
+    id: orderId ?? "",
+    enabled: orderId !== null,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
+  });
 
   const order = data?.data;
 

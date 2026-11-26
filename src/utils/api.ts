@@ -50,6 +50,9 @@ interface FetchOptions {
   gcTime?: number;
   staleTime?: number;
   enabled?: boolean;
+  /** Poll while the tab is visible. Off unless a screen asks for it: most data here is fine for hours. */
+  refetchInterval?: number | false;
+  refetchOnWindowFocus?: boolean;
 }
 
 const api = axios.create({
@@ -205,7 +208,7 @@ export const productsApi = {
 
 // Guests Api
 export const ordersApi = {
-  useGetOrders: <T>({ key, params = {}, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+  useGetOrders: <T>({ key, params = {}, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true, refetchInterval = false, refetchOnWindowFocus = false }: FetchOptions) => {
     return useQuery<T, Error>({
       queryKey: key,
       queryFn: async () => {
@@ -225,10 +228,12 @@ export const ordersApi = {
       gcTime,
       staleTime,
       enabled,
+      refetchInterval,
+      refetchOnWindowFocus,
       retry: RETRY_TIMES,
     });
   },
-  useGetOrder: <T>({ key, id, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true }: FetchOptions) => {
+  useGetOrder: <T>({ key, id, gcTime = GC_TIME, staleTime = STALE_TIME, enabled = true, refetchInterval = false, refetchOnWindowFocus = false }: FetchOptions) => {
     return useQuery<T, Error>({
       queryKey: key,
       queryFn: async () => {
@@ -238,6 +243,8 @@ export const ordersApi = {
       gcTime,
       staleTime,
       enabled,
+      refetchInterval,
+      refetchOnWindowFocus,
       retry: RETRY_TIMES,
     });
   },
