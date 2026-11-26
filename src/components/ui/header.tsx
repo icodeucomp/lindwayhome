@@ -17,6 +17,7 @@ import { useDictionary } from "@/i18n/dictionary-provider";
 import type { Dictionary } from "@/i18n/get-dictionary";
 
 import { stripLocale } from "@/utils/locale-path";
+import { CART_TARGET_PROPS } from "@/utils/fly-to-cart";
 
 import { LanguageSwitch } from "./language-switch";
 
@@ -121,7 +122,7 @@ export const Header = () => {
             </span>
           </LocaleLink>
 
-          <button type="button" onClick={openCart} className="flex items-center gap-2 text-sm text-body font-heading hover:cursor-pointer" aria-label={t.header.openBag}>
+          <button type="button" onClick={openCart} {...CART_TARGET_PROPS} className="flex items-center gap-2 text-sm text-body font-heading hover:cursor-pointer" aria-label={t.header.openBag}>
             <PiHandbagSimple className="size-5" />
             <span className="hidden sm:inline">
               {t.nav.bag} <Counter value={getCartItemByProduct()} />

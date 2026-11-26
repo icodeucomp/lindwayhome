@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 
 import { Container, Img, LocaleLink, RichText, isRichTextEmpty } from "@/components";
 
-import { useApiLocale, useCartDrawer, useCartStore, useWishlistStore } from "@/hooks";
+import { useApiLocale, useCartStore, useWishlistStore } from "@/hooks";
 
 import { brandByKey } from "@/static/taxonomy";
 
@@ -15,22 +15,11 @@ import { AccordionItem, Breadcrumb, IMAGE_FALLBACK, StoreButton, StoreSkeletonGr
 import { CollectionStrip } from "./collection-strip";
 import { RelatedProducts } from "./related-products";
 
-import { formatIDR, hasDiscount, productsApi, resolveListPrice, resolveUnitPrice } from "@/utils";
+import { flyToCart, formatIDR, hasDiscount, productsApi, resolveListPrice, resolveUnitPrice } from "@/utils";
 
 import type { Product } from "@/types";
 
 import { PiCaretDown, PiCaretUp, PiHeartStraight, PiHeartStraightFill, PiInfo, PiMinus, PiPlus } from "react-icons/pi";
-
-/**
- * Product detail (reference/Product Details.png).
- *
- * The four content panels below the buy box come from `ProductTranslation`, resolved
- * through the four-level fallback chain (§B6.1) by the API — so a product with no
- * translation rows still renders the store-wide defaults rather than four empty
- * accordions. The Size Guide panel is the assigned `SizeGuide`, transposed: the mockup
- * puts sizes across the top and measurements down the side, which is the reverse of
- * how `SizeGuideRow` stores them.
- */
 
 const THUMBNAIL_WINDOW = 3;
 
@@ -38,7 +27,6 @@ export const ProductDetail = ({ slug }: { slug: string }) => {
   const locale = useApiLocale();
 
   const { addToCart } = useCartStore();
-  const openDrawer = useCartDrawer((state) => state.open);
   const wishlist = useWishlistStore();
 
   const { data, isLoading, isError } = productsApi.useGetProduct<{ success: boolean; data: Product }>({
@@ -54,7 +42,10 @@ export const ProductDetail = ({ slug }: { slug: string }) => {
   const [selectedSize, setSelectedSize] = React.useState<string | null>(null);
   const [quantity, setQuantity] = React.useState(1);
 
-  const variants = React.useMemo(() => [...(product?.variants ?? [])].sort((a, b) => (a.size?.order ?? 0) - (b.size?.order ?? 0)), [product?.variants]);
+  const variants = React.useMemo(
+    () => [...(product?.variants ?? [])].sort((a, b) => (a.size?.order ?? 0) - (b.size?.order ?? 0)),
+    [product?.variants],
+  );
 
   if (isLoading) {
     return (
@@ -64,9 +55,6 @@ export const ProductDetail = ({ slug }: { slug: string }) => {
     );
   }
 
-  // A 404 from the API and an inactive product are the same thing to a shopper: the
-  // page does not exist. Rendering it anyway would let a deactivated product stay
-  // reachable by its old URL.
   if (isError || !product || !product.isActive) notFound();
 
   const images = product.images?.length ? product.images : [];
@@ -83,7 +71,7 @@ export const ProductDetail = ({ slug }: { slug: string }) => {
 
   const maxThumbOffset = Math.max(0, images.length - THUMBNAIL_WINDOW);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (event: React.MouseEvent<HTMLElement>) => {
     if (!selectedSize) return;
 
     addToCart(
@@ -103,13 +91,11 @@ export const ProductDetail = ({ slug }: { slug: string }) => {
       selectedSize,
     );
 
-    openDrawer();
+    flyToCart(event.currentTarget, images[activeImage]?.url ?? images[0]?.url);
   };
 
   const guide = product.sizeGuide;
   const guideSizes = [...(guide?.rows ?? [])].sort((a, b) => (a.size?.order ?? 0) - (b.size?.order ?? 0));
-  // Measurement keys are stable identifiers; their display labels are per-locale
-  // (§B4.2), so the header column reads from `parameterLabels` with the key as fallback.
   const measurementKeys = Array.from(new Set(guideSizes.flatMap((row) => Object.keys(row.measurements ?? {}))));
 
   const panels = [
@@ -133,7 +119,6 @@ export const ProductDetail = ({ slug }: { slug: string }) => {
       </Container>
 
       <Container className="grid grid-cols-1 gap-10 py-8 lg:grid-cols-2">
-        {/* Gallery */}
         <div className="flex gap-4">
           {images.length > 1 && (
             <div className="flex-col hidden w-24 gap-2 sm:flex">
@@ -151,10 +136,6 @@ export const ProductDetail = ({ slug }: { slug: string }) => {
                 const realIndex = thumbOffset + index;
                 return (
                   <button
-                    // `filename`, not `url`: two images on one product can share a URL —
-                    // every one of them does while PLACEHOLDER_IMAGE stands in — and the
-                    // filename stays unique per upload. `realIndex` is the last resort,
-                    // since a node written by hand may carry no filename at all.
                     key={image.filename || realIndex}
                     type="button"
                     onClick={() => setActiveImage(realIndex)}
@@ -178,7 +159,12 @@ export const ProductDetail = ({ slug }: { slug: string }) => {
             </div>
           )}
 
-          <Img src={images[activeImage]?.url ?? IMAGE_FALLBACK} alt={images[activeImage]?.alt || product.name} className="flex-1 aspect-3/4 bg-footer/30" cover />
+          <Img
+            src={images[activeImage]?.url ?? IMAGE_FALLBACK}
+            alt={images[activeImage]?.alt || product.name}
+            className="flex-1 aspect-3/4 bg-footer/30"
+            cover
+          />
         </div>
 
         {/* Buy box */}
@@ -222,7 +208,11 @@ export const ProductDetail = ({ slug }: { slug: string }) => {
                     onClick={() => setSelectedSize(code)}
                     title={available ? undefined : `Size ${code} is sold out`}
                     className={`min-w-11 border px-3 py-2 text-sm transition-colors ${
-                      selected ? "border-primary text-primary" : available ? "border-border text-body hover:border-primary" : "cursor-not-allowed border-border text-body/30 line-through"
+                      selected
+                        ? "border-primary text-primary"
+                        : available
+                          ? "border-border text-body hover:border-primary"
+                          : "cursor-not-allowed border-border text-body/30 line-through"
                     }`}
                   >
                     {code}
@@ -231,7 +221,7 @@ export const ProductDetail = ({ slug }: { slug: string }) => {
               })}
 
               {guide && (
-                <a href="#size-guide" className="pb-1 ml-2 text-sm border-b font-heading uppercase tracking-[0.1em] border-primary text-primary">
+                <a href="#size-guide" className="pb-1 ml-2 text-sm border-b font-heading uppercase tracking-widest border-primary text-primary">
                   Size Guide
                 </a>
               )}
@@ -240,11 +230,21 @@ export const ProductDetail = ({ slug }: { slug: string }) => {
 
           <div className="flex flex-wrap items-stretch gap-3">
             <div className="flex items-center border border-border">
-              <button type="button" onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Decrease quantity" className="grid size-12 place-items-center text-body hover:text-primary">
+              <button
+                type="button"
+                onClick={() => setQuantity((value) => Math.max(1, value - 1))}
+                aria-label="Decrease quantity"
+                className="grid size-12 place-items-center text-body hover:text-primary"
+              >
                 <PiMinus className="size-4" />
               </button>
               <span className="w-10 text-center text-body">{quantity}</span>
-              <button type="button" onClick={() => setQuantity((value) => value + 1)} aria-label="Increase quantity" className="grid size-12 place-items-center text-body hover:text-primary">
+              <button
+                type="button"
+                onClick={() => setQuantity((value) => value + 1)}
+                aria-label="Increase quantity"
+                className="grid size-12 place-items-center text-body hover:text-primary"
+              >
                 <PiPlus className="size-4" />
               </button>
             </div>
@@ -312,8 +312,6 @@ export const ProductDetail = ({ slug }: { slug: string }) => {
         </div>
       </Container>
 
-      {/* Both closing sections need the brand, which is only known once the product
-          has loaded — so they live here rather than in the route. */}
       <RelatedProducts brand={product.brand} exclude={product.id} />
       <CollectionStrip exclude={product.brand} />
     </>
