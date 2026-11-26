@@ -18,11 +18,12 @@ interface FormState {
   district: string;
   sub_district: string;
   village: string;
+  postal_code: string;
   approx_lat: string;
   approx_long: string;
 }
 
-const EMPTY: FormState = { code: "", province: "", district: "", sub_district: "", village: "", approx_lat: "", approx_long: "" };
+const EMPTY: FormState = { code: "", province: "", district: "", sub_district: "", village: "", postal_code: "", approx_lat: "", approx_long: "" };
 
 const LIST_HREF = "/admin/dashboard/locations";
 
@@ -34,6 +35,7 @@ const validate = (form: FormState): Partial<FormState> => {
   if (!form.district.trim()) errors.district = "District is required";
   if (!form.sub_district.trim()) errors.sub_district = "Sub-district is required";
   if (!form.village.trim()) errors.village = "Village is required";
+  if (form.postal_code.trim() && !/^\d{5}$/.test(form.postal_code.trim())) errors.postal_code = "Postal code must be 5 digits";
 
   // Range-checked, not just parsed: a transposed lat/long still parses as a number
   // and would silently price every order to that village from the wrong hemisphere.
@@ -74,6 +76,7 @@ export const LocationForm = ({ locationId }: { locationId?: string }) => {
       district: record.district,
       sub_district: record.sub_district,
       village: record.village,
+      postal_code: record.postal_code ?? "",
       approx_lat: String(record.approx_lat),
       approx_long: String(record.approx_long),
     });
@@ -108,6 +111,7 @@ export const LocationForm = ({ locationId }: { locationId?: string }) => {
       district: form.district.trim(),
       sub_district: form.sub_district.trim(),
       village: form.village.trim(),
+      postal_code: form.postal_code.trim() || null,
       approx_lat: Number(form.approx_lat),
       approx_long: Number(form.approx_long),
     };
@@ -153,6 +157,10 @@ export const LocationForm = ({ locationId }: { locationId?: string }) => {
               <TextInput id="village" value={form.village} onChange={setField("village")} invalid={Boolean(errors.village)} placeholder="PEMECUTAN KLOD" />
             </Field>
           </FieldRow>
+
+          <Field label="Postal code" htmlFor="postal_code" error={errors.postal_code} hint="Optional, 5 digits. Pre-fills the buyer's postal code when this village is picked at checkout">
+            <TextInput id="postal_code" inputMode="numeric" maxLength={5} value={form.postal_code} onChange={setField("postal_code")} invalid={Boolean(errors.postal_code)} placeholder="80361" />
+          </Field>
         </FormSection>
 
         <FormSection title="Coordinates" description="Decimal degrees. Bali sits near -8.65, 115.21 — a value far from that is usually a typo or a swapped pair.">

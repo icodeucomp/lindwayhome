@@ -200,6 +200,7 @@ const LOCATIONS = [
     district: "Kota Denpasar",
     sub_district: "Denpasar Selatan",
     village: "Renon",
+    postal_code: "80234",
     approx_lat: -8.6786,
     approx_long: 115.2358,
   },
@@ -209,10 +210,11 @@ const LOCATIONS = [
     district: "Badung",
     sub_district: "Kuta",
     village: "Legian",
+    postal_code: "80361",
     approx_lat: -8.7059,
     approx_long: 115.1715,
   },
-  { code: "51.08.01.2004", province: "Bali", district: "Gianyar", sub_district: "Ubud", village: "Ubud", approx_lat: -8.5069, approx_long: 115.2625 },
+  { code: "51.08.01.2004", province: "Bali", district: "Gianyar", sub_district: "Ubud", village: "Ubud", postal_code: "80571", approx_lat: -8.5069, approx_long: 115.2625 },
   {
     code: "51.06.02.2005",
     province: "Bali",
@@ -228,6 +230,7 @@ const LOCATIONS = [
     district: "Jakarta Pusat",
     sub_district: "Menteng",
     village: "Menteng",
+    postal_code: "10310",
     approx_lat: -6.1959,
     approx_long: 106.8317,
   },
@@ -237,6 +240,7 @@ const LOCATIONS = [
     district: "Kota Surabaya",
     sub_district: "Gubeng",
     village: "Gubeng",
+    postal_code: "60281",
     approx_lat: -7.2678,
     approx_long: 112.7519,
   },
@@ -246,9 +250,46 @@ const LOCATIONS = [
     district: "Kota Yogyakarta",
     sub_district: "Gondokusuman",
     village: "Terban",
+    postal_code: "55223",
     approx_lat: -7.7793,
     approx_long: 110.3742,
   },
+];
+
+// Extra villages for exercising the checkout across Indonesia. DEVELOPMENT ONLY: they are not part of
+// the essentials seed, so production never receives them. Postal codes and coordinates come from general
+// knowledge, not from an official dataset — coordinates are village-level approximations, and the `code`
+// values follow the area-code format but are placeholders, not verified Kemendagri codes. Spot-check
+// anything here before copying it into production, where the full dataset is meant to be imported.
+// Sumerta and Singaraja above deliberately carry no postal code, so the "none on file" path stays testable.
+const SAMPLE_LOCATIONS = [
+  // Bali
+  { code: "51.03.05.3001", province: "Bali", district: "Badung", sub_district: "Kuta", village: "Seminyak", postal_code: "80361", approx_lat: -8.691, approx_long: 115.168 },
+  { code: "51.03.06.3002", province: "Bali", district: "Badung", sub_district: "Kuta Utara", village: "Canggu", postal_code: "80361", approx_lat: -8.65, approx_long: 115.137 },
+  { code: "51.03.04.3003", province: "Bali", district: "Badung", sub_district: "Kuta Selatan", village: "Jimbaran", postal_code: "80361", approx_lat: -8.79, approx_long: 115.165 },
+
+  // DKI Jakarta
+  { code: "31.71.01.3004", province: "DKI Jakarta", district: "Jakarta Pusat", sub_district: "Gambir", village: "Gambir", postal_code: "10110", approx_lat: -6.1754, approx_long: 106.8272 },
+  { code: "31.74.05.3005", province: "DKI Jakarta", district: "Jakarta Selatan", sub_district: "Kebayoran Baru", village: "Senayan", postal_code: "10270", approx_lat: -6.227, approx_long: 106.801 },
+  { code: "31.74.05.3006", province: "DKI Jakarta", district: "Jakarta Selatan", sub_district: "Kebayoran Baru", village: "Melawai", postal_code: "12160", approx_lat: -6.244, approx_long: 106.8 },
+  { code: "31.74.06.3007", province: "DKI Jakarta", district: "Jakarta Selatan", sub_district: "Tebet", village: "Tebet Barat", postal_code: "12810", approx_lat: -6.238, approx_long: 106.854 },
+  { code: "31.74.08.3008", province: "DKI Jakarta", district: "Jakarta Selatan", sub_district: "Setiabudi", village: "Kuningan Timur", postal_code: "12950", approx_lat: -6.233, approx_long: 106.83 },
+
+  // Jawa Barat
+  { code: "32.73.11.3009", province: "Jawa Barat", district: "Kota Bandung", sub_district: "Coblong", village: "Dago", postal_code: "40135", approx_lat: -6.883, approx_long: 107.613 },
+  { code: "32.73.04.3010", province: "Jawa Barat", district: "Kota Bandung", sub_district: "Sumur Bandung", village: "Braga", postal_code: "40111", approx_lat: -6.9185, approx_long: 107.609 },
+  { code: "32.73.12.3011", province: "Jawa Barat", district: "Kota Bandung", sub_district: "Bandung Wetan", village: "Citarum", postal_code: "40115", approx_lat: -6.907, approx_long: 107.619 },
+
+  // Jawa Tengah, Jawa Timur, DI Yogyakarta
+  { code: "33.74.07.3012", province: "Jawa Tengah", district: "Kota Semarang", sub_district: "Semarang Tengah", village: "Pekunden", postal_code: "50134", approx_lat: -6.985, approx_long: 110.42 },
+  { code: "35.78.02.3013", province: "Jawa Timur", district: "Kota Surabaya", sub_district: "Genteng", village: "Genteng", postal_code: "60275", approx_lat: -7.257, approx_long: 112.741 },
+  { code: "35.78.03.3014", province: "Jawa Timur", district: "Kota Surabaya", sub_district: "Wonokromo", village: "Darmo", postal_code: "60241", approx_lat: -7.29, approx_long: 112.735 },
+  { code: "35.73.04.3015", province: "Jawa Timur", district: "Kota Malang", sub_district: "Klojen", village: "Klojen", postal_code: "65111", approx_lat: -7.978, approx_long: 112.63 },
+  { code: "34.71.04.3016", province: "DI Yogyakarta", district: "Kota Yogyakarta", sub_district: "Gedongtengen", village: "Sosromenduran", postal_code: "55272", approx_lat: -7.793, approx_long: 110.366 },
+  { code: "34.71.02.3017", province: "DI Yogyakarta", district: "Kota Yogyakarta", sub_district: "Gondomanan", village: "Prawirodirjan", postal_code: "55121", approx_lat: -7.804, approx_long: 110.369 },
+
+  // Sumatera Utara
+  { code: "12.71.10.3018", province: "Sumatera Utara", district: "Kota Medan", sub_district: "Medan Petisah", village: "Petisah Tengah", postal_code: "20112", approx_lat: -3.59, approx_long: 98.659 },
 ];
 
 // =============================================================================
@@ -257,7 +298,7 @@ const LOCATIONS = [
 
 async function seedLocations() {
   console.log("📍 locations…");
-  await prisma.location.createMany({ data: LOCATIONS, skipDuplicates: true });
+  await prisma.location.createMany({ data: ESSENTIALS_ONLY ? LOCATIONS : [...LOCATIONS, ...SAMPLE_LOCATIONS], skipDuplicates: true });
 }
 
 async function seedUsers() {

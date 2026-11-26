@@ -60,6 +60,8 @@ export enum InquiryStatus {
 export interface SelectOption {
   label: string;
   value: string;
+  /** Villages only: the postal code on file for it, used to pre-fill the checkout form. */
+  postalCode?: string | null;
 }
 
 export interface ApiResponse<T> {
@@ -798,6 +800,7 @@ export interface Location {
   district: string;
   sub_district: string;
   village: string;
+  postal_code?: string | null;
   approx_lat: number;
   approx_long: number;
   createdAt?: string;
@@ -810,6 +813,7 @@ export interface CreateLocation {
   district: string;
   sub_district: string;
   village: string;
+  postal_code?: string | null;
   approx_lat: number;
   approx_long: number;
 }

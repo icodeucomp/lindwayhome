@@ -85,13 +85,15 @@ export async function GET(request: NextRequest) {
           },
           select: {
             village: true,
+            postal_code: true,
           },
           distinct: ["village"],
           orderBy: {
             village: "asc",
           },
         });
-        result = villages.filter((v) => v.village).map((v) => ({ label: v.village, value: v.village }));
+        // The postal code rides along so the checkout can pre-fill it the moment a village is picked.
+        result = villages.filter((v) => v.village).map((v) => ({ label: v.village, value: v.village, postalCode: v.postal_code }));
         break;
 
       default:

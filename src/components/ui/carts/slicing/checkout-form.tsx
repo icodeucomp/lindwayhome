@@ -41,7 +41,6 @@ const initialLocationData: LocationData = {
   village: "",
 };
 
-/** Denpasar. Only ever seen for the half-second before the chosen village recentres the map. */
 const FALLBACK_CENTER = { latitude: -8.6705, longitude: 115.2126 };
 
 export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems, onSubmit, onCancel }: CheckoutFormProps) => {
@@ -59,22 +58,23 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
 
   const isAddressComplete = Boolean(province?.trim() && district?.trim() && sub_district?.trim() && village?.trim());
 
+  const postalCode = String(currentFormData.postalCode ?? "").replace(/\D/g, "");
+  const hasPostalCode = postalCode.length === 5;
+
   const {
     data: checkoutData,
     isLoading: isCheckoutLoading,
     isError: isCheckoutError,
     error: checkoutError,
   } = orderCheckoutApi.useGetOrderCheckout<ApiResponse<CheckoutQuote>>({
-    // The pin is deliberately NOT in the key. It only sharpens the courier's
-    // destination, never the price, so re-quoting on every drag would be four rate
-    // calls per nudge for an identical answer.
-    key: ["checkout", province, district, sub_district, village, cartItems, currentFormData.email],
-    enabled: isAddressComplete,
+    key: ["checkout", province, district, sub_district, village, postalCode, cartItems, currentFormData.email],
+    enabled: isAddressComplete && hasPostalCode,
     params: {
       province,
       district,
       sub_district,
       village,
+      postalCode: Number(postalCode),
       items: cartItems,
       email: currentFormData.email,
     },
@@ -110,14 +110,6 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
 
   const parameter = checkoutData?.data.parameter;
   const services = React.useMemo(() => checkoutData?.data.services ?? [], [checkoutData]);
-
-  /**
-   * Keeps the chosen service valid as quotes change.
-   *
-   * Derived during render rather than synced in an effect (§C2): an effect would
-   * run a frame late, so the summary below would briefly price the buyer's *old*
-   * service against the new address.
-   */
   const availableServices = React.useMemo(() => services.filter((service) => service.available), [services]);
 
   const activeService = React.useMemo(() => {
@@ -129,32 +121,25 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
     () =>
       Boolean(
         currentFormData.email?.trim() &&
-          currentFormData.fullname?.trim() &&
-          currentFormData.whatsappNumber?.trim() &&
-          currentFormData.address?.trim() &&
-          currentFormData.postalCode &&
-          province?.trim() &&
-          district?.trim() &&
-          sub_district?.trim() &&
-          village?.trim(),
+        currentFormData.fullname?.trim() &&
+        currentFormData.whatsappNumber?.trim() &&
+        currentFormData.address?.trim() &&
+        currentFormData.postalCode &&
+        province?.trim() &&
+        district?.trim() &&
+        sub_district?.trim() &&
+        village?.trim(),
       ),
     [currentFormData, province, district, sub_district, village],
   );
 
   const canSubmit = Boolean(activeService) && !isCheckoutLoading && !(isAddressComplete && isCheckoutError);
 
-  /**
-   * Where the pin sits.
-   *
-   * Derived during render rather than copied into state by an effect (§C2). An
-   * effect would overwrite a pin the buyer had just dragged the moment a background
-   * refetch returned the centroid again.
-   */
   const mapPosition = currentFormData.isPinned
     ? { latitude: currentFormData.latitude, longitude: currentFormData.longitude }
     : (checkoutData?.data.destination ?? FALLBACK_CENTER);
 
-  const validateAllFields = (): boolean => {
+  const validateAllFields = (): Record<string, string> => {
     const errors: Record<string, string> = {};
     const requiredFields = ["email", "fullname", "whatsappNumber", "address", "postalCode"];
 
@@ -167,20 +152,24 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
       errors.village = "Please choose your province, city, district and village.";
     }
 
-    if (isAddressComplete && isCheckoutLoading) {
+    if (!hasPostalCode) {
+      errors.postalCode = "Please enter your 5-digit postal code.";
+    }
+
+    if (isAddressComplete && hasPostalCode && isCheckoutLoading) {
       errors.address = "Please wait for the delivery quote to finish.";
     }
 
-    if (isAddressComplete && isCheckoutError) {
+    if (isAddressComplete && hasPostalCode && isCheckoutError) {
       errors.address = "We could not get a delivery quote for this address.";
     }
 
-    if (!activeService) {
+    if (hasPostalCode && !activeService) {
       errors.address = errors.address ?? "No delivery service is available for this address.";
     }
 
     setCurrentFormErrors(errors);
-    return Object.keys(errors).length === 0;
+    return errors;
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -223,10 +212,12 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
       return updated;
     });
 
-    // A different village means a different centroid, so a pin the buyer placed for
-    // the old one is now wrong. Dropping it is safer than silently keeping a
-    // coordinate that no longer belongs to the selected address.
     setCurrentFormData((prev) => ({ ...prev, latitude: 0, longitude: 0, isPinned: false }));
+
+    if (name === "village" && selectedOption?.postalCode) {
+      setCurrentFormData((prev) => ({ ...prev, postalCode: Number(selectedOption.postalCode) }));
+      setCurrentFormErrors((prev) => ({ ...prev, postalCode: "" }));
+    }
   };
 
   const handlePinChange = React.useCallback((position: { latitude: number; longitude: number }) => {
@@ -235,12 +226,13 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
 
   const handleFormSubmit = (e: React.MouseEvent) => {
     e.preventDefault();
-
-    if (!validateAllFields()) return;
+    const errors = validateAllFields();
+    if (Object.keys(errors).length > 0) return;
     if (!checkoutData || !activeService || !activeService.available) return;
 
     const sanitizedData: CheckoutFormData = {
       ...currentFormData,
+      items: cartItems,
       email: currentFormData.email.trim(),
       fullname: sanitizeInput(currentFormData.fullname),
       whatsappNumber: currentFormData.whatsappNumber.trim(),
@@ -248,7 +240,6 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
       addressNote: currentFormData.addressNote ? sanitizeInput(currentFormData.addressNote) : undefined,
       instagram: currentFormData.instagram ? sanitizeInput(currentFormData.instagram) : currentFormData.instagram,
       reference: currentFormData.reference ? sanitizeInput(currentFormData.reference) : currentFormData.reference,
-
       province,
       district,
       sub_district,
@@ -256,17 +247,14 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
       latitude: mapPosition.latitude,
       longitude: mapPosition.longitude,
       isPinned: Boolean(currentFormData.isPinned),
-
       shippingServiceType: activeService.serviceType,
       shippingCost: activeService.cost,
       totalPurchased: activeService.totalPurchased,
       isMember: checkoutData.data.isMember,
-      // The token belonging to the chosen service — it locks the price, the service
-      // and the destination together for 15 minutes.
       checkoutToken: activeService.checkoutToken,
     };
 
-    onSubmit(sanitizedData, currentFormErrors);
+    onSubmit(sanitizedData, errors);
   };
 
   const Label = ({ id, label, required }: { id: string; label: string; required: boolean }) => (
@@ -276,7 +264,14 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
     </label>
   );
 
-  const renderFieldText = (id: string, label: string, type: string = "text", placeholder: string = "", required: boolean = true, disabled: boolean = false) => (
+  const renderFieldText = (
+    id: string,
+    label: string,
+    type: string = "text",
+    placeholder: string = "",
+    required: boolean = true,
+    disabled: boolean = false,
+  ) => (
     <div className="space-y-1">
       <Label id={id} label={label} required={required} />
       <input
@@ -357,7 +352,9 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
 
           <div>{renderFieldSelect("province", "Province", provinceOptions, "Select Province", true, false, isLoadingProvinces)}</div>
           <div>{renderFieldSelect("district", "City / Regency", districtOptions, "Select City", true, !province?.trim(), isLoadingDistricts)}</div>
-          <div>{renderFieldSelect("sub_district", "District", subDistrictOptions, "Select District", true, !district?.trim(), isLoadingSubDistricts)}</div>
+          <div>
+            {renderFieldSelect("sub_district", "District", subDistrictOptions, "Select District", true, !district?.trim(), isLoadingSubDistricts)}
+          </div>
           <div>{renderFieldSelect("village", "Village", villageOptions, "Select Village", true, !sub_district?.trim(), isLoadingVillages)}</div>
 
           <div className="sm:col-span-2">{renderFieldNumber("postalCode", "Postal Code", "12345")}</div>
@@ -380,20 +377,26 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
         </div>
       </div>
 
-      {isAddressComplete && isCheckoutLoading && (
+      {isAddressComplete && !hasPostalCode && (
+        <p className="px-4 py-3 text-xs border border-border bg-muted text-body/70">Enter your 5-digit postal code to see delivery options.</p>
+      )}
+
+      {isAddressComplete && hasPostalCode && isCheckoutLoading && (
         <p className="flex items-center gap-2 px-4 py-3 text-xs border border-border bg-muted text-body/70">
           <span className="inline-block border-2 rounded-full size-3 animate-spin border-primary border-t-transparent" />
           Checking delivery options…
         </p>
       )}
 
-      {isAddressComplete && isCheckoutError && (
+      {isAddressComplete && hasPostalCode && isCheckoutError && (
         <p className="px-4 py-3 text-xs border border-primary/40 bg-primary/5 text-primary">
-          {checkoutError instanceof Error && checkoutError.message ? checkoutError.message : "We could not get a delivery quote for this address — please check it above."}
+          {checkoutError instanceof Error && checkoutError.message
+            ? checkoutError.message
+            : "We could not get a delivery quote for this address — please check it above."}
         </p>
       )}
 
-      {isAddressComplete && !isCheckoutLoading && !isCheckoutError && services.length > 0 && (
+      {isAddressComplete && hasPostalCode && !isCheckoutLoading && !isCheckoutError && services.length > 0 && (
         <ServicePicker services={services} selected={activeService?.serviceType ?? null} onSelect={setSelectedService} />
       )}
 
@@ -423,19 +426,31 @@ export const CheckoutForm = ({ formData, formErrors, price, totalItem, cartItems
             <div className="flex items-center justify-between">
               <span>Tax</span>
               <span>
-                {Number(parameter.tax_rate) === 0 ? "Free" : parameter.tax_type === DiscountType.FIXED ? `+${formatIDR(Number(parameter.tax_rate))}` : `+${Number(parameter.tax_rate)}%`}
+                {Number(parameter.tax_rate) === 0
+                  ? "Free"
+                  : parameter.tax_type === DiscountType.FIXED
+                    ? `+${formatIDR(Number(parameter.tax_rate))}`
+                    : `+${Number(parameter.tax_rate)}%`}
               </span>
             </div>
 
             <div className="flex items-center justify-between">
               <span>Promo</span>
-              <span>{parameter.promo_type === DiscountType.FIXED ? `-${formatIDR(Number(parameter.promotion_discount))}` : `-${Number(parameter.promotion_discount)}%`}</span>
+              <span>
+                {parameter.promo_type === DiscountType.FIXED
+                  ? `-${formatIDR(Number(parameter.promotion_discount))}`
+                  : `-${Number(parameter.promotion_discount)}%`}
+              </span>
             </div>
 
             {checkoutData.data.isMember && (
               <div className="flex items-center justify-between">
                 <span>Member Discount</span>
-                <span>{parameter.member_type === DiscountType.FIXED ? `-${formatIDR(Number(parameter.member_discount))}` : `-${Number(parameter.member_discount)}%`}</span>
+                <span>
+                  {parameter.member_type === DiscountType.FIXED
+                    ? `-${formatIDR(Number(parameter.member_discount))}`
+                    : `-${Number(parameter.member_discount)}%`}
+                </span>
               </div>
             )}
 

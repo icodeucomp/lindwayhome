@@ -346,6 +346,7 @@ export const LocationSchema = z.object({
   district: z.string().min(1, "District is required"),
   sub_district: z.string().min(1, "Sub-district is required"),
   village: z.string().min(1, "Village is required"),
+  postal_code: z.string().trim().regex(/^\d{5}$/, "Postal code must be 5 digits").nullish(),
   approx_lat: z.number().min(-90, "Latitude must be between -90 and 90").max(90, "Latitude must be between -90 and 90"),
   approx_long: z.number().min(-180, "Longitude must be between -180 and 180").max(180, "Longitude must be between -180 and 180"),
   createdAt: z

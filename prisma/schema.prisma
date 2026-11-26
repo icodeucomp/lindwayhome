@@ -603,6 +603,9 @@ model Location {
   district     String
   sub_district String  @map("sub_district")
   village      String
+  // 5-digit Indonesian postal code, used only to pre-fill the checkout form. Nullable on purpose: a
+  // village without one simply leaves the field for the buyer to type.
+  postal_code  String? @map("postal_code")
   approx_lat   Decimal @map("approx_lat")
   approx_long  Decimal @map("approx_long")
 

@@ -24,9 +24,6 @@ const initFormData: CheckoutFormData = {
   whatsappNumber: "",
   instagram: "",
   reference: "",
-
-  // The courier destination. Zeroed rather than omitted so the form's controlled
-  // inputs never flip between uncontrolled and controlled on first keystroke.
   province: "",
   district: "",
   sub_district: "",
@@ -51,10 +48,6 @@ export const OrderSummary = ({ isVisible, onClose, price, totalItem }: OrderSumm
   const [formData, setFormData] = React.useState<CheckoutFormData>(initFormData);
   const [formErrors, setFormErrors] = React.useState<Record<string, string>>({});
 
-  // Order creation and payment are two separate moments now (§B6.3): creating the
-  // order only reserves stock and opens a Xendit invoice. `onSuccess` here just
-  // hands the resulting invoice URL back to the payment step — it does NOT advance
-  // to "complete", because nobody has paid yet.
   const createOrder = orderCheckoutApi.useCreateOrder({
     onSuccess: (data) => {
       setFormData((prev) => ({ ...prev, invoiceUrl: data.invoiceUrl }));
@@ -70,7 +63,7 @@ export const OrderSummary = ({ isVisible, onClose, price, totalItem }: OrderSumm
   };
 
   const handleFormSubmit = (data: CheckoutFormData, errors: Record<string, string>) => {
-    if (Object.keys(errors).length > 0) {
+    if (Object.values(errors).some(Boolean)) {
       toast.error("Please correct the errors in the form");
       return;
     }
@@ -97,9 +90,6 @@ export const OrderSummary = ({ isVisible, onClose, price, totalItem }: OrderSumm
     createOrder.mutate(submitData);
   };
 
-  // Fired once the buyer says they finished paying on Xendit's hosted page — not
-  // once the order is merely created. The order can exist for a while with nobody
-  // having paid yet; this is the actual "the buyer did something" signal.
   const handlePaid = () => setCurrentStep("complete");
 
   return (
@@ -128,9 +118,17 @@ export const OrderSummary = ({ isVisible, onClose, price, totalItem }: OrderSumm
           />
         )}
         {currentStep === "payment" && (
-          <PaymentStep formData={formData} onBack={() => setCurrentStep("summary")} onPayNow={handlePayNow} onPaid={handlePaid} isCreatingOrder={createOrder.isPending} />
+          <PaymentStep
+            formData={formData}
+            onBack={() => setCurrentStep("summary")}
+            onPayNow={handlePayNow}
+            onPaid={handlePaid}
+            isCreatingOrder={createOrder.isPending}
+          />
         )}
-        {currentStep === "complete" && <CompleteStep formData={formData} totalItem={totalItem} totalPurchased={formData.totalPurchased} onClose={handleClose} />}
+        {currentStep === "complete" && (
+          <CompleteStep formData={formData} totalItem={totalItem} totalPurchased={formData.totalPurchased} onClose={handleClose} />
+        )}
       </div>
     </Modal>
   );
