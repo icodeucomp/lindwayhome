@@ -121,7 +121,9 @@ const OrderDetail = ({ orderId, onClose }: { orderId: string | null; onClose: ()
                 </a>
                 {/* An unpinned order carries the village centroid, which can be a
                     kilometre off. Worth flagging before a courier is sent to it. */}
-                <span className="block text-body/50">{order.isPinned ? "Pinned by the buyer" : "Village centre — the buyer did not move the pin"}</span>
+                <span className="block text-body/50">
+                  {order.isPinned ? "Pinned by the buyer" : "Village centre — the buyer did not move the pin"}
+                </span>
               </DetailRow>
               <DetailRow label="Delivery service">{shippingServiceLabels[order.shippingServiceType]}</DetailRow>
               <DetailRow label="Tracking number">{order.trackingNumber}</DetailRow>
@@ -140,7 +142,7 @@ const OrderDetail = ({ orderId, onClose }: { orderId: string | null; onClose: ()
                       type="button"
                       onClick={() => checkPaymentStatus.mutate(order.id)}
                       disabled={checkPaymentStatus.isPending}
-                      className="text-xxs uppercase tracking-[0.1em] text-primary hover:text-body disabled:opacity-50"
+                      className="text-xxs uppercase tracking-widest text-primary hover:text-body disabled:opacity-50"
                     >
                       {checkPaymentStatus.isPending ? "Checking…" : "Check with Xendit"}
                     </button>
@@ -163,7 +165,13 @@ const OrderDetail = ({ orderId, onClose }: { orderId: string | null; onClose: ()
               // Legacy v1 orders only — a gateway payment has no receipt.
               <div>
                 <p className="mb-2 admin-field-label">Payment receipt</p>
-                <Img src={order.receiptImage.url} alt={order.receiptImage.alt} className="w-full border rounded-sm border-border" width={400} height={400} />
+                <Img
+                  src={order.receiptImage.url}
+                  alt={order.receiptImage.alt}
+                  className="w-full border rounded-sm border-border"
+                  width={400}
+                  height={400}
+                />
               </div>
             ) : null}
           </div>
@@ -229,7 +237,11 @@ export const OrdersLists = ({ orders, view, isLoading, isError, hasFilters, pend
       <EmptyState
         icon={<PiReceipt className="size-6" />}
         title={hasFilters ? "No orders match your filters" : "No orders yet"}
-        description={hasFilters ? "Try a different keyword, or clear the filters to see every order." : "Orders appear here the moment a buyer completes checkout."}
+        description={
+          hasFilters
+            ? "Try a different keyword, or clear the filters to see every order."
+            : "Orders appear here the moment a buyer completes checkout."
+        }
       />
     );
   }
